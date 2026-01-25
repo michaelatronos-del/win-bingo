@@ -40,7 +40,7 @@ This guide will help you deploy your Win Bingo application to Render.
    - **Name**: `win-bingo-frontend` (or any name you prefer)
    - **Branch**: `main` (or your default branch)
    - **Root Directory**: `client`
-   - **Build Command**: `npm install && npm run build`
+   - **Build Command**: `npm install --include=dev && npm run build`
    - **Publish Directory**: `dist`
    - **Plan**: Free (or choose a paid plan)
 
