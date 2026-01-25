@@ -2,6 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { getBoard, loadBoards, type BoardGrid } from './boards'
 
+// Get API base URL - use environment variable if set, otherwise use window.location.origin in production
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  return process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'
+}
+
 type Phase = 'lobby' | 'countdown' | 'calling'
 type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game'
 
@@ -54,7 +62,7 @@ export default function App() {
       const savedToken = localStorage.getItem('authToken')
       if (savedUserId && savedUsername && savedToken) {
         // Verify session with server
-        fetch(`${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/api/auth/verify`, {
+        fetch(`${getApiUrl()}/api/auth/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: savedUserId, token: savedToken }),
@@ -84,7 +92,7 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated) return
     
-    const s = io(process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001', { 
+    const s = io(getApiUrl(), { 
       transports: ['websocket'],
       auth: { userId, username }
     })
@@ -460,7 +468,7 @@ export default function App() {
   const playCallSound = async (n: number) => {
     const letter = numberToLetter(n)
     // Always fetch audio from the server to avoid client-origin path issues
-    const base = `${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/audio/${audioPack}`
+    const base = `${getApiUrl()}/audio/${audioPack}`
     const candidates = [
       `${base}/${letter}-${n}.mp3`,
       `${base}/${letter}_${n}.mp3`,
@@ -741,7 +749,7 @@ export default function App() {
     setLoginError('')
     
     try {
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/api/auth/login`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -796,7 +804,7 @@ export default function App() {
     setLoginError('')
     
     try {
-      const response = await fetch(`${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/api/auth/signup`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1080,7 +1088,7 @@ export default function App() {
                   }
                   
                   // Send to server for final verification and processing
-                  const response = await fetch(`${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/api/deposit`, {
+                  const response = await fetch(`${getApiUrl()}/api/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1284,7 +1292,7 @@ export default function App() {
                   }
                   
                   // Send to server for verification
-                  const response = await fetch(`${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/api/withdrawal/verify`, {
+                  const response = await fetch(`${getApiUrl()}/api/withdrawal/verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1376,7 +1384,7 @@ export default function App() {
                 
                 setWithdrawalVerifying(true)
                 try {
-                  const response = await fetch(`${process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'}/api/withdrawal`, {
+                  const response = await fetch(`${getApiUrl()}/api/withdrawal`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

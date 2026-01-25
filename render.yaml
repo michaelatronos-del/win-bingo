@@ -1,0 +1,32 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: win-bingo-backend
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /
+
+  # Frontend Static Site
+  - type: static
+    name: win-bingo-frontend
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set this to your backend URL after deployment
+      # Example: - key: VITE_API_URL
+      #           value: https://win-bingo-backend.onrender.com
+
