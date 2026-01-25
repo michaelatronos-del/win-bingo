@@ -70,14 +70,15 @@ Your server already has CORS enabled with `cors()` middleware, which should work
 
 2. Add `FRONTEND_URL` environment variable in Render backend settings.
 
-## Alternative: Using render.yaml (Recommended)
+## Alternative: Using render.yaml (Partial)
 
-If you prefer, you can use the `render.yaml` file included in this project:
+**Note**: Render's `render.yaml` doesn't support static sites. The included `render.yaml` will only deploy the backend.
 
 1. In Render dashboard, click **"New +"** → **"Blueprint"**
 2. Connect your GitHub repository
-3. Render will automatically detect `render.yaml` and create both services
+3. Render will automatically detect `render.yaml` and create the backend service
 4. Review and apply the configuration
+5. **Then manually deploy the frontend** following Step 2 above (Static Site deployment)
 
 ## Notes
 
