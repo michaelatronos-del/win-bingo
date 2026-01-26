@@ -403,12 +403,15 @@ export default function App() {
     ]
 
     const headers = ['B', 'I', 'N', 'G', 'O']
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
 
     return (
       <div>
         <div className="grid grid-cols-5 gap-1 mb-2">
-          {headers.map(h => (
-            <div key={h} className="text-center font-bold text-slate-300">{h}</div>
+          {headers.map((h, idx) => (
+            <div key={h} className={`${headerColors[idx]} rounded text-center font-bold text-white py-1 text-sm`}>
+              {h}
+            </div>
           ))}
         </div>
         <div className="grid grid-cols-5 gap-1">
@@ -420,11 +423,16 @@ export default function App() {
                   <div
                     key={n}
                     className={[
-                      'h-7 w-full rounded text-xs md:text-sm flex items-center justify-center border',
-                      isCalled ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-slate-700 border-slate-600 text-slate-300'
+                      'h-8 w-full rounded text-xs md:text-sm flex items-center justify-center border relative',
+                      isCalled ? 'bg-slate-600 border-orange-400 text-white' : 'bg-slate-700 border-slate-600 text-slate-300'
                     ].join(' ')}
                   >
                     {n}
+                    {isCalled && (
+                      <div className="absolute inset-0 flex items-center justify-center text-orange-400 font-black text-lg">
+                        ✕
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -1262,99 +1270,209 @@ export default function App() {
   }
 
 
-  const renderGamePage = () => (
-    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Game Info */}
-        <div className="bg-slate-800 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-slate-300 text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
-            <div className="flex gap-3 text-sm">
-              <span>Stake: <b>{stake.toFixed(2)}</b></span>
-              <span>Players: <b>{players}</b></span>
-              <span>Prize: <b>{prize}</b></span>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold">Live Game</div>
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-1 rounded bg-slate-700 font-mono" title="Time until next game start">
-                {String(seconds).padStart(2,"0")}s
-              </div>
-              {phase === 'calling' && (
-                <div className="px-3 py-1 rounded bg-emerald-700 font-mono" title="Next call in">
-                  {String(callCountdown).padStart(2,'0')}s
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Big last-called number display */}
-          {phase === 'calling' && (
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-4xl md:text-5xl font-black tracking-wide">
-                {lastCalled ? `${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}` : 'Waiting...'}
-              </div>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-sm">
-                  <span className="text-slate-300">Audio:</span>
-                  <select
-                    className="bg-slate-700 text-slate-100 rounded px-2 py-1"
-                    value={audioPack}
-                    onChange={(e) => setAudioPack(e.target.value)}
-                  >
-                    <option value="amharic">Amharic</option>
-                    <option value="modern-amharic">Modern Amharic</option>
-                  </select>
-                  <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} />
-                  <button
-                    className="ml-2 px-2 py-1 rounded bg-slate-700 hover:brightness-110"
-                    onClick={() => lastCalled ? playCallSound(lastCalled) : undefined}
-                  >
-                    Test
-                  </button>
-                </label>
-              </div>
-            </div>
-          )}
-          
-          <div className="text-slate-300 mb-2">Caller:</div>
-          <div className="mb-6">
-            {renderCallerGrid()}
-          </div>
-          
+  const renderGamePage = () => {
+    // Get last 5 called numbers for recently called display
+    const recentlyCalled = called.slice(-5).reverse()
+    
+    // Format current called number
+    const formatCalledNumber = (num: number | null) => {
+      if (!num) return null
+      const letter = num <= 15 ? 'B' : num <= 30 ? 'I' : num <= 45 ? 'N' : num <= 60 ? 'G' : 'O'
+      return `${letter}-${num}`
+    }
+    
+    return (
+      <div className="min-h-screen bg-slate-900 text-white p-4">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between mb-4">
           <button
-            onClick={onPressBingo}
-            disabled={autoAlgoMark ? false : !canBingo}
-            className={`w-full py-3 rounded text-lg font-bold ${
-              autoAlgoMark || canBingo
-                ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
-                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-            }`}
+            onClick={() => setCurrentPage('lobby')}
+            className="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm"
           >
-            BINGO!
+            X Close
           </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="p-2 rounded bg-slate-800 hover:bg-slate-700"
+              title="Refresh"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setAudioOn(!audioOn)}
+              className={`p-2 rounded ${audioOn ? 'bg-blue-600' : 'bg-slate-800'} hover:bg-opacity-80`}
+              title="Audio"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                {audioOn ? (
+                  <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.383 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.383l4-4.707zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                ) : (
+                  <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.383 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.383l4-4.707zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Player Boards - vertical list */}
-        <div className="bg-slate-800 rounded-xl p-4">
-          <div className="text-slate-300 mb-4">Your Boards:</div>
-          <div className="flex flex-col gap-6">
-            {picks.map((boardId) => (
-              <div key={boardId} className="text-center">
-                <div className="text-sm text-slate-400 mb-2">Board {boardId}</div>
-                {renderCard(boardId, true)}
-              </div>
-            ))}
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-3xl md:text-4xl font-bold">
+            ጨዋታው ዝግጁ ነው
           </div>
-          <div className="mt-4 text-xs text-slate-400">
-            Click on called numbers to mark them. FREE is always marked.
+        </div>
+
+        {/* Info Boxes: Prize, Bet, Calls */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {/* Prize Box - Blue */}
+          <div className="bg-blue-600 rounded-xl p-4">
+            <div className="text-sm opacity-90 mb-1">ሽልማት</div>
+            <div className="text-2xl font-bold">{prize} Birr</div>
+          </div>
+          
+          {/* Bet Box - Orange */}
+          <div className="bg-orange-500 rounded-xl p-4">
+            <div className="text-sm opacity-90 mb-1">ውርርድ</div>
+            <div className="text-2xl font-bold">{stake} Birr</div>
+          </div>
+          
+          {/* Calls Box - Red */}
+          <div className="bg-red-600 rounded-xl p-4">
+            <div className="text-sm opacity-90 mb-1">ጥሪዎች</div>
+            <div className="text-2xl font-bold">{called.length}</div>
+          </div>
+        </div>
+
+        {/* Current Called Number Section */}
+        {phase === 'calling' && lastCalled && (
+          <div className="mb-6">
+            <div className="bg-red-600 rounded-lg p-3 flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm opacity-90">Number bing</span>
+                <span className="text-sm font-semibold">የን!ሁኑ ጥሪ</span>
+              </div>
+              <div className="h-16 w-16 rounded-full bg-orange-500 flex items-center justify-center text-xl font-black">
+                {formatCalledNumber(lastCalled)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recently Called Numbers */}
+        {called.length > 0 && (
+          <div className="bg-slate-800 rounded-lg p-3 mb-6">
+            <div className="text-sm text-slate-400 mb-2">Recently Called Numbers:</div>
+            <div className="flex gap-2 flex-wrap">
+              {recentlyCalled.map((num, idx) => {
+                const letter = num <= 15 ? 'B' : num <= 30 ? 'I' : num <= 45 ? 'N' : num <= 60 ? 'G' : 'O'
+                const colors = ['bg-green-500', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500']
+                return (
+                  <div
+                    key={idx}
+                    className={`${colors[idx % colors.length]} rounded-lg px-3 py-2 font-bold text-sm`}
+                  >
+                    {letter}-{num}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Main Caller Board */}
+          <div className="lg:col-span-2 bg-slate-800 rounded-xl p-4">
+            <div className="text-lg font-semibold mb-4">Caller Board</div>
+            <div className="mb-4">
+              {renderCallerGrid()}
+            </div>
+            <button
+              onClick={onPressBingo}
+              disabled={autoAlgoMark ? false : !canBingo}
+              className={`w-full py-4 rounded-lg text-xl font-bold ${
+                autoAlgoMark || canBingo
+                  ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              BINGO!
+            </button>
+          </div>
+
+          {/* Right: Player Boards */}
+          <div className="bg-slate-800 rounded-xl p-4">
+            <div className="text-lg font-semibold mb-4">Your Boards</div>
+            <div className="space-y-6">
+              {picks.map((boardId) => {
+                const grid = getBoard(boardId)
+                if (!grid) return null
+                
+                // Check if this board has a potential bingo
+                const boardCanBingo = checkBingo(grid)
+                
+                return (
+                  <div key={boardId} className="bg-slate-700 rounded-lg p-3">
+                    <div className="text-sm text-slate-300 mb-2">Board {boardId}</div>
+                    <div className="grid grid-cols-5 gap-1 mb-2">
+                      {['B', 'I', 'N', 'G', 'O'].map((letter, i) => (
+                        <div key={i} className={`text-center font-bold text-xs py-1 rounded ${
+                          i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-pink-500' : i === 2 ? 'bg-purple-500' : i === 3 ? 'bg-green-500' : 'bg-orange-500'
+                        }`}>
+                          {letter}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-5 gap-1">
+                      {grid.map((val, i) => {
+                        const isFree = val === -1
+                        const isMarked = isFree || markedNumbers.has(val)
+                        const isCalled = called.includes(val)
+                        const isLastCalled = val === lastCalled
+                        const shouldHighlight = isMarked
+                        
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => !isFree && isCalled && toggleMark(val)}
+                            className={[
+                              'aspect-square rounded text-xs flex items-center justify-center border cursor-pointer relative',
+                              shouldHighlight ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-slate-600 border-slate-500 text-slate-200',
+                              !isFree && isCalled ? 'hover:brightness-110' : '',
+                              isLastCalled ? 'ring-2 ring-orange-400' : ''
+                            ].join(' ')}
+                          >
+                            {isFree ? (
+                              <span className="text-emerald-300 font-bold">FREE</span>
+                            ) : (
+                              <>
+                                {val}
+                                {isLastCalled && (
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"></div>
+                                )}
+                                {boardCanBingo && isMarked && !isLastCalled && (
+                                  <div className="absolute -top-1 -left-1 text-green-400">★</div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-4 text-xs text-slate-400">
+              Click on called numbers to mark them. FREE is always marked.
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
