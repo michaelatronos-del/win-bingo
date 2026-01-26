@@ -29,6 +29,10 @@ export default function App() {
   const [seconds, setSeconds] = useState<number>(60)
   const [prize, setPrize] = useState<number>(0)
   const [players, setPlayers] = useState<number>(0)
+  const [waitingPlayers, setWaitingPlayers] = useState<number>(0)
+  const [isWaiting, setIsWaiting] = useState<boolean>(false)
+  const [betHouses, setBetHouses] = useState<any[]>([])
+  const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
   const [balance, setBalance] = useState<number>(0)
   const [bonus, setBonus] = useState<number>(0)
   const [called, setCalled] = useState<number[]>([])
@@ -105,8 +109,10 @@ export default function App() {
       setPrize(d.prize)
       setCalled(d.called)
       setPlayerId(d.playerId)
-      // If server is already in calling phase, go to game; otherwise keep current page
-      if (d.phase === 'calling') {
+      setIsWaiting(d.isWaiting || false)
+      setCurrentBetHouse(d.stake)
+      // If server is already in calling phase and we're not waiting, go to game
+      if (d.phase === 'calling' && !d.isWaiting) {
         setCurrentPage('game')
       }
     })
@@ -120,51 +126,86 @@ export default function App() {
     
     s.on('phase', (d: any) => {
       setPhase(d.phase)
-      // If game starts and we're in lobby, redirect to game
-      if (d.phase === 'calling' && currentPage === 'lobby') {
+      // If game starts and we're in lobby and not waiting, redirect to game
+      if (d.phase === 'calling' && currentPage === 'lobby' && !isWaiting) {
         setCurrentPage('game')
       }
     })
     
-    s.on('players', (d: any) => setPlayers(d.count))
-    s.on('call', (d: any) => {
-      setCalled(d.called)
-      setLastCalled(d.number)
-      setCallCountdown(3)
-      if (autoMark || autoAlgoMark) {
-        setMarkedNumbers(prev => {
-          const next = new Set(prev)
-          next.add(d.number)
-          return next
-        })
+    s.on('players', (d: any) => {
+      setPlayers(d.count || 0)
+      setWaitingPlayers(d.waitingCount || 0)
+    })
+    
+    s.on('bet_houses_status', (d: any) => {
+      if (d.betHouses) {
+        setBetHouses(d.betHouses)
       }
-      if (audioOn) {
-        playCallSound(d.number)
+    })
+    s.on('call', (d: any) => {
+      // Only process calls for current bet house
+      if (d.stake === currentBetHouse) {
+        setCalled(d.called)
+        setLastCalled(d.number)
+        setCallCountdown(3)
+        if (autoMark || autoAlgoMark) {
+          setMarkedNumbers(prev => {
+            const next = new Set(prev)
+            next.add(d.number)
+            return next
+          })
+        }
+        if (audioOn) {
+          playCallSound(d.number)
+        }
       }
     })
     
     s.on('winner', (d: any) => { 
-      alert(`Winner: ${d.playerId}\nPrize: ${d.prize}`)
-      setPicks([])
-      setMarkedNumbers(new Set())
-      setCurrentPage('lobby')
-      setIsReady(false)
+      // Only process winner for current bet house
+      if (d.stake === currentBetHouse) {
+        alert(`Winner: ${d.playerId}\nPrize: ${d.prize}`)
+        setPicks([])
+        setMarkedNumbers(new Set())
+        setCurrentPage('lobby')
+        setIsReady(false)
+        setIsWaiting(false)
+      }
     })
     
-    s.on('game_start', () => {
-      setCurrentPage('game')
+    s.on('game_start', (d: any) => {
+      // Only redirect if it's for our bet house and we're not waiting
+      if (d.stake === currentBetHouse && !isWaiting) {
+        setCurrentPage('game')
+      }
     })
     
-    s.on('start_game_confirm', () => {
-      setCurrentPage('game')
+    s.on('start_game_confirm', (d: any) => {
+      if (d.isWaiting) {
+        setIsWaiting(true)
+        // Stay on lobby/board selection page if waiting
+      } else if (d.stake === currentBetHouse) {
+        setCurrentPage('game')
+        setIsWaiting(false)
+      }
     })
     
     s.on('balance_update', (d: any) => {
       setBalance(d.balance || 0)
     })
     
+    // Request bet houses status on connection
+    s.emit('get_bet_houses_status')
+    
     return () => { s.disconnect() }
   }, [isAuthenticated, userId, username])
+  
+  // Auto-join default bet house when socket is ready
+  useEffect(() => {
+    if (socket && !currentBetHouse) {
+      handleJoinBetHouse(10)
+    }
+  }, [socket, currentBetHouse])
 
   // Restore picks from localStorage and persist changes
   useEffect(() => {
@@ -195,10 +236,10 @@ export default function App() {
   }, [])
 
   useEffect(() => { 
-    if (socket && picks.length > 0) {
-      socket.emit('select_numbers', picks) 
+    if (socket && picks.length > 0 && currentBetHouse) {
+      socket.emit('select_numbers', { picks, stake: currentBetHouse }) 
     }
-  }, [socket, picks])
+  }, [socket, picks, currentBetHouse])
 
 
   // Manage 3s per-call countdown lifecycle
@@ -217,7 +258,8 @@ export default function App() {
   const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
 
   const togglePick = (n: number) => {
-    if (phase !== 'lobby' && phase !== 'countdown') return
+    // Allow picking boards even during live games (if waiting)
+    if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
     setPicks(prev => {
       if (prev.includes(n)) return prev.filter(x => x !== n)
       if (prev.length >= 2) return prev
@@ -225,15 +267,32 @@ export default function App() {
     })
   }
 
+  const handleJoinBetHouse = (stakeAmount: number) => {
+    if (!socket) return
+    setCurrentBetHouse(stakeAmount)
+    setStake(stakeAmount)
+    setPicks([])
+    setIsReady(false)
+    setIsWaiting(false)
+    socket.emit('join_bet_house', stakeAmount)
+    setCurrentPage('lobby')
+  }
+
   const handleStartGame = () => {
     if (picks.length === 0) {
       alert('Please select at least one board before starting!')
       return
     }
+    if (!currentBetHouse) {
+      alert('Please select a bet house first!')
+      return
+    }
     setIsReady(true)
-    socket?.emit('start_game')
-    // Redirect immediately; server continues countdown and will also emit confirmations
-    setCurrentPage('game')
+    socket?.emit('start_game', { stake: currentBetHouse })
+    // If not waiting, redirect immediately; otherwise stay on lobby
+    if (!isWaiting) {
+      setCurrentPage('game')
+    }
   }
 
   const toggleMark = (number: number) => {
@@ -322,12 +381,14 @@ export default function App() {
   }
 
   const onPressBingo = () => {
+    if (phase !== 'calling' || isWaiting) return
     // Validate locally before notifying server
     if (!hasBingoIncludingLastCalled()) {
       alert('No valid BINGO found that includes the last called number. Keep marking!')
       return
     }
-    socket?.emit('bingo')
+    if (!currentBetHouse) return
+    socket?.emit('bingo', { stake: currentBetHouse })
   }
 
   // Render 75-number caller grid with B I N G O columns
@@ -533,17 +594,32 @@ export default function App() {
           <div className="flex items-center justify-between mb-6">
             <div className="text-slate-300 text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
             <div className="flex gap-4 text-sm">
-              <span>Stake: <b>{stake.toFixed(2)}</b></span>
-              <span>Players: <b>{players}</b></span>
-              <span>Prize: <b>{prize}</b></span>
+              <span>Stake: <b>{stake} Birr</b></span>
+              <span>Active: <b>{players}</b></span>
+              {waitingPlayers > 0 && <span>Waiting: <b>{waitingPlayers}</b></span>}
+              <span>Prize: <b>{prize} Birr</b></span>
             </div>
           </div>
           
           <div className="flex items-center justify-between mb-6">
-            <div className="text-2xl font-bold">Select Your Boards</div>
-            <div className="px-4 py-2 rounded bg-slate-700 font-mono text-lg">
-              {String(seconds).padStart(2,"0")}s
+            <div className="text-2xl font-bold">
+              Select Your Boards
+              {isWaiting && (
+                <span className="ml-3 px-3 py-1 rounded bg-yellow-500 text-black text-sm font-bold">
+                  Waiting for next game...
+                </span>
+              )}
             </div>
+            {!isWaiting && (
+              <div className="px-4 py-2 rounded bg-slate-700 font-mono text-lg">
+                {String(seconds).padStart(2,"0")}s
+              </div>
+            )}
+            {isWaiting && (
+              <div className="px-4 py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-sm">
+                Game in progress
+              </div>
+            )}
           </div>
 
           {/* Audio and Auto Mark toggles visible before countdown */}
@@ -587,7 +663,7 @@ export default function App() {
           <div className="grid grid-cols-10 gap-2 mb-6">
             {board.map(n => {
               const isPicked = picks.includes(n)
-              const disabled = phase !== 'lobby' && phase !== 'countdown'
+              const disabled = phase !== 'lobby' && phase !== 'countdown' && !isWaiting
               return (
                 <button
                   key={n}
@@ -623,7 +699,12 @@ export default function App() {
           <div className="flex items-center justify-between">
             <div className="text-slate-300">
               Selected: {picks.length}/2 boards
-              {picks.length > 0 && (
+              {isWaiting && picks.length > 0 && (
+                <div className="mt-2 text-yellow-400 text-sm">
+                  You'll join the next game when it starts
+                </div>
+              )}
+              {picks.length > 0 && !isWaiting && (
                 <div className="flex gap-2 mt-2">
                   {picks.map(n => (
                     <span key={n} className="px-2 py-1 bg-amber-500 text-black rounded text-sm">Board {n}</span>
@@ -631,18 +712,25 @@ export default function App() {
                 </div>
               )}
             </div>
-            
-            <button
-              onClick={handleStartGame}
-              disabled={picks.length === 0 || isReady}
-              className={`px-6 py-3 rounded-lg font-bold text-lg ${
-                picks.length > 0 && !isReady 
-                  ? 'bg-green-500 hover:bg-green-600 text-black' 
-                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              }`}
-            >
-              {isReady ? 'Ready!' : 'Start Game'}
-        </button>
+            <div className="flex gap-2">
+              <button
+                className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-sm"
+                onClick={() => setCurrentPage('welcome')}
+              >
+                Switch Bet House
+              </button>
+              <button
+                onClick={handleStartGame}
+                disabled={picks.length === 0 || isReady}
+                className={`px-6 py-3 rounded-lg font-bold text-lg ${
+                  picks.length > 0 && !isReady 
+                    ? 'bg-green-500 hover:bg-green-600 text-black' 
+                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {isReady ? (isWaiting ? 'Waiting...' : 'Ready!') : 'Start Game'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -907,50 +995,74 @@ export default function App() {
           </button>
         </div>
 
-        <div className="text-xl font-semibold">Play</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Mini', amount: 10, tag: 15, color: 'bg-sky-600' },
-            { label: 'Sweety', amount: 20, tag: 74, color: 'bg-orange-500' },
-            { label: 'Standard', amount: 50, tag: 40, color: 'bg-violet-600' },
-            { label: 'Grand', amount: 100, tag: 60, color: 'bg-teal-600' },
-          ].map(card => (
-            <div key={card.amount} className={`${card.color} rounded-xl p-5 flex flex-col gap-4`}>
-              <div className="text-sm opacity-90">{card.label}</div>
-              <div className="text-3xl font-extrabold">{card.amount} Birr</div>
-              <div className="mt-auto flex items-center justify-between">
-                <button
-                  className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
-                  onClick={() => {
-                    setStake(card.amount)
-                    socket?.emit('set_stake', card.amount)
-                    setCurrentPage('lobby')
-                  }}
-                >
-                  Play now
-                </button>
-                <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{card.tag}</div>
+        <div className="text-xl font-semibold">Bet Houses</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {betHouses.length > 0 ? betHouses.map((house: any) => {
+            const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
+              10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
+              20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
+              50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
+              100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
+              200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
+              500: { label: 'Premium', tag: 80, color: 'bg-purple-600' },
+            }
+            const config = cardConfig[house.stake] || { label: `${house.stake} Birr`, tag: 0, color: 'bg-slate-600' }
+            const isLive = house.phase === 'calling'
+            const isCountdown = house.phase === 'countdown'
+            const isSelected = currentBetHouse === house.stake
+            
+            return (
+              <div key={house.stake} className={`${config.color} rounded-xl p-5 flex flex-col gap-4 ${isSelected ? 'ring-4 ring-yellow-400' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm opacity-90">{config.label}</div>
+                  {isLive && <span className="px-2 py-1 rounded bg-red-500 text-xs font-bold animate-pulse">LIVE</span>}
+                  {isCountdown && <span className="px-2 py-1 rounded bg-yellow-500 text-xs font-bold">Starting</span>}
+                </div>
+                <div className="text-3xl font-extrabold">{house.stake} Birr</div>
+                <div className="text-sm opacity-90">
+                  <div>Active: {house.activePlayers} players</div>
+                  {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
+                  <div>Prize: {house.prize} Birr</div>
+                </div>
+                <div className="mt-auto flex items-center justify-between">
+                  <button
+                    className="px-4 py-2 rounded bg-black/30 hover:bg-black/40 font-semibold"
+                    onClick={() => handleJoinBetHouse(house.stake)}
+                  >
+                    {isSelected ? 'Joined' : isLive ? 'Join & Wait' : 'Play now'}
+                  </button>
+                  <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
+                </div>
               </div>
-            </div>
-          ))}
-          {/* Extra 200 birr */}
-          <div className={`bg-emerald-600 rounded-xl p-5 flex flex-col gap-4`}>
-            <div className="text-sm opacity-90">Elite</div>
-            <div className="text-3xl font-extrabold">200 Birr</div>
-            <div className="mt-auto flex items-center justify-between">
-              <button
-                className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
-                onClick={() => {
-                  setStake(200)
-                  socket?.emit('set_stake', 200)
-                  setCurrentPage('lobby')
-                }}
-              >
-                Play now
-              </button>
-              <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">75</div>
-            </div>
-          </div>
+            )
+          }) : (
+            // Fallback if bet houses not loaded yet
+            [10, 20, 50, 100, 200].map(amount => {
+              const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
+                10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
+                20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
+                50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
+                100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
+                200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
+              }
+              const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
+              return (
+                <div key={amount} className={`${config.color} rounded-xl p-5 flex flex-col gap-4`}>
+                  <div className="text-sm opacity-90">{config.label}</div>
+                  <div className="text-3xl font-extrabold">{amount} Birr</div>
+                  <div className="mt-auto flex items-center justify-between">
+                    <button
+                      className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
+                      onClick={() => handleJoinBetHouse(amount)}
+                    >
+                      Play now
+                    </button>
+                    <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
 
         <div className="text-xs text-slate-400">Version preview</div>

@@ -21,20 +21,57 @@ app.use('/audio', express.static(audioDir));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-const ROOM_ID = 'main';
 const BOARD_SIZE = 75; // BINGO: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 3000;
 
-let state = {
-  phase: 'lobby',
-  countdown: COUNTDOWN_SECONDS,
-  players: new Map(),
-  stake: 10,
-  called: [],
-  timer: null,
-  caller: null,
-};
+// Available stake amounts (bet houses)
+const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];
+
+// Game states for each stake amount (bet house)
+// Key: stake amount, Value: game state object
+const gameStates = new Map();
+
+// Initialize game states for all stake amounts
+AVAILABLE_STAKES.forEach(stake => {
+  const roomId = `room-${stake}`;
+  gameStates.set(stake, {
+    roomId,
+    phase: 'lobby',
+    countdown: COUNTDOWN_SECONDS,
+    players: new Map(), // socket.id -> player object
+    waitingPlayers: new Map(), // socket.id -> player object (players waiting to join next game)
+    stake: stake,
+    called: [],
+    timer: null,
+    caller: null,
+  });
+});
+
+// Helper to get room ID from stake
+function getRoomId(stake) {
+  return `room-${stake}`;
+}
+
+// Helper to get game state for a stake
+function getGameState(stake) {
+  if (!gameStates.has(stake)) {
+    // Initialize if doesn't exist
+    const roomId = getRoomId(stake);
+    gameStates.set(stake, {
+      roomId,
+      phase: 'lobby',
+      countdown: COUNTDOWN_SECONDS,
+      players: new Map(),
+      waitingPlayers: new Map(),
+      stake: stake,
+      called: [],
+      timer: null,
+      caller: null,
+    });
+  }
+  return gameStates.get(stake);
+}
 
 // Store user accounts
 const users = new Map(); // username -> { userId, passwordHash, createdAt }
@@ -56,47 +93,70 @@ function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-function getOnlinePlayers() {
+function getOnlinePlayers(state) {
   return Array.from(state.players.values());
 }
 
-function computePrizePool() {
-  const total = getOnlinePlayers().length * state.stake;
+function computePrizePool(state) {
+  const total = getOnlinePlayers(state).length * state.stake;
   return Math.floor(total * 0.8);
 }
 
-function startCountdown() {
+function startCountdown(stake) {
+  const state = getGameState(stake);
+  const roomId = state.roomId;
+  
   clearInterval(state.timer);
   state.phase = 'countdown';
   state.countdown = COUNTDOWN_SECONDS;
   state.called = [];
-  io.to(ROOM_ID).emit('phase', { phase: state.phase });
-  io.to(ROOM_ID).emit('tick', { seconds: state.countdown, players: getOnlinePlayers().length, prize: computePrizePool(), stake: state.stake });
+  
+  // Move waiting players to active players if game is starting
+  state.waitingPlayers.forEach((player, socketId) => {
+    state.players.set(socketId, player);
+    state.waitingPlayers.delete(socketId);
+  });
+  
+  io.to(roomId).emit('phase', { phase: state.phase, stake });
+  io.to(roomId).emit('tick', { 
+    seconds: state.countdown, 
+    players: getOnlinePlayers(state).length, 
+    prize: computePrizePool(state), 
+    stake: state.stake 
+  });
   
   state.timer = setInterval(() => {
     state.countdown -= 1;
-    io.to(ROOM_ID).emit('tick', { seconds: state.countdown, players: getOnlinePlayers().length, prize: computePrizePool(), stake: state.stake });
+    io.to(roomId).emit('tick', { 
+      seconds: state.countdown, 
+      players: getOnlinePlayers(state).length, 
+      prize: computePrizePool(state), 
+      stake: state.stake 
+    });
     
     if (state.countdown <= 0) {
       clearInterval(state.timer);
       // Only start calling if there are players with boards selected
-      const playersWithBoards = getOnlinePlayers().filter(p => p.picks && p.picks.length > 0);
+      const playersWithBoards = getOnlinePlayers(state).filter(p => p.picks && p.picks.length > 0);
       if (playersWithBoards.length > 0) {
-        startCalling();
+        startCalling(stake);
       } else {
         // No players ready, restart lobby
         state.phase = 'lobby';
-        io.to(ROOM_ID).emit('phase', { phase: state.phase });
-        startCountdown();
+        io.to(roomId).emit('phase', { phase: state.phase, stake });
+        startCountdown(stake);
       }
     }
   }, 1000);
 }
 
-function startCalling() {
+function startCalling(stake) {
+  const state = getGameState(stake);
+  const roomId = state.roomId;
+  
   state.phase = 'calling';
-  io.to(ROOM_ID).emit('phase', { phase: state.phase });
-  io.to(ROOM_ID).emit('game_start');
+  io.to(roomId).emit('phase', { phase: state.phase, stake });
+  io.to(roomId).emit('game_start', { stake });
   
   // Generate BINGO numbers: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
   const numbers = [];
@@ -115,17 +175,47 @@ function startCalling() {
   state.caller = setInterval(() => {
     if (idx >= numbers.length) {
       clearInterval(state.caller);
-      // Game over, restart lobby
+      // Game over, restart lobby and move waiting players in
       state.phase = 'lobby';
-      io.to(ROOM_ID).emit('phase', { phase: state.phase });
-      startCountdown();
+      io.to(roomId).emit('phase', { phase: state.phase, stake });
+      // Reset active players, move waiting players to active
+      state.players.clear();
+      state.waitingPlayers.forEach((player, socketId) => {
+        state.players.set(socketId, player);
+        state.waitingPlayers.delete(socketId);
+      });
+      startCountdown(stake);
       return;
     }
     const n = numbers[idx++];
     state.called.push(n);
-    io.to(ROOM_ID).emit('call', { number: n, called: state.called });
+    io.to(roomId).emit('call', { number: n, called: state.called, stake });
   }, CALL_INTERVAL_MS);
 }
+
+// Get status of all bet houses
+function getAllBetHousesStatus() {
+  const statuses = [];
+  AVAILABLE_STAKES.forEach(stake => {
+    const state = getGameState(stake);
+    const activePlayers = getOnlinePlayers(state).length;
+    const waitingPlayers = state.waitingPlayers.size;
+    statuses.push({
+      stake,
+      phase: state.phase,
+      activePlayers,
+      waitingPlayers,
+      totalPlayers: activePlayers + waitingPlayers,
+      prize: computePrizePool(state),
+      countdown: state.countdown,
+      called: state.called.length
+    });
+  });
+  return statuses;
+}
+
+// Track which room each socket is in
+const socketRooms = new Map(); // socket.id -> stake amount
 
 io.on('connection', (socket) => {
   const auth = socket.handshake.auth;
@@ -137,66 +227,145 @@ io.on('connection', (socket) => {
     return;
   }
   
-  socket.join(ROOM_ID);
-  state.players.set(socket.id, { 
-    id: socket.id, 
-    userId: userId,
-    name: username, 
-    stake: state.stake, 
-    picks: [],
-    ready: false
-  });
-  
   // Initialize balance if not exists
   if (!userBalances.has(userId)) {
     userBalances.set(userId, 0);
   }
   
-  io.to(ROOM_ID).emit('players', { count: getOnlinePlayers().length });
-
-  socket.emit('init', { 
-    phase: state.phase, 
-    seconds: state.countdown, 
-    stake: state.stake, 
-    prize: computePrizePool(), 
-    called: state.called, 
-    playerId: socket.id 
-  });
-  
   // Send balance to client
   socket.emit('balance_update', { balance: userBalances.get(userId) || 0 });
+  
+  // Send all bet houses status on connection
+  socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
-  socket.on('select_numbers', (picks) => {
+  // Join a specific bet house (stake amount)
+  socket.on('join_bet_house', (stakeAmount) => {
+    const stake = Number(stakeAmount);
+    if (!AVAILABLE_STAKES.includes(stake)) {
+      socket.emit('error', { message: 'Invalid stake amount' });
+      return;
+    }
+    
+    // Leave previous room if any
+    const previousStake = socketRooms.get(socket.id);
+    if (previousStake && previousStake !== stake) {
+      const prevState = getGameState(previousStake);
+      const prevRoomId = prevState.roomId;
+      socket.leave(prevRoomId);
+      prevState.players.delete(socket.id);
+      prevState.waitingPlayers.delete(socket.id);
+      io.to(prevRoomId).emit('players', { 
+        count: getOnlinePlayers(prevState).length, 
+        waitingCount: prevState.waitingPlayers.size,
+        stake: previousStake 
+      });
+    }
+    
+    // Join new room
+    const state = getGameState(stake);
+    const roomId = state.roomId;
+    socket.join(roomId);
+    socketRooms.set(socket.id, stake);
+    
+    // Add player to waiting players (they can select boards even during live games)
+    const player = {
+      id: socket.id,
+      userId: userId,
+      name: username,
+      stake: stake,
+      picks: [],
+      ready: false
+    };
+    
+    // If game is live, add to waiting players; otherwise add to active players
+    if (state.phase === 'calling') {
+      state.waitingPlayers.set(socket.id, player);
+    } else {
+      state.players.set(socket.id, player);
+    }
+    
+    // Send current state to player
+    socket.emit('init', {
+      phase: state.phase,
+      seconds: state.countdown,
+      stake: state.stake,
+      prize: computePrizePool(state),
+      called: state.called,
+      playerId: socket.id,
+      isWaiting: state.phase === 'calling'
+    });
+    
+    // Update room with player count
+    io.to(roomId).emit('players', {
+      count: getOnlinePlayers(state).length,
+      waitingCount: state.waitingPlayers.size,
+      stake: stake
+    });
+    
+    // Broadcast updated bet houses status to all clients
+    io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+  });
+
+  socket.on('select_numbers', (data) => {
+    const { picks, stake: stakeAmount } = data;
     if (!Array.isArray(picks) || picks.length > 2) return;
-    const player = state.players.get(socket.id);
+    
+    const stake = Number(stakeAmount);
+    if (!socketRooms.has(socket.id) || socketRooms.get(socket.id) !== stake) {
+      return;
+    }
+    
+    const state = getGameState(stake);
+    const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (!player) return;
+    
     player.picks = picks;
   });
 
-  socket.on('start_game', () => {
-    const player = state.players.get(socket.id);
+  socket.on('start_game', (data) => {
+    const stake = Number(data?.stake || socketRooms.get(socket.id));
+    if (!stake || !socketRooms.has(socket.id) || socketRooms.get(socket.id) !== stake) {
+      return;
+    }
+    
+    const state = getGameState(stake);
+    const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (!player || player.picks.length === 0) return;
+    
     player.ready = true;
     
-    // Confirm the player is ready and redirect them to game page
-    socket.emit('start_game_confirm');
+    // If player was waiting and game is live, keep them in waiting
+    // Otherwise, move them to active players if not already there
+    if (state.phase !== 'calling' && state.waitingPlayers.has(socket.id)) {
+      state.waitingPlayers.delete(socket.id);
+      state.players.set(socket.id, player);
+    }
+    
+    // Confirm the player is ready
+    socket.emit('start_game_confirm', { stake, isWaiting: state.phase === 'calling' });
     
     // If we're in countdown phase and player is ready, they can join the game
     if (state.phase === 'countdown') {
-      // Player is ready to play, they'll be redirected to game page
-      socket.emit('game_start');
+      socket.emit('game_start', { stake });
     }
+    
+    // Update room
+    const roomId = state.roomId;
+    io.to(roomId).emit('players', {
+      count: getOnlinePlayers(state).length,
+      waitingCount: state.waitingPlayers.size,
+      stake: stake
+    });
   });
 
-  // Allow clients to choose a stake (bet house)
-  socket.on('set_stake', (amount) => {
-    const num = Number(amount)
-    if (!Number.isFinite(num) || num <= 0) return
-    state.stake = num
-    io.to(ROOM_ID).emit('tick', { seconds: state.countdown, players: getOnlinePlayers().length, prize: computePrizePool(), stake: state.stake })
-  })
-
-  socket.on('bingo', () => {
+  socket.on('bingo', (data) => {
+    const stake = Number(data?.stake || socketRooms.get(socket.id));
+    if (!stake || !socketRooms.has(socket.id) || socketRooms.get(socket.id) !== stake) {
+      return;
+    }
+    
+    const state = getGameState(stake);
+    const roomId = state.roomId;
     const player = state.players.get(socket.id);
     if (!player || !player.picks || player.picks.length === 0) return;
     
@@ -204,27 +373,62 @@ io.on('connection', (socket) => {
     const hasValidBingo = true; // Placeholder - implement actual board validation
     
     if (hasValidBingo) {
-      io.to(ROOM_ID).emit('winner', { playerId: socket.id, prize: computePrizePool() });
+      const prize = computePrizePool(state);
+      io.to(roomId).emit('winner', { playerId: socket.id, prize, stake });
+      
+      // Award prize to winner
+      const winnerBalance = userBalances.get(player.userId) || 0;
+      userBalances.set(player.userId, winnerBalance + prize);
+      socket.emit('balance_update', { balance: userBalances.get(player.userId) });
+      
       clearInterval(state.caller);
       clearInterval(state.timer);
-      // Reset all players
-      state.players.forEach(p => {
-        p.picks = [];
-        p.ready = false;
+      
+      // Reset active players, move waiting players to active for next game
+      state.players.clear();
+      state.waitingPlayers.forEach((waitingPlayer, socketId) => {
+        waitingPlayer.picks = [];
+        waitingPlayer.ready = false;
+        state.players.set(socketId, waitingPlayer);
       });
+      state.waitingPlayers.clear();
+      
       state.phase = 'lobby';
-      io.to(ROOM_ID).emit('phase', { phase: state.phase });
-      startCountdown();
+      io.to(roomId).emit('phase', { phase: state.phase, stake });
+      
+      // Broadcast updated bet houses status
+      io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+      
+      startCountdown(stake);
     } else {
       // Invalid bingo - disqualify player
       player.disqualified = true;
-      socket.emit('bingo_result', { valid: false, message: 'Invalid BINGO!' });
+      socket.emit('bingo_result', { valid: false, message: 'Invalid BINGO!', stake });
     }
   });
 
+  socket.on('get_bet_houses_status', () => {
+    socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+  });
+
   socket.on('disconnect', () => {
-    state.players.delete(socket.id);
-    io.to(ROOM_ID).emit('players', { count: getOnlinePlayers().length });
+    const stake = socketRooms.get(socket.id);
+    if (stake) {
+      const state = getGameState(stake);
+      const roomId = state.roomId;
+      state.players.delete(socket.id);
+      state.waitingPlayers.delete(socket.id);
+      socketRooms.delete(socket.id);
+      
+      io.to(roomId).emit('players', {
+        count: getOnlinePlayers(state).length,
+        waitingCount: state.waitingPlayers.size,
+        stake: stake
+      });
+      
+      // Broadcast updated bet houses status
+      io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+    }
   });
 });
 
@@ -315,9 +519,12 @@ app.post('/api/deposit', (req, res) => {
     userBalances.set(userId, currentBalance + amountNum);
     transactionIds.add(transactionId);
     
-    // Notify client of balance update
+    // Notify client of balance update (search across all rooms)
     const playerSocket = Array.from(io.sockets.sockets.values()).find(s => {
-      const player = state.players.get(s.id);
+      const stake = socketRooms.get(s.id);
+      if (!stake) return false;
+      const state = getGameState(stake);
+      const player = state.players.get(s.id) || state.waitingPlayers.get(s.id);
       return player && player.userId === userId;
     });
     if (playerSocket) {
@@ -371,9 +578,12 @@ app.post('/api/withdrawal', (req, res) => {
     // Deduct balance immediately (in production, you might want to hold it pending)
     userBalances.set(userId, currentBalance - amountNum);
     
-    // Notify client of balance update
+    // Notify client of balance update (search across all rooms)
     const playerSocket = Array.from(io.sockets.sockets.values()).find(s => {
-      const player = state.players.get(s.id);
+      const stake = socketRooms.get(s.id);
+      if (!stake) return false;
+      const state = getGameState(stake);
+      const player = state.players.get(s.id) || state.waitingPlayers.get(s.id);
       return player && player.userId === userId;
     });
     if (playerSocket) {
@@ -596,14 +806,28 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000); // Every hour
 
+// API endpoint to get all bet houses status
+app.get('/api/bet-houses', (_req, res) => {
+  res.json({ success: true, betHouses: getAllBetHousesStatus() });
+});
+
 app.get('/', (_req, res) => {
-  res.send('Go Bingo server running');
+  res.json({ 
+    message: 'Win Bingo server running',
+    betHouses: getAllBetHousesStatus()
+  });
 });
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server listening on :${PORT}`);
-  if (!state.timer && state.phase === 'lobby') startCountdown();
+  // Initialize countdowns for all bet houses
+  AVAILABLE_STAKES.forEach(stake => {
+    const state = getGameState(stake);
+    if (!state.timer && state.phase === 'lobby') {
+      startCountdown(stake);
+    }
+  });
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`\n❌ Error: Port ${PORT} is already in use!`);
