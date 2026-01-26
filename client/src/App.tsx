@@ -403,15 +403,12 @@ export default function App() {
     ]
 
     const headers = ['B', 'I', 'N', 'G', 'O']
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
 
     return (
-      <div className="w-full">
+      <div>
         <div className="grid grid-cols-5 gap-1 mb-2">
-          {headers.map((h, idx) => (
-            <div key={h} className={`${headerColors[idx]} rounded text-center font-bold text-white py-1 text-xs sm:text-sm`}>
-              {h}
-            </div>
+          {headers.map(h => (
+            <div key={h} className="text-center font-bold text-slate-300">{h}</div>
           ))}
         </div>
         <div className="grid grid-cols-5 gap-1">
@@ -423,8 +420,8 @@ export default function App() {
                   <div
                     key={n}
                     className={[
-                      'h-5 sm:h-6 md:h-7 w-full rounded text-[10px] sm:text-xs md:text-sm flex items-center justify-center border',
-                      isCalled ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-300'
+                      'h-7 w-full rounded text-xs md:text-sm flex items-center justify-center border',
+                      isCalled ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-slate-700 border-slate-600 text-slate-300'
                     ].join(' ')}
                   >
                     {n}
@@ -562,58 +559,30 @@ export default function App() {
     if (!grid) return (
       <div className="text-slate-400">Board {boardId} not found</div>
     )
-    
-    // Check if this board can form a bingo
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false
-    
-    const headers = ['B', 'I', 'N', 'G', 'O']
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
-    
     return (
-      <div className="w-full">
-        {/* Colored BINGO headers */}
-        <div className="grid grid-cols-5 gap-1 mb-1">
-          {headers.map((h, idx) => (
-            <div key={h} className={`${headerColors[idx]} rounded text-center font-bold text-white py-1 text-xs sm:text-sm`}>
-              {h}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-5 gap-1">
-          {grid.map((val, idx) => {
-            const isFree = val === -1
-            const isMarked = isFree || markedNumbers.has(val)
-            const isCalled = called.includes(val)
-            const shouldHighlight = isGamePage 
-              ? (autoAlgoMark ? (isFree || isCalled) : isMarked)
-              : isCalled
-            // Show star if marked and can form bingo
-            const showStar = isGamePage && boardCanBingo && isMarked && !isFree
+      <div className="grid grid-cols-5 gap-1">
+        {grid.map((val, idx) => {
+          const isFree = val === -1
+          const isMarked = isFree || markedNumbers.has(val)
+          const isCalled = called.includes(val)
+          const shouldHighlight = isGamePage 
+            ? (autoAlgoMark ? (isFree || isCalled) : isMarked)
+            : isCalled
 
-            return (
-              <div 
-                key={idx} 
-                onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
-                className={[
-                  'aspect-square rounded text-xs sm:text-sm flex items-center justify-center border cursor-pointer relative',
-                  shouldHighlight ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-200',
-                  isGamePage && !isFree && isCalled ? 'hover:brightness-110' : ''
-                ].join(' ')}
-              >
-                {isFree ? (
-                  <span className="text-emerald-300 font-bold text-[10px] sm:text-xs">FREE</span>
-                ) : (
-                  <>
-                    <span>{val}</span>
-                    {showStar && (
-                      <span className="absolute -top-1 -left-1 text-green-400 text-lg">★</span>
-                    )}
-                  </>
-                )}
-              </div>
-            )
-          })}
-        </div>
+  return (
+            <div 
+              key={idx} 
+              onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
+              className={[
+                'h-7 w-full rounded text-xs flex items-center justify-center border cursor-pointer',
+                shouldHighlight ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-slate-700 border-slate-600',
+                isGamePage && !isFree && isCalled ? 'hover:brightness-110' : ''
+              ].join(' ')}
+            >
+              {isFree ? 'FREE' : val}
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -1293,120 +1262,99 @@ export default function App() {
   }
 
 
-  const renderGamePage = () => {
-    // Get last 5 called numbers for recently called display
-    const recentlyCalled = called.slice(-5).reverse()
-    
-    return (
-      <div className="min-h-screen bg-slate-900 text-white p-2 sm:p-4">
-        <div className="w-full max-w-7xl mx-auto">
-          {/* Info Boxes: Stake, Players, Prize */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-4">
-            {/* Stake Box - Orange */}
-            <div className="bg-orange-500 rounded-lg sm:rounded-xl p-2 sm:p-4">
-              <div className="text-[10px] sm:text-xs opacity-90 mb-1">Stake</div>
-              <div className="text-lg sm:text-2xl font-bold">{stake} Birr</div>
+  const renderGamePage = () => (
+    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Game Info */}
+        <div className="bg-slate-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-slate-300 text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
+            <div className="flex gap-3 text-sm">
+              <span>Stake: <b>{stake.toFixed(2)}</b></span>
+              <span>Players: <b>{players}</b></span>
+              <span>Prize: <b>{prize}</b></span>
             </div>
-            
-            {/* Players Box - Blue */}
-            <div className="bg-blue-600 rounded-lg sm:rounded-xl p-2 sm:p-4">
-              <div className="text-[10px] sm:text-xs opacity-90 mb-1">Players</div>
-              <div className="text-lg sm:text-2xl font-bold">{players}</div>
-            </div>
-            
-            {/* Prize Box - Green */}
-            <div className="bg-green-600 rounded-lg sm:rounded-xl p-2 sm:p-4">
-              <div className="text-[10px] sm:text-xs opacity-90 mb-1">Prize</div>
-              <div className="text-lg sm:text-2xl font-bold">{prize} Birr</div>
+          </div>
+          
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-lg font-semibold">Live Game</div>
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1 rounded bg-slate-700 font-mono" title="Time until next game start">
+                {String(seconds).padStart(2,"0")}s
+              </div>
+              {phase === 'calling' && (
+                <div className="px-3 py-1 rounded bg-emerald-700 font-mono" title="Next call in">
+                  {String(callCountdown).padStart(2,'0')}s
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Recently Called Numbers */}
-          {called.length > 0 && (
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 mb-3 sm:mb-4">
-              <div className="text-[10px] sm:text-xs text-slate-400 mb-2">Recently Called Numbers:</div>
-              <div className="flex gap-1 sm:gap-2 flex-wrap">
-                {recentlyCalled.map((num, idx) => {
-                  const letter = num <= 15 ? 'B' : num <= 30 ? 'I' : num <= 45 ? 'N' : num <= 60 ? 'G' : 'O'
-                  const colors = ['bg-green-500', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500']
-                  return (
-                    <div
-                      key={`${num}-${idx}`}
-                      className={`${colors[idx % colors.length]} rounded px-2 sm:px-3 py-1 sm:py-2 font-bold text-[10px] sm:text-xs`}
-                    >
-                      {letter}-{num}
-                    </div>
-                  )
-                })}
+          {/* Big last-called number display */}
+          {phase === 'calling' && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-4xl md:text-5xl font-black tracking-wide">
+                {lastCalled ? `${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}` : 'Waiting...'}
+              </div>
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-300">Audio:</span>
+                  <select
+                    className="bg-slate-700 text-slate-100 rounded px-2 py-1"
+                    value={audioPack}
+                    onChange={(e) => setAudioPack(e.target.value)}
+                  >
+                    <option value="amharic">Amharic</option>
+                    <option value="modern-amharic">Modern Amharic</option>
+                  </select>
+                  <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} />
+                  <button
+                    className="ml-2 px-2 py-1 rounded bg-slate-700 hover:brightness-110"
+                    onClick={() => lastCalled ? playCallSound(lastCalled) : undefined}
+                  >
+                    Test
+                  </button>
+                </label>
               </div>
             </div>
           )}
+          
+          <div className="text-slate-300 mb-2">Caller:</div>
+          <div className="mb-6">
+            {renderCallerGrid()}
+          </div>
+          
+          <button
+            onClick={onPressBingo}
+            disabled={autoAlgoMark ? false : !canBingo}
+            className={`w-full py-3 rounded text-lg font-bold ${
+              autoAlgoMark || canBingo
+                ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
+                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            BINGO!
+          </button>
+        </div>
 
-          {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
-            {/* Left: Main Caller Board */}
-            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
-                <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
-                <div className="flex items-center gap-2">
-                  <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
-                    {String(seconds).padStart(2,"0")}s
-                  </div>
-                  {phase === 'calling' && (
-                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
-                      {String(callCountdown).padStart(2,'0')}s
-                    </div>
-                  )}
-                </div>
+        {/* Player Boards - vertical list */}
+        <div className="bg-slate-800 rounded-xl p-4">
+          <div className="text-slate-300 mb-4">Your Boards:</div>
+          <div className="flex flex-col gap-6">
+            {picks.map((boardId) => (
+              <div key={boardId} className="text-center">
+                <div className="text-sm text-slate-400 mb-2">Board {boardId}</div>
+                {renderCard(boardId, true)}
               </div>
-
-              {/* Big last-called number display */}
-              {phase === 'calling' && lastCalled && (
-                <div className="mb-3 sm:mb-4">
-                  <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
-                    {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs sm:text-sm text-slate-300 mb-2">Caller:</div>
-              <div className="mb-4 overflow-x-auto">
-                {renderCallerGrid()}
-              </div>
-              
-              <button
-                onClick={onPressBingo}
-                disabled={autoAlgoMark ? false : !canBingo}
-                className={`w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
-                  autoAlgoMark || canBingo
-                    ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
-                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                BINGO!
-              </button>
-            </div>
-
-            {/* Right: Player Boards */}
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4">
-              <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
-              <div className="space-y-4 sm:space-y-6">
-                {picks.map((boardId) => (
-                  <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-3">
-                    <div className="text-xs sm:text-sm text-slate-300 mb-2">Board {boardId}</div>
-                    {renderCard(boardId, true)}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
-                Click on called numbers to mark them. FREE is always marked.
-              </div>
-            </div>
+            ))}
+          </div>
+          <div className="mt-4 text-xs text-slate-400">
+            Click on called numbers to mark them. FREE is always marked.
           </div>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
