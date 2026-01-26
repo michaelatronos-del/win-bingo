@@ -111,11 +111,10 @@ export default function App() {
       setPlayerId(d.playerId)
       setIsWaiting(d.isWaiting || false)
       setCurrentBetHouse(d.stake)
-      // Only redirect to game if we're already in lobby, not if we're on welcome page
-      if (d.phase === 'calling' && !d.isWaiting && currentPage === 'lobby') {
+      // If server is already in calling phase and we're not waiting, go to game
+      if (d.phase === 'calling' && !d.isWaiting) {
         setCurrentPage('game')
       }
-      // If we're on welcome page, stay there - don't auto-redirect to lobby
     })
     
     s.on('tick', (d: any) => { 
@@ -201,7 +200,12 @@ export default function App() {
     return () => { s.disconnect() }
   }, [isAuthenticated, userId, username])
   
-  // Don't auto-join - let user select bet house from welcome page
+  // Auto-join default bet house when socket is ready
+  useEffect(() => {
+    if (socket && !currentBetHouse) {
+      handleJoinBetHouse(10)
+    }
+  }, [socket, currentBetHouse])
 
   // Restore picks from localStorage and persist changes
   useEffect(() => {
@@ -271,11 +275,7 @@ export default function App() {
     setIsReady(false)
     setIsWaiting(false)
     socket.emit('join_bet_house', stakeAmount)
-    // Only go to lobby if user explicitly joined (not on initial connection)
-    // If already on welcome page, stay there until they click "Play now"
-    if (currentPage !== 'welcome') {
-      setCurrentPage('lobby')
-    }
+    setCurrentPage('lobby')
   }
 
   const handleStartGame = () => {
@@ -1027,12 +1027,9 @@ export default function App() {
                 <div className="mt-auto flex items-center justify-between">
                   <button
                     className="px-4 py-2 rounded bg-black/30 hover:bg-black/40 font-semibold"
-                    onClick={() => {
-                      handleJoinBetHouse(house.stake)
-                      setCurrentPage('lobby')
-                    }}
+                    onClick={() => handleJoinBetHouse(house.stake)}
                   >
-                    {isSelected ? 'Go to Lobby' : isLive ? 'Join & Wait' : 'Play now'}
+                    {isSelected ? 'Joined' : isLive ? 'Join & Wait' : 'Play now'}
                   </button>
                   <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
                 </div>
@@ -1056,10 +1053,7 @@ export default function App() {
                   <div className="mt-auto flex items-center justify-between">
                     <button
                       className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
-                      onClick={() => {
-                        handleJoinBetHouse(amount)
-                        setCurrentPage('lobby')
-                      }}
+                      onClick={() => handleJoinBetHouse(amount)}
                     >
                       Play now
                     </button>
