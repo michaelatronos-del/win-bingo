@@ -163,7 +163,8 @@ export default function App() {
           return next
         })
       }
-      if (audioOn) {
+      // Only play audio for active players in the current live game
+      if (audioOn && !isWaiting && phase === 'calling') {
         playCallSound(d.number)
       }
     })
@@ -446,6 +447,9 @@ export default function App() {
 
   // Audio: try to play a sound for each call using selected pack
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
+
+  // Cache audio elements so calls play instantly after first load
+  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   // Parse amount from deposit/withdrawal message
   const parseAmount = (message: string): number | null => {
     // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
@@ -548,13 +552,18 @@ export default function App() {
     ]
     for (const src of candidates) {
       try {
-        await new Promise<void>((resolve, reject) => {
-          const audio = new Audio(src)
-          audio.oncanplaythrough = () => {
-            audio.play().then(() => resolve()).catch(reject)
-          }
-          audio.onerror = reject
-        })
+        let audio = audioCacheRef.current.get(src)
+        if (!audio) {
+          audio = new Audio(src)
+          audioCacheRef.current.set(src, audio)
+          // Wait for the first load only
+          await new Promise<void>((resolve, reject) => {
+            audio!.oncanplaythrough = () => resolve()
+            audio!.onerror = reject
+          })
+        }
+        audio.currentTime = 0
+        await audio.play()
         break
       } catch (_) {
         continue

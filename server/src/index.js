@@ -95,8 +95,15 @@ function getOnlinePlayers(state) {
 }
 
 function computePrizePool(state) {
-  const total = getOnlinePlayers(state).length * state.stake;
-  return Math.floor(total * 0.8);
+  // Prize = 80% of (total selected boards * stake)
+  let totalBoards = 0;
+  state.players.forEach(player => {
+    if (Array.isArray(player.picks)) {
+      totalBoards += player.picks.length;
+    }
+  });
+  const totalBetAmount = totalBoards * state.stake;
+  return Math.floor(totalBetAmount * 0.8);
 }
 
 function startCountdown(stake) {
