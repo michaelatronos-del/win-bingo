@@ -116,7 +116,6 @@ export default function App() {
       if (d.phase === 'calling' && !d.isWaiting && currentPage === 'lobby') {
         setCurrentPage('game')
       }
-      // If we're on welcome page, stay there - don't auto-redirect to lobby
     })
     
     s.on('tick', (d: any) => { 
@@ -144,14 +143,16 @@ export default function App() {
         setBetHouses(d.betHouses)
       }
     })
+
+    // Boards reserved in this room
     s.on('boards_taken', (d: any) => {
-      if (d.stake && d.takenBoards && d.stake === currentBetHouse) {
+      if (d.takenBoards) {
         setTakenBoards(d.takenBoards as number[])
       }
     })
+
+    // Number calls for the current room (socket is only in one room)
     s.on('call', (d: any) => {
-      // Only process calls for current bet house
-      if (d.stake === currentBetHouse) {
       setCalled(d.called)
       setLastCalled(d.number)
       setCallCountdown(3)
@@ -164,26 +165,21 @@ export default function App() {
       }
       if (audioOn) {
         playCallSound(d.number)
-        }
       }
     })
     
     s.on('winner', (d: any) => { 
-      // Only process winner for current bet house
-      if (d.stake === currentBetHouse) {
       alert(`Winner: ${d.playerId}\nPrize: ${d.prize}`)
       setPicks([])
       setMarkedNumbers(new Set())
       setCurrentPage('lobby')
       setIsReady(false)
-        setIsWaiting(false)
-      }
+      setIsWaiting(false)
     })
     
-    s.on('game_start', (d: any) => {
-      // Only redirect if it's for our bet house and we're not waiting
-      if (d.stake === currentBetHouse && !isWaiting) {
-      setCurrentPage('game')
+    s.on('game_start', () => {
+      if (!isWaiting) {
+        setCurrentPage('game')
       }
     })
     
@@ -191,8 +187,8 @@ export default function App() {
       if (d.isWaiting) {
         setIsWaiting(true)
         // Stay on lobby/board selection page if waiting
-      } else if (d.stake === currentBetHouse) {
-      setCurrentPage('game')
+      } else {
+        setCurrentPage('game')
         setIsWaiting(false)
       }
     })
@@ -205,7 +201,7 @@ export default function App() {
     s.emit('get_bet_houses_status')
     
     return () => { s.disconnect() }
-  }, [isAuthenticated, userId, username, currentBetHouse])
+  }, [isAuthenticated, userId, username])
   
   // Don't auto-join - let user select bet house from welcome page
 
