@@ -131,6 +131,14 @@ export default function App() {
       if (d.phase === 'calling' && currentPage === 'lobby' && !isWaiting) {
         setCurrentPage('game')
       }
+      // Whenever phase switches back to lobby, reset local selection state
+      if (d.phase === 'lobby') {
+        setPicks([])
+        setMarkedNumbers(new Set())
+        setIsReady(false)
+        setIsWaiting(false)
+        setTakenBoards([])
+      }
     })
     
     s.on('players', (d: any) => {
@@ -1321,15 +1329,22 @@ export default function App() {
             <button
               onClick={() => {
                 // Leave the current game on the server and return to welcome page
+                const previousStake = currentBetHouse
                 socket?.emit('leave_current_game')
-                setCurrentBetHouse(null)
                 setPicks([])
                 setMarkedNumbers(new Set())
-                setPhase('lobby')
                 setIsReady(false)
                 setIsWaiting(false)
                 setTakenBoards([])
-                setCurrentPage('welcome')
+                setPhase('lobby')
+                // Return to the same bet house's selecting page if we know it
+                if (previousStake) {
+                  setCurrentBetHouse(previousStake)
+                  setStake(previousStake)
+                  setCurrentPage('lobby')
+                } else {
+                  setCurrentPage('welcome')
+                }
               }}
               className="px-3 py-1 sm:px-4 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
             >

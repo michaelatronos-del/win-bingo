@@ -94,15 +94,19 @@ function getOnlinePlayers(state) {
   return Array.from(state.players.values());
 }
 
-function computePrizePool(state) {
-  // Prize = 80% of (total selected boards * stake)
+function getTotalSelectedBoards(state) {
   let totalBoards = 0;
   state.players.forEach(player => {
     if (Array.isArray(player.picks)) {
       totalBoards += player.picks.length;
     }
   });
-  const totalBetAmount = totalBoards * state.stake;
+  return totalBoards;
+}
+
+function computePrizePool(state) {
+  // Prize = 80% of (total selected boards * stake)
+  const totalBetAmount = getTotalSelectedBoards(state) * state.stake;
   return Math.floor(totalBetAmount * 0.8);
 }
 
@@ -131,7 +135,7 @@ function startCountdown(stake) {
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('tick', { 
     seconds: state.countdown, 
-    players: getOnlinePlayers(state).length, 
+    players: getTotalSelectedBoards(state), 
     prize: computePrizePool(state), 
     stake: state.stake 
   });
@@ -140,7 +144,7 @@ function startCountdown(stake) {
     state.countdown -= 1;
     io.to(roomId).emit('tick', { 
       seconds: state.countdown, 
-      players: getOnlinePlayers(state).length, 
+      players: getTotalSelectedBoards(state), 
       prize: computePrizePool(state), 
       stake: state.stake 
     });
@@ -210,7 +214,7 @@ function getAllBetHousesStatus() {
   const statuses = [];
   AVAILABLE_STAKES.forEach(stake => {
     const state = getGameState(stake);
-    const activePlayers = getOnlinePlayers(state).length;
+    const activePlayers = getTotalSelectedBoards(state);
     const waitingPlayers = state.waitingPlayers.size;
     statuses.push({
       stake,
@@ -309,7 +313,7 @@ io.on('connection', (socket) => {
   
     // Update room with player count
     io.to(roomId).emit('players', {
-      count: getOnlinePlayers(state).length,
+      count: getTotalSelectedBoards(state),
       waitingCount: state.waitingPlayers.size,
       stake: stake
     });
@@ -488,7 +492,7 @@ io.on('connection', (socket) => {
       socketRooms.delete(socket.id);
       
       io.to(roomId).emit('players', {
-        count: getOnlinePlayers(state).length,
+        count: getTotalSelectedBoards(state),
         waitingCount: state.waitingPlayers.size,
         stake: stake
       });
