@@ -32,20 +32,27 @@ const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];
 // Key: stake amount, Value: game state object
 const gameStates = new Map();
 
-// Initialize game states for all stake amounts
-AVAILABLE_STAKES.forEach(stake => {
-  const roomId = `room-${stake}`;
-  gameStates.set(stake, {
+// Helper to create an empty game state for a given stake
+function createEmptyGameState(stake, roomIdOverride) {
+  const roomId = roomIdOverride || `room-${stake}`;
+  return {
     roomId,
     phase: 'lobby',
     countdown: COUNTDOWN_SECONDS,
-    players: new Map(), // socket.id -> player object
-    waitingPlayers: new Map(), // socket.id -> player object (players waiting to join next game)
-    stake: stake,
+    players: new Map(), // active players in current game
+    waitingPlayers: new Map(), // players waiting for next game
+    takenBoards: new Set(), // reserved board numbers in current selection phase
+    stake,
     called: [],
     timer: null,
     caller: null,
-  });
+  };
+}
+
+// Initialize game states for all stake amounts
+AVAILABLE_STAKES.forEach(stake => {
+  const roomId = `room-${stake}`;
+  gameStates.set(stake, createEmptyGameState(stake, roomId));
 });
 
 // Helper to get room ID from stake
@@ -58,17 +65,7 @@ function getGameState(stake) {
   if (!gameStates.has(stake)) {
     // Initialize if doesn't exist
     const roomId = getRoomId(stake);
-    gameStates.set(stake, {
-      roomId,
-      phase: 'lobby',
-      countdown: COUNTDOWN_SECONDS,
-      players: new Map(),
-      waitingPlayers: new Map(),
-      stake: stake,
-      called: [],
-      timer: null,
-      caller: null,
-    });
+    gameStates.set(stake, createEmptyGameState(stake, roomId));
   }
   return gameStates.get(stake);
 }
@@ -116,6 +113,13 @@ function startCountdown(stake) {
     state.players.set(socketId, player);
     state.waitingPlayers.delete(socketId);
   });
+  // Reset taken boards based on current active players
+  state.takenBoards = new Set();
+  state.players.forEach(player => {
+    if (Array.isArray(player.picks)) {
+      player.picks.forEach(boardId => state.takenBoards.add(boardId));
+    }
+  });
   
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('tick', { 
@@ -136,8 +140,9 @@ function startCountdown(stake) {
     
     if (state.countdown <= 0) {
       clearInterval(state.timer);
-      // Only start calling if there are players with boards selected
-      const playersWithBoards = getOnlinePlayers(state).filter(p => p.picks && p.picks.length > 0);
+      // Only start calling if there are players with boards selected.
+      // Consider any active player that has at least one board selected.
+      const playersWithBoards = getOnlinePlayers(state).filter(p => Array.isArray(p.picks) && p.picks.length > 0);
       if (playersWithBoards.length > 0) {
         startCalling(stake);
       } else {
@@ -285,16 +290,16 @@ io.on('connection', (socket) => {
     }
     
     // Send current state to player
-    socket.emit('init', {
-      phase: state.phase,
-      seconds: state.countdown,
-      stake: state.stake,
+  socket.emit('init', { 
+    phase: state.phase, 
+    seconds: state.countdown, 
+    stake: state.stake, 
       prize: computePrizePool(state),
-      called: state.called,
+    called: state.called, 
       playerId: socket.id,
       isWaiting: state.phase === 'calling'
-    });
-    
+  });
+  
     // Update room with player count
     io.to(roomId).emit('players', {
       count: getOnlinePlayers(state).length,
@@ -319,7 +324,23 @@ io.on('connection', (socket) => {
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (!player) return;
     
-    player.picks = picks;
+    // Release previously taken boards for this player
+    if (Array.isArray(player.picks)) {
+      player.picks.forEach(boardId => state.takenBoards.delete(boardId));
+    }
+    
+    // Reserve new boards and assign to player
+    const uniquePicks = Array.from(new Set(picks));
+    const availablePicks = uniquePicks.filter(boardId => !state.takenBoards.has(boardId));
+    availablePicks.forEach(boardId => state.takenBoards.add(boardId));
+    player.picks = availablePicks;
+
+    // Notify room about taken boards so other players can see which boards are unavailable
+    const roomId = state.roomId;
+    io.to(roomId).emit('boards_taken', {
+      stake,
+      takenBoards: Array.from(state.takenBoards),
+    });
   });
 
   socket.on('start_game', (data) => {
@@ -392,6 +413,7 @@ io.on('connection', (socket) => {
         state.players.set(socketId, waitingPlayer);
       });
       state.waitingPlayers.clear();
+      state.takenBoards = new Set();
       
       state.phase = 'lobby';
       io.to(roomId).emit('phase', { phase: state.phase, stake });
@@ -411,11 +433,49 @@ io.on('connection', (socket) => {
     socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
   });
 
+  // Allow player to leave current game (but stay connected)
+  socket.on('leave_current_game', () => {
+    const stake = socketRooms.get(socket.id);
+    if (!stake) return;
+    const state = getGameState(stake);
+    const roomId = state.roomId;
+
+    // Release any boards taken by this player
+    const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
+    if (player && Array.isArray(player.picks)) {
+      player.picks.forEach(boardId => state.takenBoards.delete(boardId));
+    }
+
+    // Remove player from current game state and room
+    state.players.delete(socket.id);
+    state.waitingPlayers.delete(socket.id);
+    socket.leave(roomId);
+    socketRooms.delete(socket.id);
+
+    io.to(roomId).emit('players', {
+      count: getOnlinePlayers(state).length,
+      waitingCount: state.waitingPlayers.size,
+      stake,
+    });
+
+    // Broadcast updated bet houses and taken boards
+    io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+    io.to(roomId).emit('boards_taken', {
+      stake,
+      takenBoards: Array.from(state.takenBoards),
+    });
+  });
+
   socket.on('disconnect', () => {
     const stake = socketRooms.get(socket.id);
     if (stake) {
       const state = getGameState(stake);
       const roomId = state.roomId;
+      // Release any boards taken by this player
+      const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
+      if (player && Array.isArray(player.picks)) {
+        player.picks.forEach(boardId => state.takenBoards.delete(boardId));
+      }
       state.players.delete(socket.id);
       state.waitingPlayers.delete(socket.id);
       socketRooms.delete(socket.id);
@@ -428,6 +488,11 @@ io.on('connection', (socket) => {
       
       // Broadcast updated bet houses status
       io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+      // Broadcast updated taken boards for this stake
+      io.to(roomId).emit('boards_taken', {
+        stake,
+        takenBoards: Array.from(state.takenBoards),
+      });
     }
   });
 });

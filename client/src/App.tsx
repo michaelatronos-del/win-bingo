@@ -29,6 +29,7 @@ export default function App() {
   const [seconds, setSeconds] = useState<number>(60)
   const [prize, setPrize] = useState<number>(0)
   const [players, setPlayers] = useState<number>(0)
+  const [takenBoards, setTakenBoards] = useState<number[]>([])
   const [waitingPlayers, setWaitingPlayers] = useState<number>(0)
   const [isWaiting, setIsWaiting] = useState<boolean>(false)
   const [betHouses, setBetHouses] = useState<any[]>([])
@@ -143,21 +144,26 @@ export default function App() {
         setBetHouses(d.betHouses)
       }
     })
+    s.on('boards_taken', (d: any) => {
+      if (d.stake && d.takenBoards && d.stake === currentBetHouse) {
+        setTakenBoards(d.takenBoards as number[])
+      }
+    })
     s.on('call', (d: any) => {
       // Only process calls for current bet house
       if (d.stake === currentBetHouse) {
-        setCalled(d.called)
-        setLastCalled(d.number)
-        setCallCountdown(3)
-        if (autoMark || autoAlgoMark) {
-          setMarkedNumbers(prev => {
-            const next = new Set(prev)
-            next.add(d.number)
-            return next
-          })
-        }
-        if (audioOn) {
-          playCallSound(d.number)
+      setCalled(d.called)
+      setLastCalled(d.number)
+      setCallCountdown(3)
+      if (autoMark || autoAlgoMark) {
+        setMarkedNumbers(prev => {
+          const next = new Set(prev)
+          next.add(d.number)
+          return next
+        })
+      }
+      if (audioOn) {
+        playCallSound(d.number)
         }
       }
     })
@@ -165,11 +171,11 @@ export default function App() {
     s.on('winner', (d: any) => { 
       // Only process winner for current bet house
       if (d.stake === currentBetHouse) {
-        alert(`Winner: ${d.playerId}\nPrize: ${d.prize}`)
-        setPicks([])
-        setMarkedNumbers(new Set())
-        setCurrentPage('lobby')
-        setIsReady(false)
+      alert(`Winner: ${d.playerId}\nPrize: ${d.prize}`)
+      setPicks([])
+      setMarkedNumbers(new Set())
+      setCurrentPage('lobby')
+      setIsReady(false)
         setIsWaiting(false)
       }
     })
@@ -177,7 +183,7 @@ export default function App() {
     s.on('game_start', (d: any) => {
       // Only redirect if it's for our bet house and we're not waiting
       if (d.stake === currentBetHouse && !isWaiting) {
-        setCurrentPage('game')
+      setCurrentPage('game')
       }
     })
     
@@ -186,7 +192,7 @@ export default function App() {
         setIsWaiting(true)
         // Stay on lobby/board selection page if waiting
       } else if (d.stake === currentBetHouse) {
-        setCurrentPage('game')
+      setCurrentPage('game')
         setIsWaiting(false)
       }
     })
@@ -199,7 +205,7 @@ export default function App() {
     s.emit('get_bet_houses_status')
     
     return () => { s.disconnect() }
-  }, [isAuthenticated, userId, username])
+  }, [isAuthenticated, userId, username, currentBetHouse])
   
   // Don't auto-join - let user select bet house from welcome page
 
@@ -232,7 +238,7 @@ export default function App() {
   }, [])
 
   useEffect(() => { 
-    if (socket && picks.length > 0 && currentBetHouse) {
+    if (socket && currentBetHouse) {
       socket.emit('select_numbers', { picks, stake: currentBetHouse }) 
     }
   }, [socket, picks, currentBetHouse])
@@ -256,6 +262,10 @@ export default function App() {
   const togglePick = (n: number) => {
     // Allow picking boards even during live games (if waiting)
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
+    // Prevent selecting boards that are already taken by other players
+    const isTaken = takenBoards.includes(n)
+    const isAlreadyPicked = picks.includes(n)
+    if (isTaken && !isAlreadyPicked) return
     setPicks(prev => {
       if (prev.includes(n)) return prev.filter(x => x !== n)
       if (prev.length >= 2) return prev
@@ -291,7 +301,7 @@ export default function App() {
     socket?.emit('start_game', { stake: currentBetHouse })
     // If not waiting, redirect immediately; otherwise stay on lobby
     if (!isWaiting) {
-      setCurrentPage('game')
+    setCurrentPage('game')
     }
   }
 
@@ -579,27 +589,27 @@ export default function App() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-5 gap-1">
-          {grid.map((val, idx) => {
-            const isFree = val === -1
-            const isMarked = isFree || markedNumbers.has(val)
-            const isCalled = called.includes(val)
-            const shouldHighlight = isGamePage 
-              ? (autoAlgoMark ? (isFree || isCalled) : isMarked)
-              : isCalled
+      <div className="grid grid-cols-5 gap-1">
+        {grid.map((val, idx) => {
+          const isFree = val === -1
+          const isMarked = isFree || markedNumbers.has(val)
+          const isCalled = called.includes(val)
+          const shouldHighlight = isGamePage 
+            ? (autoAlgoMark ? (isFree || isCalled) : isMarked)
+            : isCalled
             // Show star if marked and can form bingo
             const showStar = isGamePage && boardCanBingo && isMarked && !isFree
 
-            return (
-              <div 
-                key={idx} 
-                onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
-                className={[
+  return (
+            <div 
+              key={idx} 
+              onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
+              className={[
                   'aspect-square rounded text-xs sm:text-sm flex items-center justify-center border cursor-pointer relative',
                   shouldHighlight ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-200',
-                  isGamePage && !isFree && isCalled ? 'hover:brightness-110' : ''
-                ].join(' ')}
-              >
+                isGamePage && !isFree && isCalled ? 'hover:brightness-110' : ''
+              ].join(' ')}
+            >
                 {isFree ? (
                   <span className="text-emerald-300 font-bold text-[10px] sm:text-xs">FREE</span>
                 ) : (
@@ -610,9 +620,9 @@ export default function App() {
                     )}
                   </>
                 )}
-              </div>
-            )
-          })}
+            </div>
+          )
+        })}
         </div>
       </div>
     )
@@ -642,9 +652,9 @@ export default function App() {
               )}
             </div>
             {!isWaiting && (
-              <div className="px-4 py-2 rounded bg-slate-700 font-mono text-lg">
-                {String(seconds).padStart(2,"0")}s
-              </div>
+            <div className="px-4 py-2 rounded bg-slate-700 font-mono text-lg">
+              {String(seconds).padStart(2,"0")}s
+            </div>
             )}
             {isWaiting && (
               <div className="px-4 py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-sm">
@@ -694,7 +704,8 @@ export default function App() {
           <div className="grid grid-cols-10 gap-2 mb-6">
             {board.map(n => {
               const isPicked = picks.includes(n)
-              const disabled = phase !== 'lobby' && phase !== 'countdown' && !isWaiting
+              const isTaken = takenBoards.includes(n)
+              const disabled = (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) || (isTaken && !isPicked)
               return (
                 <button
                   key={n}
@@ -702,7 +713,7 @@ export default function App() {
                   disabled={disabled}
                   className={[
                     "aspect-square rounded text-xs md:text-sm flex items-center justify-center border font-semibold",
-                    isPicked ? "bg-amber-500 border-amber-400 text-black" : "bg-slate-700 border-slate-600",
+                    isPicked ? "bg-amber-500 border-amber-400 text-black" : isTaken ? "bg-slate-900 border-slate-800 text-slate-600" : "bg-slate-700 border-slate-600",
                     disabled ? "opacity-60 cursor-not-allowed" : "hover:brightness-110"
                   ].join(" ")}
                 >
@@ -750,17 +761,17 @@ export default function App() {
               >
                 Switch Bet House
               </button>
-              <button
-                onClick={handleStartGame}
-                disabled={picks.length === 0 || isReady}
-                className={`px-6 py-3 rounded-lg font-bold text-lg ${
-                  picks.length > 0 && !isReady 
-                    ? 'bg-green-500 hover:bg-green-600 text-black' 
-                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                }`}
-              >
+            <button
+              onClick={handleStartGame}
+              disabled={picks.length === 0 || isReady}
+              className={`px-6 py-3 rounded-lg font-bold text-lg ${
+                picks.length > 0 && !isReady 
+                  ? 'bg-green-500 hover:bg-green-600 text-black' 
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              }`}
+            >
                 {isReady ? (isWaiting ? 'Waiting...' : 'Ready!') : 'Start Game'}
-              </button>
+        </button>
             </div>
           </div>
         </div>
@@ -1055,19 +1066,19 @@ export default function App() {
                   {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
                   <div>Prize: {house.prize} Birr</div>
                 </div>
-                <div className="mt-auto flex items-center justify-between">
-                  <button
+              <div className="mt-auto flex items-center justify-between">
+                <button
                     className="px-4 py-2 rounded bg-black/30 hover:bg-black/40 font-semibold"
-                    onClick={() => {
+                  onClick={() => {
                       handleJoinBetHouse(house.stake)
-                      setCurrentPage('lobby')
-                    }}
-                  >
+                    setCurrentPage('lobby')
+                  }}
+                >
                     {isSelected ? 'Go to Lobby' : isLive ? 'Join & Wait' : 'Play now'}
-                  </button>
+                </button>
                   <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
-                </div>
               </div>
+            </div>
             )
           }) : (
             // Fallback if bet houses not loaded yet
@@ -1084,19 +1095,19 @@ export default function App() {
                 <div key={amount} className={`${config.color} rounded-xl p-5 flex flex-col gap-4`}>
                   <div className="text-sm opacity-90">{config.label}</div>
                   <div className="text-3xl font-extrabold">{amount} Birr</div>
-                  <div className="mt-auto flex items-center justify-between">
-                    <button
-                      className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
-                      onClick={() => {
+            <div className="mt-auto flex items-center justify-between">
+              <button
+                className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
+                onClick={() => {
                         handleJoinBetHouse(amount)
-                        setCurrentPage('lobby')
-                      }}
-                    >
-                      Play now
-                    </button>
+                  setCurrentPage('lobby')
+                }}
+              >
+                Play now
+              </button>
                     <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
-                  </div>
-                </div>
+            </div>
+          </div>
               )
             })
           )}
@@ -1300,6 +1311,26 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-900 text-white p-2 sm:p-4">
         <div className="w-full max-w-7xl mx-auto">
+          {/* Top bar with Close button */}
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <button
+              onClick={() => {
+                // Leave the current game on the server and return to welcome page
+                socket?.emit('leave_current_game')
+                setCurrentBetHouse(null)
+                setPicks([])
+                setMarkedNumbers(new Set())
+                setPhase('lobby')
+                setIsReady(false)
+                setIsWaiting(false)
+                setTakenBoards([])
+                setCurrentPage('welcome')
+              }}
+              className="px-3 py-1 sm:px-4 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
+            >
+              Close
+            </button>
+          </div>
           {/* Info Boxes: Stake, Players, Prize */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-4">
             {/* Stake Box - Orange */}
@@ -1312,8 +1343,8 @@ export default function App() {
             <div className="bg-blue-600 rounded-lg sm:rounded-xl p-2 sm:p-4">
               <div className="text-[10px] sm:text-xs opacity-90 mb-1">Players</div>
               <div className="text-lg sm:text-2xl font-bold">{players}</div>
-            </div>
-            
+          </div>
+          
             {/* Prize Box - Green */}
             <div className="bg-green-600 rounded-lg sm:rounded-xl p-2 sm:p-4">
               <div className="text-[10px] sm:text-xs opacity-90 mb-1">Prize</div>
@@ -1348,64 +1379,64 @@ export default function App() {
             <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
                 <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                   <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
-                    {String(seconds).padStart(2,"0")}s
-                  </div>
-                  {phase === 'calling' && (
-                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
-                      {String(callCountdown).padStart(2,'0')}s
-                    </div>
-                  )}
-                </div>
+                {String(seconds).padStart(2,"0")}s
               </div>
+              {phase === 'calling' && (
+                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
+                  {String(callCountdown).padStart(2,'0')}s
+                </div>
+              )}
+            </div>
+          </div>
 
-              {/* Big last-called number display */}
+          {/* Big last-called number display */}
               {phase === 'calling' && lastCalled && (
                 <div className="mb-3 sm:mb-4">
                   <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
                     {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
-                  </div>
-                </div>
-              )}
-
+              </div>
+            </div>
+          )}
+          
               <div className="text-xs sm:text-sm text-slate-300 mb-2">Caller:</div>
               <div className="mb-4 overflow-x-auto">
-                {renderCallerGrid()}
-              </div>
-              
-              <button
-                onClick={onPressBingo}
-                disabled={autoAlgoMark ? false : !canBingo}
+            {renderCallerGrid()}
+          </div>
+          
+          <button
+            onClick={onPressBingo}
+            disabled={autoAlgoMark ? false : !canBingo}
                 className={`w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
-                  autoAlgoMark || canBingo
-                    ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
-                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                BINGO!
-              </button>
-            </div>
+              autoAlgoMark || canBingo
+                ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
+                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            BINGO!
+          </button>
+        </div>
 
             {/* Right: Player Boards */}
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4">
               <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
               <div className="space-y-4 sm:space-y-6">
-                {picks.map((boardId) => (
+            {picks.map((boardId) => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-3">
                     <div className="text-xs sm:text-sm text-slate-300 mb-2">Board {boardId}</div>
-                    {renderCard(boardId, true)}
-                  </div>
-                ))}
+                {renderCard(boardId, true)}
               </div>
+            ))}
+          </div>
               <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
-                Click on called numbers to mark them. FREE is always marked.
+            Click on called numbers to mark them. FREE is always marked.
               </div>
-            </div>
           </div>
         </div>
       </div>
-    )
+    </div>
+  )
   }
 
   const renderWithdrawalPage = () => {
