@@ -171,8 +171,8 @@ export default function App() {
           return next
         })
       }
-      // Only play audio for active players in the current live game
-      if (audioOn && !isWaiting && phase === 'calling') {
+      // Only play audio for active players in the current live game, using refs to avoid stale state
+      if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
         playCallSound(d.number)
       }
     })
@@ -456,8 +456,15 @@ export default function App() {
   // Audio: try to play a sound for each call using selected pack
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
 
-  // Cache audio elements so calls play instantly after first load
+  // Cache audio elements and latest flags so calls play instantly and only for active players
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
+  const audioOnRef = useRef<boolean>(audioOn)
+  const isWaitingRef = useRef<boolean>(isWaiting)
+  const phaseRef = useRef<Phase>(phase)
+
+  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
+  useEffect(() => { phaseRef.current = phase }, [phase])
   // Parse amount from deposit/withdrawal message
   const parseAmount = (message: string): number | null => {
     // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
