@@ -58,6 +58,7 @@ export default function App() {
   const [withdrawalMessage, setWithdrawalMessage] = useState<string>('')
   const [withdrawalVerifying, setWithdrawalVerifying] = useState<boolean>(false)
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
+  const autoBingoSentRef = useRef<boolean>(false)
 
   // Check for existing session on mount
   useEffect(() => {
@@ -98,7 +99,12 @@ export default function App() {
     if (!isAuthenticated) return
     
     const s = io(getApiUrl(), { 
-      transports: ['websocket'],
+      // Allow both websocket and polling so poor networks can still receive calls reliably
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
       auth: { userId, username }
     })
     setSocket(s)
@@ -138,6 +144,7 @@ export default function App() {
         setIsReady(false)
         setIsWaiting(false)
         setTakenBoards([])
+        autoBingoSentRef.current = false
       }
     })
     
@@ -163,13 +170,23 @@ export default function App() {
     s.on('call', (d: any) => {
       setCalled(d.called)
       setLastCalled(d.number)
-      setCallCountdown(3)
+      // 5 second countdown between calls
+      setCallCountdown(5)
       if (autoMark || autoAlgoMark) {
         setMarkedNumbers(prev => {
           const next = new Set(prev)
           next.add(d.number)
           return next
         })
+      }
+      // When auto algorithm marking is enabled, automatically trigger BINGO
+      // as soon as a valid winning line exists that includes the last called number.
+      if (autoAlgoMark && !autoBingoSentRef.current) {
+        const hasAutoBingo = hasBingoIncludingLastCalled(d.called, d.number)
+        if (hasAutoBingo) {
+          autoBingoSentRef.current = true
+          onPressBingo(d.called, d.number)
+        }
       }
       // Only play audio for active players in the current live game, using refs to avoid stale state
       if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
@@ -190,6 +207,7 @@ export default function App() {
       if (!isWaiting) {
         setCurrentPage('game')
       }
+      autoBingoSentRef.current = false
     })
     
     s.on('start_game_confirm', (d: any) => {
@@ -249,7 +267,7 @@ export default function App() {
   }, [socket, picks, currentBetHouse])
 
 
-  // Manage 3s per-call countdown lifecycle
+  // Manage 5s per-call countdown lifecycle
   useEffect(() => {
     if (phase !== 'calling') {
       setCallCountdown(0)
@@ -363,11 +381,19 @@ export default function App() {
     return board ? checkBingo(board) : false
   })
 
-  // Ensure a win line exists that includes the most recent called number
-  const hasBingoIncludingLastCalled = (): boolean => {
-    if (!lastCalled) return false
+  // Ensure a win line exists that includes the most recent called number.
+  // Optional overrides let us validate immediately on a fresh server call payload.
+  const hasBingoIncludingLastCalled = (
+    overrideCalled?: number[],
+    overrideLastCalled?: number | null
+  ): boolean => {
+    const effectiveLastCalled = overrideLastCalled ?? lastCalled
+    if (!effectiveLastCalled) return false
     // Effective marked set: when auto algorithm is on, use called numbers as marks
-    const effectiveMarks = new Set<number>(autoAlgoMark ? called : Array.from(markedNumbers))
+    const effectiveCalled = overrideCalled ?? called
+    const effectiveMarks = new Set<number>(
+      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
+    )
     for (const boardId of picks) {
       const grid = getBoard(boardId)
       if (!grid) continue
@@ -386,7 +412,7 @@ export default function App() {
       lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
 
       for (const line of lines) {
-        const containsLast = line.includes(lastCalled)
+        const containsLast = line.includes(effectiveLastCalled)
         if (!containsLast) continue
         const complete = line.every(n => n === -1 || effectiveMarks.has(n))
         if (complete) return true
@@ -395,10 +421,10 @@ export default function App() {
     return false
   }
 
-  const onPressBingo = () => {
+  const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
     if (phase !== 'calling' || isWaiting) return
     // Validate locally before notifying server
-    if (!hasBingoIncludingLastCalled()) {
+    if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
       alert('No valid BINGO found that includes the last called number. Keep marking!')
       return
     }
@@ -1433,7 +1459,7 @@ export default function App() {
           </div>
           
           <button
-            onClick={onPressBingo}
+            onClick={() => onPressBingo()}
             disabled={autoAlgoMark ? false : !canBingo}
                 className={`w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
               autoAlgoMark || canBingo
