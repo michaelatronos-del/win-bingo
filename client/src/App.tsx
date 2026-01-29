@@ -1097,7 +1097,7 @@ export default function App() {
         </div>
 
         <div className="text-base sm:text-xl font-semibold">Bet Houses</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 pb-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
           {betHouses.length > 0 ? betHouses.map((house: any) => {
             const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
               10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
