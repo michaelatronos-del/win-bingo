@@ -686,12 +686,12 @@ export default function App() {
   }
 
   const renderLobbyPage = () => (
-    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        <div className="bg-slate-800 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-slate-300 text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
-            <div className="flex gap-4 text-sm">
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
+        <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
+            <div className="text-slate-300 text-xs sm:text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
+            <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
               <span>Stake: <b>{stake} Birr</b></span>
               <span>Active: <b>{players}</b></span>
               {waitingPlayers > 0 && <span>Waiting: <b>{waitingPlayers}</b></span>}
@@ -699,66 +699,68 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-2xl font-bold">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
+            <div className="text-lg sm:text-2xl font-bold flex items-center flex-wrap gap-2">
               Select Your Boards
               {isWaiting && (
-                <span className="ml-3 px-3 py-1 rounded bg-yellow-500 text-black text-sm font-bold">
-                  Waiting for next game...
+                <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded bg-yellow-500 text-black text-xs sm:text-sm font-bold">
+                  Waiting...
                 </span>
               )}
             </div>
             {!isWaiting && (
-            <div className="px-4 py-2 rounded bg-slate-700 font-mono text-lg">
+            <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
               {String(seconds).padStart(2,"0")}s
             </div>
             )}
             {isWaiting && (
-              <div className="px-4 py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-sm">
+              <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-xs sm:text-sm">
                 Game in progress
               </div>
             )}
           </div>
 
           {/* Audio and Auto Mark toggles visible before countdown */}
-          <div className="flex flex-wrap items-center gap-6 mb-6">
-            <label className="flex items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
+            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <span className="text-slate-300">Audio:</span>
               <select
-                className="bg-slate-700 text-slate-100 rounded px-2 py-1"
+                className="bg-slate-700 text-slate-100 rounded px-1 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm"
                 value={audioPack}
                 onChange={(e) => setAudioPack(e.target.value)}
               >
                 <option value="amharic">Amharic</option>
                 <option value="modern-amharic">Modern Amharic</option>
               </select>
-              <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} />
+              <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />
               <button
-                className="ml-2 px-2 py-1 rounded bg-slate-700 hover:brightness-110"
+                className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-slate-700 hover:brightness-110 text-xs sm:text-sm"
                 onClick={() => playCallSound(1)}
               >
                 Test
               </button>
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <input
                 type="checkbox"
                 checked={autoMark}
                 onChange={(e) => setAutoMark(e.target.checked)}
+                className="w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-slate-300">Auto mark (me)</span>
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <input
                 type="checkbox"
                 checked={autoAlgoMark}
                 onChange={(e) => setAutoAlgoMark(e.target.checked)}
+                className="w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-slate-300">Auto algorithm mark</span>
             </label>
           </div>
           
-          <div className="grid grid-cols-10 gap-2 mb-6">
+          <div className="grid grid-cols-10 gap-1 sm:gap-2 mb-3 sm:mb-6">
             {board.map(n => {
               const isPicked = picks.includes(n)
               const isTaken = takenBoards.includes(n)
@@ -782,12 +784,12 @@ export default function App() {
           
           {/* Selected Boards Preview */}
           {picks.length > 0 && (
-            <div className="mb-6">
-              <div className="text-slate-300 mb-4">Your Selected Boards ({picks.length}/2):</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-3 sm:mb-6">
+              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">Your Selected Boards ({picks.length}/2):</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                 {picks.map((boardId, idx) => (
-                  <div key={boardId} className="bg-slate-700 rounded-lg p-4">
-                    <div className="text-sm text-slate-400 mb-2">Board {boardId}</div>
+                  <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-4">
+                    <div className="text-xs sm:text-sm text-slate-400 mb-1 sm:mb-2">Board {boardId}</div>
                     {renderCard(boardId, false)}
                   </div>
                 ))}
@@ -795,25 +797,25 @@ export default function App() {
             </div>
           )}
           
-          <div className="flex items-center justify-between">
-            <div className="text-slate-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="text-slate-300 text-xs sm:text-sm">
               Selected: {picks.length}/2 boards
               {isWaiting && picks.length > 0 && (
-                <div className="mt-2 text-yellow-400 text-sm">
+                <div className="mt-1 sm:mt-2 text-yellow-400 text-xs sm:text-sm">
                   You'll join the next game when it starts
                 </div>
               )}
               {picks.length > 0 && !isWaiting && (
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-1 sm:gap-2 mt-1 sm:mt-2">
                   {picks.map(n => (
-                    <span key={n} className="px-2 py-1 bg-amber-500 text-black rounded text-sm">Board {n}</span>
+                    <span key={n} className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 text-black rounded text-xs sm:text-sm">Board {n}</span>
                   ))}
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
-                className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-sm"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm flex-1 sm:flex-none"
                 onClick={() => setCurrentPage('welcome')}
               >
                 Switch Bet House
@@ -821,7 +823,7 @@ export default function App() {
             <button
               onClick={handleStartGame}
               disabled={picks.length === 0 || isReady}
-              className={`px-6 py-3 rounded-lg font-bold text-lg ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-lg flex-1 sm:flex-none ${
                 picks.length > 0 && !isReady 
                   ? 'bg-green-500 hover:bg-green-600 text-black' 
                   : 'bg-slate-700 text-slate-400 cursor-not-allowed'
@@ -837,12 +839,12 @@ export default function App() {
   )
 
   const renderLoginPage = () => (
-    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
+    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-md">
-        <div className="bg-slate-800 rounded-xl p-8 space-y-6">
+        <div className="bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-8 space-y-4 sm:space-y-6">
           <div className="text-center">
-            <div className="text-3xl font-bold mb-2">WIN BINGO</div>
-            <div className="text-slate-400 text-sm">Welcome! Please sign in or create an account</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Welcome! Please sign in or create an account</div>
           </div>
           
           <div className="flex gap-2 mb-4">
@@ -880,15 +882,15 @@ export default function App() {
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <label className="text-slate-300 text-sm mb-2 block">Username</label>
+              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">Username</label>
               <input
                 type="text"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="Enter your username"
-                className="w-full bg-slate-700 rounded-lg p-3 border border-slate-600 outline-none focus:border-emerald-500"
+                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !loginLoading) {
                     if (loginMode === 'login') handleLogin()
@@ -898,13 +900,13 @@ export default function App() {
               />
             </div>
             <div>
-              <label className="text-slate-300 text-sm mb-2 block">Password</label>
+              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">Password</label>
               <input
                 type="password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full bg-slate-700 rounded-lg p-3 border border-slate-600 outline-none focus:border-emerald-500"
+                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !loginLoading) {
                     if (loginMode === 'login') handleLogin()
@@ -916,7 +918,7 @@ export default function App() {
             <button
               onClick={loginMode === 'login' ? handleLogin : handleSignup}
               disabled={!loginUsername.trim() || !loginPassword.trim() || loginLoading}
-              className="w-full py-3 rounded-lg bg-emerald-600 text-white font-bold disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-700"
+              className="w-full py-2 sm:py-3 rounded-lg bg-emerald-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-700"
             >
               {loginLoading ? 'Processing...' : loginMode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
@@ -1042,25 +1044,25 @@ export default function App() {
 
   // Welcome page with balance, deposit, instructions, invite, and bet houses
   const renderWelcomePage = () => (
-    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="text-2xl font-bold">Hello, {username}!</div>
-          <div className="flex gap-2">
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
+        <div className="flex items-center justify-between py-1 sm:py-2">
+          <div className="text-lg sm:text-2xl font-bold truncate pr-2">Hello, {username}!</div>
+          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
             <button
-              className="px-4 py-2 rounded bg-amber-500 text-black font-semibold"
+              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-amber-500 text-black font-semibold text-xs sm:text-sm"
               onClick={() => setCurrentPage('depositSelect')}
             >
               + Deposit
             </button>
             <button
-              className="px-4 py-2 rounded bg-blue-500 text-white font-semibold"
+              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-blue-500 text-white font-semibold text-xs sm:text-sm"
               onClick={() => setCurrentPage('withdrawal')}
             >
               Withdraw
             </button>
             <button
-              className="px-4 py-2 rounded bg-slate-700 text-white font-semibold"
+              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 text-white font-semibold text-xs sm:text-sm"
               onClick={handleLogout}
             >
               Logout
@@ -1069,33 +1071,33 @@ export default function App() {
         </div>
 
         {/* Balance card */}
-        <div className="bg-rose-500/80 rounded-xl p-5 flex items-center justify-between">
+        <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex items-center justify-between">
           <div>
-            <div className="uppercase text-xs">Balance</div>
-            <div className="text-3xl font-extrabold">{balance} Birr</div>
-            <div className="mt-2 text-xs opacity-90">Bonus</div>
-            <div className="text-lg font-bold">{bonus} Birr</div>
+            <div className="uppercase text-[10px] sm:text-xs">Balance</div>
+            <div className="text-xl sm:text-3xl font-extrabold">{balance} Birr</div>
+            <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs opacity-90">Bonus</div>
+            <div className="text-sm sm:text-lg font-bold">{bonus} Birr</div>
           </div>
-          <div className="text-6xl font-black opacity-60">ETB</div>
+          <div className="text-4xl sm:text-6xl font-black opacity-60">ETB</div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <button
-            className="px-4 py-3 rounded bg-slate-800 hover:bg-slate-700"
+            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
             onClick={() => setCurrentPage('instructions')}
           >
             Instructions
           </button>
           <button
-            className="px-4 py-3 rounded bg-slate-800 hover:bg-slate-700"
+            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
             onClick={() => navigator.clipboard.writeText(`${window.location.origin}/?ref=${playerId}`)}
           >
-            Invite Friends (copy link)
+            Invite Friends
           </button>
         </div>
 
-        <div className="text-xl font-semibold">Bet Houses</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="text-base sm:text-xl font-semibold">Bet Houses</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 pb-2">
           {betHouses.length > 0 ? betHouses.map((house: any) => {
             const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
               10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
@@ -1111,21 +1113,21 @@ export default function App() {
             const isSelected = currentBetHouse === house.stake
             
             return (
-              <div key={house.stake} className={`${config.color} rounded-xl p-5 flex flex-col gap-4 ${isSelected ? 'ring-4 ring-yellow-400' : ''}`}>
+              <div key={house.stake} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 ${isSelected ? 'ring-2 sm:ring-4 ring-yellow-400' : ''}`}>
                 <div className="flex items-center justify-between">
-                  <div className="text-sm opacity-90">{config.label}</div>
-                  {isLive && <span className="px-2 py-1 rounded bg-red-500 text-xs font-bold animate-pulse">LIVE</span>}
-                  {isCountdown && <span className="px-2 py-1 rounded bg-yellow-500 text-xs font-bold">Starting</span>}
+                  <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
+                  {isLive && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-500 text-[10px] sm:text-xs font-bold animate-pulse">LIVE</span>}
+                  {isCountdown && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-500 text-[10px] sm:text-xs font-bold">Starting</span>}
                 </div>
-                <div className="text-3xl font-extrabold">{house.stake} Birr</div>
-                <div className="text-sm opacity-90">
+                <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
+                <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
                   <div>Active: {house.activePlayers} players</div>
                   {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
                   <div>Prize: {house.prize} Birr</div>
                 </div>
-              <div className="mt-auto flex items-center justify-between">
+              <div className="mt-auto flex items-center justify-between gap-2">
                 <button
-                    className="px-4 py-2 rounded bg-black/30 hover:bg-black/40 font-semibold"
+                    className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
                   onClick={() => {
                       handleJoinBetHouse(house.stake)
                     setCurrentPage('lobby')
@@ -1133,7 +1135,7 @@ export default function App() {
                 >
                     {isSelected ? 'Go to Lobby' : isLive ? 'Join & Wait' : 'Play now'}
                 </button>
-                  <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
+                  <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
               </div>
             </div>
             )
@@ -1149,12 +1151,12 @@ export default function App() {
               }
               const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
               return (
-                <div key={amount} className={`${config.color} rounded-xl p-5 flex flex-col gap-4`}>
-                  <div className="text-sm opacity-90">{config.label}</div>
-                  <div className="text-3xl font-extrabold">{amount} Birr</div>
-            <div className="mt-auto flex items-center justify-between">
+                <div key={amount} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4`}>
+                  <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
+                  <div className="text-xl sm:text-3xl font-extrabold">{amount} Birr</div>
+            <div className="mt-auto flex items-center justify-between gap-2">
               <button
-                className="px-4 py-2 rounded bg-black/30 hover:bg-black/40"
+                className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
                 onClick={() => {
                         handleJoinBetHouse(amount)
                   setCurrentPage('lobby')
@@ -1162,7 +1164,7 @@ export default function App() {
               >
                 Play now
               </button>
-                    <div className="h-12 w-12 rounded-full bg-black/20 flex items-center justify-center text-xl font-black">{config.tag}</div>
+                    <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
             </div>
           </div>
               )
@@ -1170,26 +1172,26 @@ export default function App() {
           )}
         </div>
 
-        <div className="text-xs text-slate-400">Version preview</div>
+        <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
       </div>
     </div>
   )
 
   const renderInstructionsPage = () => (
-    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-slate-800 rounded-xl p-6 space-y-4">
-        <div className="text-2xl font-bold mb-2">How to play</div>
-        <ol className="list-decimal space-y-2 ml-5 text-slate-200 text-sm">
+    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-3xl bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4">
+        <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">How to play</div>
+        <ol className="list-decimal space-y-1 sm:space-y-2 ml-4 sm:ml-5 text-slate-200 text-xs sm:text-sm">
           <li>Choose a bet house (10/20/50/100/200 Birr).</li>
           <li>Select up to 2 boards in the lobby.</li>
           <li>Press Start Game to enter the live game.</li>
           <li>During calling, mark called numbers on your boards or enable auto mark.</li>
           <li>Press BINGO only when a full row/column/diagonal is complete including the last call.</li>
         </ol>
-        <div className="text-2xl font-bold mt-6">Deposits & Withdrawals</div>
-        <p className="text-slate-200 text-sm">Use the Deposit button on the Welcome page. Withdrawal flow can be added similarly.</p>
+        <div className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6">Deposits & Withdrawals</div>
+        <p className="text-slate-200 text-xs sm:text-sm">Use the Deposit button on the Welcome page. Withdrawal flow can be added similarly.</p>
         <div className="flex justify-end">
-          <button className="px-4 py-2 rounded bg-slate-700" onClick={() => setCurrentPage('welcome')}>Back</button>
+          <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>Back</button>
         </div>
       </div>
     </div>
@@ -1214,27 +1216,27 @@ export default function App() {
   }
 
   const renderDepositSelect = () => (
-    <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
+    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-3xl">
-        <div className="text-2xl font-bold mb-4">Select Payment Platform</div>
-        <div className="bg-emerald-600/80 rounded-lg px-4 py-2 text-sm mb-3">Recommended</div>
-        <div className="space-y-3">
+        <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Select Payment Platform</div>
+        <div className="bg-emerald-600/80 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm mb-2 sm:mb-3">Recommended</div>
+        <div className="space-y-2 sm:space-y-3">
           {providers.map(p => (
             <button
               key={p.id}
               onClick={() => { setSelectedProvider(p.id); setCurrentPage('depositConfirm') }}
-              className="w-full bg-slate-800 hover:bg-slate-700 rounded-xl p-4 flex items-center justify-between border border-slate-700"
+              className="w-full bg-slate-800 hover:bg-slate-700 rounded-lg sm:rounded-xl p-3 sm:p-4 flex items-center justify-between border border-slate-700"
             >
-              <div className="flex items-center gap-3">
-                <div className="text-2xl">{p.logo}</div>
-                <div className="text-lg">{p.name}</div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="text-xl sm:text-2xl">{p.logo}</div>
+                <div className="text-base sm:text-lg">{p.name}</div>
               </div>
               <div className="text-slate-400">›</div>
             </button>
           ))}
         </div>
-        <div className="mt-6">
-          <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>Back</button>
+        <div className="mt-4 sm:mt-6">
+          <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>Back</button>
         </div>
       </div>
     </div>
@@ -1243,39 +1245,39 @@ export default function App() {
   const renderDepositConfirm = () => {
     const info = providerToAccount[selectedProvider] || { account: '—', name: '—' }
     return (
-      <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl space-y-4">
-          <div className="text-2xl font-bold">Confirm payment</div>
+      <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
+          <div className="text-xl sm:text-2xl font-bold">Confirm payment</div>
           <div>
-            <div className="text-slate-300 text-sm mb-2">Deposit account</div>
-            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <div className="text-lg font-mono">{info.account}</div>
-              <div className="text-sm text-slate-400 mt-1">{info.name} ({selectedProvider === 'awash' ? 'Awash Bank' : ''})</div>
+            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Deposit account</div>
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
+              <div className="text-sm sm:text-lg font-mono break-all">{info.account}</div>
+              <div className="text-xs sm:text-sm text-slate-400 mt-1">{info.name} ({selectedProvider === 'awash' ? 'Awash Bank' : ''})</div>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div>
-              <div className="text-slate-300 text-sm mb-2">Amount to deposit</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Amount to deposit</div>
               <input
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 placeholder="Enter amount in Birr"
-                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none"
+                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
               />
             </div>
-            <div className="space-y-2">
-              <div className="text-sm text-slate-300">Paste your deposit confirmation message</div>
+            <div className="space-y-1 sm:space-y-2">
+              <div className="text-xs sm:text-sm text-slate-300">Paste your deposit confirmation message</div>
               <textarea
                 value={depositMessage}
                 onChange={(e) => setDepositMessage(e.target.value)}
                 placeholder="Paste the SMS or confirmation message you received after depositing to the account above. The message should include: amount, account number, and transaction ID."
-                rows={6}
-                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none"
+                rows={4}
+                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none resize-none text-xs sm:text-sm"
               />
             </div>
             <button
-              className="w-full py-3 rounded-xl bg-emerald-600 text-black font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-emerald-600 text-black font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={!depositAmount || !depositMessage.trim() || depositVerifying}
               onClick={async () => {
                 const amountNum = Number(depositAmount)
@@ -1342,18 +1344,18 @@ export default function App() {
               {depositVerifying ? 'Verifying…' : 'Verify & Submit Deposit'}
             </button>
           </div>
-          <div className="mt-6">
-            <div className="text-xl font-semibold mb-2">How to deposit</div>
-            <div className="bg-slate-800 rounded-xl p-4 text-slate-300 text-sm space-y-2">
+          <div className="mt-4 sm:mt-6">
+            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">How to deposit</div>
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 text-slate-300 text-xs sm:text-sm space-y-1 sm:space-y-2">
               <p>1. Send the exact amount ({depositAmount || '___'} Birr) to the account above using {selectedProvider}.</p>
               <p>2. After the deposit is successful, you will receive a confirmation SMS/message.</p>
               <p>3. Copy and paste the entire confirmation message in the text area above.</p>
               <p>4. Click "Verify & Submit Deposit" to instantly verify and process your deposit.</p>
-              <p className="text-amber-400 mt-2">The system will automatically verify: amount, account number, and transaction ID. Account holder name is optional.</p>
+              <p className="text-amber-400 mt-1 sm:mt-2">The system will automatically verify: amount, account number, and transaction ID. Account holder name is optional.</p>
             </div>
           </div>
           <div>
-            <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('depositSelect')}>Back</button>
+            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('depositSelect')}>Back</button>
           </div>
         </div>
       </div>
@@ -1366,7 +1368,7 @@ export default function App() {
     const recentlyCalled = called.slice(-5).reverse()
     
     return (
-      <div className="min-h-screen bg-slate-900 text-white p-2 sm:p-4">
+      <div className="h-screen bg-slate-900 text-white overflow-y-auto p-2 sm:p-4">
         <div className="w-full max-w-7xl mx-auto">
           {/* Top bar with Close button */}
           <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -1506,29 +1508,29 @@ export default function App() {
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
       return (
-        <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl space-y-4">
-            <div className="text-2xl font-bold">Confirm Withdrawal</div>
-            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <div className="text-slate-300 text-sm mb-2">Withdrawal Amount</div>
-              <div className="text-2xl font-bold">{withdrawalAmount} Birr</div>
+        <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
+            <div className="text-xl sm:text-2xl font-bold">Confirm Withdrawal</div>
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Withdrawal Amount</div>
+              <div className="text-xl sm:text-2xl font-bold">{withdrawalAmount} Birr</div>
             </div>
-            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <div className="text-slate-300 text-sm mb-2">Your Account</div>
-              <div className="text-lg font-mono">{withdrawalAccount}</div>
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Your Account</div>
+              <div className="text-sm sm:text-lg font-mono break-all">{withdrawalAccount}</div>
             </div>
-            <div className="space-y-2">
-              <div className="text-sm text-slate-300">Paste withdrawal confirmation message</div>
+            <div className="space-y-1 sm:space-y-2">
+              <div className="text-xs sm:text-sm text-slate-300">Paste withdrawal confirmation message</div>
               <textarea
                 value={withdrawalMessage}
                 onChange={(e) => setWithdrawalMessage(e.target.value)}
                 placeholder="After we process your withdrawal, you will receive a confirmation message. Paste it here to verify the withdrawal was successful."
-                rows={6}
-                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none"
+                rows={4}
+                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none resize-none text-xs sm:text-sm"
               />
             </div>
             <button
-              className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-blue-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={!withdrawalMessage.trim() || withdrawalVerifying}
               onClick={async () => {
                 if (!withdrawalMessage.trim()) {
@@ -1593,7 +1595,7 @@ export default function App() {
               {withdrawalVerifying ? 'Verifying…' : 'Verify Withdrawal'}
             </button>
             <div>
-              <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentWithdrawalPage('form')}>Back</button>
+              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentWithdrawalPage('form')}>Back</button>
             </div>
           </div>
         </div>
@@ -1601,36 +1603,36 @@ export default function App() {
     }
     
     return (
-      <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl space-y-4">
-          <div className="text-2xl font-bold">Withdraw Funds</div>
-          <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-            <div className="text-slate-300 text-sm mb-2">Available Balance</div>
-            <div className="text-3xl font-bold">{balance} Birr</div>
+      <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
+          <div className="text-xl sm:text-2xl font-bold">Withdraw Funds</div>
+          <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
+            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Available Balance</div>
+            <div className="text-2xl sm:text-3xl font-bold">{balance} Birr</div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div>
-              <div className="text-slate-300 text-sm mb-2">Withdrawal Amount</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Withdrawal Amount</div>
               <input
                 type="number"
                 value={withdrawalAmount}
                 onChange={(e) => setWithdrawalAmount(e.target.value)}
                 placeholder="Enter amount in Birr"
-                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none"
+                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
               />
             </div>
             <div>
-              <div className="text-slate-300 text-sm mb-2">Your Account Number</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Your Account Number</div>
               <input
                 type="text"
                 value={withdrawalAccount}
                 onChange={(e) => setWithdrawalAccount(e.target.value)}
                 placeholder="Enter your account number (same bank/provider as deposit)"
-                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none"
+                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
               />
             </div>
             <button
-              className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-blue-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={!withdrawalAmount || !withdrawalAccount.trim() || withdrawalVerifying}
               onClick={async () => {
                 const amountNum = Number(withdrawalAmount)
@@ -1681,9 +1683,9 @@ export default function App() {
               {withdrawalVerifying ? 'Processing…' : 'Request Withdrawal'}
             </button>
           </div>
-          <div className="mt-6">
-            <div className="text-xl font-semibold mb-2">How to withdraw</div>
-            <div className="bg-slate-800 rounded-xl p-4 text-slate-300 text-sm space-y-2">
+          <div className="mt-4 sm:mt-6">
+            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">How to withdraw</div>
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 text-slate-300 text-xs sm:text-sm space-y-1 sm:space-y-2">
               <p>1. Enter the amount you want to withdraw (must be less than or equal to your balance).</p>
               <p>2. Enter your account number where you want to receive the funds.</p>
               <p>3. Click "Request Withdrawal" to submit your request.</p>
@@ -1692,7 +1694,7 @@ export default function App() {
             </div>
           </div>
           <div>
-            <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>Back</button>
+            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>Back</button>
           </div>
         </div>
       </div>
