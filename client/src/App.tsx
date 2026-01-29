@@ -185,7 +185,9 @@ export default function App() {
         const hasAutoBingo = hasBingoIncludingLastCalled(d.called, d.number)
         if (hasAutoBingo) {
           autoBingoSentRef.current = true
-          onPressBingo(d.called, d.number)
+          if (currentBetHouse) {
+            s.emit('bingo', { stake: currentBetHouse })
+          }
         }
       }
       // Only play audio for active players in the current live game, using refs to avoid stale state
@@ -201,6 +203,7 @@ export default function App() {
       setCurrentPage('lobby')
       setIsReady(false)
       setIsWaiting(false)
+      autoBingoSentRef.current = false
     })
     
     s.on('game_start', () => {
