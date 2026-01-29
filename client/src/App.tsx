@@ -179,15 +179,13 @@ export default function App() {
           return next
         })
       }
-      // When auto algorithm marking is enabled, automatically trigger BINGO
-      // as soon as a valid winning line exists that includes the last called number.
-      if (autoAlgoMark && !autoBingoSentRef.current) {
+      // Automatically trigger BINGO for this player as soon as a valid winning line
+      // exists that includes the last called number (works with or without auto algorithm mark).
+      if (!autoBingoSentRef.current) {
         const hasAutoBingo = hasBingoIncludingLastCalled(d.called, d.number)
-        if (hasAutoBingo) {
+        if (hasAutoBingo && currentBetHouse) {
           autoBingoSentRef.current = true
-          if (currentBetHouse) {
-            s.emit('bingo', { stake: currentBetHouse })
-          }
+          s.emit('bingo', { stake: currentBetHouse })
         }
       }
       // Only play audio for active players in the current live game, using refs to avoid stale state
@@ -1447,8 +1445,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Big last-called number display */}
-              {phase === 'calling' && lastCalled && (
+          {/* Big last-called number display - only visible during the 5s per-call countdown */}
+              {phase === 'calling' && lastCalled && callCountdown > 0 && (
                 <div className="mb-3 sm:mb-4">
                   <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
                     {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
