@@ -180,9 +180,10 @@ export default function App() {
         })
       }
       // Automatically trigger BINGO for this player as soon as a valid winning line
-      // exists that includes the last called number (works with or without auto algorithm mark).
-      if (!autoBingoSentRef.current) {
-        const hasAutoBingo = hasBingoIncludingLastCalled(d.called, d.number)
+      // exists that includes the last called number, when any auto marking is enabled.
+      if ((autoMark || autoAlgoMark) && !autoBingoSentRef.current) {
+        const autoMarks = new Set<number>(d.called)
+        const hasAutoBingo = hasBingoWithMarksAndLast(autoMarks, d.number)
         if (hasAutoBingo && currentBetHouse) {
           autoBingoSentRef.current = true
           s.emit('bingo', { stake: currentBetHouse })
@@ -382,19 +383,12 @@ export default function App() {
     return board ? checkBingo(board) : false
   })
 
-  // Ensure a win line exists that includes the most recent called number.
-  // Optional overrides let us validate immediately on a fresh server call payload.
-  const hasBingoIncludingLastCalled = (
-    overrideCalled?: number[],
-    overrideLastCalled?: number | null
+  // Core bingo checker given an explicit set of marked numbers and a last-called value.
+  const hasBingoWithMarksAndLast = (
+    marks: Set<number>,
+    last: number | null
   ): boolean => {
-    const effectiveLastCalled = overrideLastCalled ?? lastCalled
-    if (!effectiveLastCalled) return false
-    // Effective marked set: when auto algorithm is on, use called numbers as marks
-    const effectiveCalled = overrideCalled ?? called
-    const effectiveMarks = new Set<number>(
-      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
-    )
+    if (!last) return false
     for (const boardId of picks) {
       const grid = getBoard(boardId)
       if (!grid) continue
@@ -413,13 +407,29 @@ export default function App() {
       lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
 
       for (const line of lines) {
-        const containsLast = line.includes(effectiveLastCalled)
+        const containsLast = line.includes(last)
         if (!containsLast) continue
-        const complete = line.every(n => n === -1 || effectiveMarks.has(n))
+        const complete = line.every(n => n === -1 || marks.has(n))
         if (complete) return true
       }
     }
     return false
+  }
+
+  // Ensure a win line exists that includes the most recent called number.
+  // Optional overrides let us validate immediately on a fresh server call payload.
+  const hasBingoIncludingLastCalled = (
+    overrideCalled?: number[],
+    overrideLastCalled?: number | null
+  ): boolean => {
+    const effectiveLastCalled = overrideLastCalled ?? lastCalled
+    if (!effectiveLastCalled) return false
+    // Effective marked set: when auto algorithm is on, use called numbers as marks
+    const effectiveCalled = overrideCalled ?? called
+    const marks = new Set<number>(
+      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
+    )
+    return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
   }
 
   const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
