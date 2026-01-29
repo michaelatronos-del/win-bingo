@@ -38,6 +38,7 @@ export default function App() {
   const [bonus, setBonus] = useState<number>(0)
   const [called, setCalled] = useState<number[]>([])
   const [picks, setPicks] = useState<number[]>([])
+  const [activeGameBoardId, setActiveGameBoardId] = useState<number | null>(null)
   const [boardHtmlProvided, setBoardHtmlProvided] = useState<boolean>(false)
   const [currentPage, setCurrentPage] = useState<Page>('login')
   const [isReady, setIsReady] = useState<boolean>(false)
@@ -233,6 +234,15 @@ export default function App() {
   }, [isAuthenticated, userId, username])
   
   // Don't auto-join - let user select bet house from welcome page
+
+  // Keep a valid active board selection on the game page (mobile uses this for tab switching)
+  useEffect(() => {
+    if (currentPage !== 'game') return
+    setActiveGameBoardId(prev => {
+      if (prev && picks.includes(prev)) return prev
+      return picks[0] ?? null
+    })
+  }, [currentPage, picks])
 
   // Restore picks from localStorage and persist changes
   useEffect(() => {
@@ -444,7 +454,7 @@ export default function App() {
   }
 
   // Render 75-number caller grid with B I N G O columns
-  const renderCallerGrid = () => {
+  const renderCallerGrid = (compact: boolean = false) => {
     // Build columns: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
     const columns: number[][] = [
       Array.from({ length: 15 }, (_, i) => i + 1),
@@ -456,26 +466,35 @@ export default function App() {
 
     const headers = ['B', 'I', 'N', 'G', 'O']
     const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
+    const headerClass = compact
+      ? 'rounded text-center font-bold text-white py-0.5 text-[10px]'
+      : 'rounded text-center font-bold text-white py-1 text-xs sm:text-sm'
+    const headerGridClass = compact ? 'grid grid-cols-5 gap-0.5 mb-1' : 'grid grid-cols-5 gap-1 mb-2'
+    const gridClass = compact ? 'grid grid-cols-5 gap-0.5' : 'grid grid-cols-5 gap-1'
+    const colClass = compact ? 'grid grid-rows-15 gap-0.5' : 'grid grid-rows-15 gap-1'
+    const cellClassBase = compact
+      ? 'h-4 w-full rounded text-[9px] flex items-center justify-center border'
+      : 'h-5 sm:h-6 md:h-7 w-full rounded text-[10px] sm:text-xs md:text-sm flex items-center justify-center border'
 
     return (
       <div className="w-full">
-        <div className="grid grid-cols-5 gap-1 mb-2">
+        <div className={headerGridClass}>
           {headers.map((h, idx) => (
-            <div key={h} className={`${headerColors[idx]} rounded text-center font-bold text-white py-1 text-xs sm:text-sm`}>
+            <div key={h} className={`${headerColors[idx]} ${headerClass}`}>
               {h}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-5 gap-1">
+        <div className={gridClass}>
           {columns.map((col, cIdx) => (
-            <div key={cIdx} className="grid grid-rows-15 gap-1">
+            <div key={cIdx} className={colClass}>
               {col.map((n) => {
                 const isCalled = called.includes(n)
                 return (
                   <div
                     key={n}
                     className={[
-                      'h-5 sm:h-6 md:h-7 w-full rounded text-[10px] sm:text-xs md:text-sm flex items-center justify-center border',
+                      cellClassBase,
                       isCalled ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-300'
                     ].join(' ')}
                   >
@@ -1368,8 +1387,8 @@ export default function App() {
     const recentlyCalled = called.slice(-5).reverse()
     
     return (
-      <div className="h-screen bg-slate-900 text-white overflow-y-auto p-2 sm:p-4">
-        <div className="w-full max-w-7xl mx-auto">
+      <div className="h-screen bg-slate-900 text-white overflow-hidden p-2 sm:p-4">
+        <div className="w-full max-w-7xl mx-auto h-full flex flex-col">
           {/* Top bar with Close button */}
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <button
@@ -1420,7 +1439,7 @@ export default function App() {
 
           {/* Recently Called Numbers */}
           {called.length > 0 && (
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 mb-3 sm:mb-4">
+            <div className="hidden sm:block bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 mb-3 sm:mb-4">
               <div className="text-[10px] sm:text-xs text-slate-400 mb-2">Recently Called Numbers:</div>
               <div className="flex gap-1 sm:gap-2 flex-wrap">
                 {recentlyCalled.map((num, idx) => {
@@ -1440,9 +1459,9 @@ export default function App() {
           )}
 
           {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
             {/* Left: Main Caller Board */}
-            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4">
+            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
                 <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
             <div className="flex items-center gap-2">
@@ -1454,27 +1473,33 @@ export default function App() {
                   {String(callCountdown).padStart(2,'0')}s
                 </div>
               )}
+              {/* Compact last called display on mobile (matches the "circle" style) */}
+              {phase === 'calling' && lastCalled && callCountdown > 0 && (
+                <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
+                  {lastCalled}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Big last-called number display - only visible during the 5s per-call countdown */}
               {phase === 'calling' && lastCalled && callCountdown > 0 && (
                 <div className="mb-3 sm:mb-4">
-                  <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
+                  <div className="hidden sm:block text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
                     {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
               </div>
             </div>
           )}
           
               <div className="text-xs sm:text-sm text-slate-300 mb-2">Caller:</div>
-              <div className="mb-4 overflow-x-auto">
-            {renderCallerGrid()}
+              <div className="mb-2 sm:mb-4 overflow-hidden sm:overflow-visible flex-1 min-h-0">
+            {renderCallerGrid(true)}
           </div>
           
           <button
             onClick={() => onPressBingo()}
             disabled={autoAlgoMark ? false : !canBingo}
-                className={`w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
+                className={`hidden lg:block w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
               autoAlgoMark || canBingo
                 ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
                 : 'bg-slate-700 text-slate-400 cursor-not-allowed'
@@ -1485,20 +1510,62 @@ export default function App() {
         </div>
 
             {/* Right: Player Boards */}
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4">
-              <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
-              <div className="space-y-4 sm:space-y-6">
-            {picks.map((boardId) => (
-                  <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-3">
-                    <div className="text-xs sm:text-sm text-slate-300 mb-2">Board {boardId}</div>
-                {renderCard(boardId, true)}
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+              {/* Mobile: show one board with tabs, so the whole screen fits (no scroll) */}
+              <div className="lg:hidden flex items-center justify-between gap-2 mb-2">
+                <div className="text-xs font-semibold text-slate-200">Your Board</div>
+                {picks.length > 1 && (
+                  <div className="flex gap-1">
+                    {picks.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setActiveGameBoardId(id)}
+                        className={[
+                          'px-2 py-1 rounded text-[10px] font-bold',
+                          (activeGameBoardId ?? picks[0]) === id ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-200'
+                        ].join(' ')}
+                      >
+                        {id}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-              <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
-            Click on called numbers to mark them. FREE is always marked.
+              <div className="lg:hidden flex-1 min-h-0 flex items-start justify-center">
+                {renderCard(activeGameBoardId ?? picks[0] ?? null, true)}
               </div>
-          </div>
+
+              {/* Desktop: keep showing all boards */}
+              <div className="hidden lg:block">
+                <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
+                <div className="space-y-4 sm:space-y-6">
+                  {picks.map((boardId) => (
+                    <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-3">
+                      <div className="text-xs sm:text-sm text-slate-300 mb-2">Board {boardId}</div>
+                      {renderCard(boardId, true)}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
+                  Click on called numbers to mark them. FREE is always marked.
+                </div>
+              </div>
+            </div>
+        </div>
+
+        {/* Mobile: big Bingo button fixed at the bottom area (like your screenshot) */}
+        <div className="lg:hidden mt-2">
+          <button
+            onClick={() => onPressBingo()}
+            disabled={autoAlgoMark ? false : !canBingo}
+            className={`w-full py-3 rounded text-base font-black ${
+              autoAlgoMark || canBingo
+                ? 'bg-fuchsia-500 hover:brightness-110 text-black'
+                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            BINGO!
+          </button>
         </div>
       </div>
     </div>
