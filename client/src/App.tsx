@@ -1477,30 +1477,26 @@ export default function App() {
             </div>
           )}
 
-          {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
-            {/* Left: Main Caller Board */}
-            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
-                <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
-            <div className="flex items-center gap-2">
-                  <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
-                {String(seconds).padStart(2,"0")}s
-              </div>
-              {phase === 'calling' && (
-                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
-                  {String(callCountdown).padStart(2,'0')}s
-                </div>
-              )}
-              {/* Compact last called display on mobile (matches the "circle" style) */}
-              {phase === 'calling' && lastCalled && callCountdown > 0 && (
-                <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
-                  {lastCalled}
-                </div>
-              )}
-            </div>
-          </div>
+          DownloadCopy code{/* Main Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
 
+              {/* LEFT: Player Boards (stacked) */}
+              <div className="order-2 lg:order-1 lg:col-span-1">
+                <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-200">
+                  <div className="text-sm sm:text-lg font-semibold mb-3 text-slate-900">Your Boards:</div>
+                  <div className="space-y-3 sm:space-y-4">
+                    {picks.map((boardId) => (
+                      <div key={boardId} className="bg-slate-100 rounded-xl p-2 sm:p-3 border border-slate-200">
+                        <div className="text-xs sm:text-sm text-slate-600 mb-2">Board {boardId}</div>
+                        {renderCard(boardId, true)}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-[10px] sm:text-xs text-slate-500">
+                    Tap called numbers to mark them. FREE is always marked.
+                  </div>
+                </div>
+              </div>
           {/* Big last-called number display - only visible during the 5s per-call countdown */}
               {phase === 'calling' && lastCalled && callCountdown > 0 && (
                 <div className="mb-3 sm:mb-4">
