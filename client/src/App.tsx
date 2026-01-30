@@ -455,64 +455,60 @@ export default function App() {
 
   // Render 75-number caller grid with B I N G O columns
   const renderCallerGrid = (compact: boolean = false) => {
-  const columns: number[][] = [
-    Array.from({ length: 15 }, (_, i) => i + 1),
-    Array.from({ length: 15 }, (_, i) => i + 16),
-    Array.from({ length: 15 }, (_, i) => i + 31),
-    Array.from({ length: 15 }, (_, i) => i + 46),
-    Array.from({ length: 15 }, (_, i) => i + 61),
-  ];
+    // Build columns: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
+    const columns: number[][] = [
+      Array.from({ length: 15 }, (_, i) => i + 1),
+      Array.from({ length: 15 }, (_, i) => i + 16),
+      Array.from({ length: 15 }, (_, i) => i + 31),
+      Array.from({ length: 15 }, (_, i) => i + 46),
+      Array.from({ length: 15 }, (_, i) => i + 61),
+    ]
 
-  const headers = ['B', 'I', 'N', 'G', 'O'];
-  const headerColors = [
-    'bg-blue-500',
-    'bg-pink-500',
-    'bg-purple-500',
-    'bg-green-500',
-    'bg-orange-500'
-  ];
+    const headers = ['B', 'I', 'N', 'G', 'O']
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
+    const headerClass = compact
+      ? 'rounded text-center font-bold text-white py-0.5 text-[10px]'
+      : 'rounded text-center font-bold text-white py-1 text-xs sm:text-sm'
+    const headerGridClass = compact ? 'grid grid-cols-5 gap-0.5 mb-1' : 'grid grid-cols-5 gap-1 mb-2'
+    const gridClass = compact ? 'grid grid-cols-5 gap-0.5' : 'grid grid-cols-5 gap-1'
+    const colClass = compact ? 'grid grid-rows-15 gap-0.5' : 'grid grid-rows-15 gap-1'
+    const cellClassBase = compact
+      ? 'h-4 w-full rounded text-[9px] flex items-center justify-center border'
+      : 'h-5 sm:h-6 md:h-7 w-full rounded text-[10px] sm:text-xs md:text-sm flex items-center justify-center border'
 
-  return (
-    <div className="bg-[#0F1116] p-2 rounded-xl shadow-inner">
-      {/* Headers */}
-      <div className="grid grid-cols-5 gap-1 mb-2">
-        {headers.map((h, i) => (
-          <div
-            key={h}
-            className={`${headerColors[i]} text-white rounded-lg text-center font-extrabold py-1`}
-          >
-            {h}
-          </div>
-        ))}
+    return (
+      <div className="w-full">
+        <div className={headerGridClass}>
+          {headers.map((h, idx) => (
+            <div key={h} className={`${headerColors[idx]} ${headerClass}`}>
+              {h}
+            </div>
+          ))}
+        </div>
+        <div className={gridClass}>
+          {columns.map((col, cIdx) => (
+            <div key={cIdx} className={colClass}>
+              {col.map((n) => {
+                const isCalled = called.includes(n)
+                return (
+                  <div
+                    key={n}
+                    className={[
+                      cellClassBase,
+                      isCalled ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-300'
+                    ].join(' ')}
+                  >
+                    {n}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
+    )
+  }
 
-      {/* 5 columns of numbers */}
-      <div className="grid grid-cols-5 gap-1">
-        {columns.map((col, colIndex) => (
-          <div key={colIndex} className="grid grid-rows-15 gap-1">
-            {col.map((num) => {
-              const calledBefore = called.includes(num);
-
-              return (
-                <div
-                  key={num}
-                  className={[
-                    'h-6 w-full rounded flex items-center justify-center text-xs font-bold',
-                    calledBefore
-                      ? 'bg-emerald-500 text-black shadow-md'
-                      : 'bg-slate-700 text-slate-300'
-                  ].join(' ')}
-                >
-                  {num}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
   // Audio: try to play a sound for each call using selected pack
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
 
@@ -646,83 +642,68 @@ export default function App() {
     }
   }
 
- const renderCard = (boardId: number | null, isGamePage: boolean = false) => {
-  if (!boardId) return null;
-
-  const grid: BoardGrid | null = getBoard(boardId);
-  if (!grid) return <div className="text-slate-400">Board {boardId} not found</div>;
-
-  const boardCanBingo = isGamePage ? checkBingo(grid) : false;
-  const headers = ['B', 'I', 'N', 'G', 'O'];
-  const headerColors = [
-    'bg-blue-500',
-    'bg-pink-500',
-    'bg-purple-500',
-    'bg-green-500',
-    'bg-orange-500'
-  ];
-
-  return (
-    <div className="bg-[#0F1116] p-3 rounded-xl shadow-lg">
-      {/* BINGO header */}
-      <div className="grid grid-cols-5 gap-1 mb-2">
-        {headers.map((h, idx) => (
-          <div
-            key={idx}
-            className={`${headerColors[idx]} rounded-lg text-center text-white font-black py-1`}
-          >
-            {h}
-          </div>
-        ))}
-      </div>
-
+  const renderCard = (boardId: number | null, isGamePage: boolean = false) => {
+    if (!boardId) return null
+    const grid: BoardGrid | null = getBoard(boardId)
+    if (!grid) return (
+      <div className="text-slate-400">Board {boardId} not found</div>
+    )
+    
+    // Check if this board can form a bingo
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false
+    
+    const headers = ['B', 'I', 'N', 'G', 'O']
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
+    
+    return (
+      <div className="w-full">
+        {/* Colored BINGO headers */}
+        <div className="grid grid-cols-5 gap-1 mb-1">
+          {headers.map((h, idx) => (
+            <div key={h} className={`${headerColors[idx]} rounded text-center font-bold text-white py-1 text-xs sm:text-sm`}>
+              {h}
+            </div>
+          ))}
+        </div>
       <div className="grid grid-cols-5 gap-1">
         {grid.map((val, idx) => {
-          const isFree = val === -1;
-          const isCalled = called.includes(val);
-          const isMarked = isFree || markedNumbers.has(val);
+          const isFree = val === -1
+          const isMarked = isFree || markedNumbers.has(val)
+          const isCalled = called.includes(val)
+          const shouldHighlight = isGamePage 
+            ? (autoAlgoMark ? (isFree || isCalled) : isMarked)
+            : isCalled
+            // Show star if marked and can form bingo
+            const showStar = isGamePage && boardCanBingo && isMarked && !isFree
 
-          const finalState = isGamePage
-            ? (autoAlgoMark ? isCalled || isFree : isMarked)
-            : isCalled;
-
-          const showStar =
-            isGamePage && boardCanBingo && !isFree && finalState;
-
-          return (
-            <div
-              key={idx}
-              onClick={() =>
-                isGamePage && !isFree && isCalled && toggleMark(val)
-              }
+  return (
+            <div 
+              key={idx} 
+              onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
               className={[
-                'aspect-square rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer relative transition',
-                isFree
-                  ? 'bg-yellow-400 text-black'
-                  : finalState
-                  ? 'bg-emerald-500 text-black'
-                  : 'bg-slate-700 text-slate-300',
-                isGamePage && isCalled ? 'hover:brightness-110' : ''
+                  'aspect-square rounded text-xs sm:text-sm flex items-center justify-center border cursor-pointer relative',
+                  shouldHighlight ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-200',
+                isGamePage && !isFree && isCalled ? 'hover:brightness-110' : ''
               ].join(' ')}
             >
-              {isFree ? (
-                <span className="font-black text-[10px]">FREE</span>
-              ) : (
-                <span>{val}</span>
-              )}
-
-              {showStar && (
-                <span className="absolute -top-1 -left-1 text-green-300 text-lg">
-                  ★
-                </span>
-              )}
+                {isFree ? (
+                  <span className="text-emerald-300 font-bold text-[10px] sm:text-xs">FREE</span>
+                ) : (
+                  <>
+                    <span>{val}</span>
+                    {showStar && (
+                      <span className="absolute -top-1 -left-1 text-green-400 text-lg">★</span>
+                    )}
+                  </>
+                )}
             </div>
-          );
+          )
         })}
+        </div>
       </div>
-    </div>
-  );
-};
+    )
+  }
+
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
@@ -1477,26 +1458,30 @@ export default function App() {
             </div>
           )}
 
-          DownloadCopy code{/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
-
-        {/* LEFT: Player Boards (stacked) */}
-        <div className="order-2 lg:order-1 lg:col-span-1">
-          <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-200">
-            <div className="text-sm sm:text-lg font-semibold mb-3 text-slate-900">Your Boards:</div>
-            <div className="space-y-3 sm:space-y-4">
-              {picks.map((boardId) => (
-                <div key={boardId} className="bg-slate-100 rounded-xl p-2 sm:p-3 border border-slate-200">
-                  <div className="text-xs sm:text-sm text-slate-600 mb-2">Board {boardId}</div>
-                  {renderCard(boardId, true)}
+          {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
+            {/* Left: Main Caller Board */}
+            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
+                <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
+            <div className="flex items-center gap-2">
+                  <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
+                {String(seconds).padStart(2,"0")}s
+              </div>
+              {phase === 'calling' && (
+                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
+                  {String(callCountdown).padStart(2,'0')}s
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 text-[10px] sm:text-xs text-slate-500">
-              Tap called numbers to mark them. FREE is always marked.
+              )}
+              {/* Compact last called display on mobile (matches the "circle" style) */}
+              {phase === 'calling' && lastCalled && callCountdown > 0 && (
+                <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
+                  {lastCalled}
+                </div>
+              )}
             </div>
           </div>
-        </div>
+
           {/* Big last-called number display - only visible during the 5s per-call countdown */}
               {phase === 'calling' && lastCalled && callCountdown > 0 && (
                 <div className="mb-3 sm:mb-4">
