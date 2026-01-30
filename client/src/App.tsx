@@ -1478,51 +1478,29 @@ export default function App() {
             </div>
           )}
 
-          {/* Main Layout: Boards (Left) and Caller Board (Right) */}
-<div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
-
-{/* LEFT SIDE → PLAYER BOARDS */}
-<div className="bg-white rounded-xl p-3 sm:p-4 shadow-md flex flex-col min-h-0 lg:col-span-1">
-
-  {/* Mobile Tabs */}
-  <div className="lg:hidden flex justify-between mb-2">
-    <div className="text-xs font-semibold">Your Board</div>
-    {picks.length > 1 && (
-      <div className="flex gap-1">
-        {picks.map((id) => (
-          <button
-            key={id}
-            onClick={() => setActiveGameBoardId(id)}
-            className={`px-2 py-1 rounded text-[10px] font-bold ${
-              (activeGameBoardId ?? picks[0]) === id
-                ? 'bg-amber-500 text-black'
-                : 'bg-gray-200 text-black'
-            }`}
-          >
-            {id}
-          </button>
-        ))}
-      </div>
-    )}
-  </div>
-
-  {/* Mobile: show active board */}
-  <div className="lg:hidden flex-1 min-h-0 flex items-start justify-center">
-    {renderCard(activeGameBoardId ?? picks[0] ?? null, true)}
-  </div>
-
-  {/* Desktop: stack all boards vertically */}
-  <div className="hidden lg:block">
-    <div className="text-sm font-semibold mb-3">Your Boards:</div>
-    <div className="space-y-4">
-      {picks.map((boardId) => (
-        <div key={boardId} className="bg-white rounded-xl p-3 shadow-md border border-gray-200">
-          {renderCard(boardId, true)}
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
+          {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
+            {/* Left: Main Caller Board */}
+            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
+                <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
+            <div className="flex items-center gap-2">
+                  <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
+                {String(seconds).padStart(2,"0")}s
+              </div>
+              {phase === 'calling' && (
+                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
+                  {String(callCountdown).padStart(2,'0')}s
+                </div>
+              )}
+              {/* Compact last called display on mobile (matches the "circle" style) */}
+              {phase === 'calling' && lastCalled && callCountdown > 0 && (
+                <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
+                  {lastCalled}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Big last-called number display - only visible during the 5s per-call countdown */}
               {phase === 'calling' && lastCalled && callCountdown > 0 && (
@@ -1552,7 +1530,7 @@ export default function App() {
         </div>
 
             {/* Right: Player Boards */}
-            <div className="lg:col-span-2 bg-white rounded-xl p-3 sm:p-4 shadow-md flex flex-col min-h-0">
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               {/* Mobile: show one board with tabs, so the whole screen fits (no scroll) */}
               <div className="lg:hidden flex items-center justify-between gap-2 mb-2">
                 <div className="text-xs font-semibold text-slate-200">Your Board</div>
@@ -1610,6 +1588,7 @@ export default function App() {
           </button>
         </div>
       </div>
+    </div>
   )
   }
 
