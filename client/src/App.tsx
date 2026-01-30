@@ -1811,8 +1811,8 @@ export default function App() {
           </div>
         </div>
       </div>
-    )
-  }}}
+    )}
+  }}
 
   // Redirect to login if not authenticated (except for login page)
   if (!isAuthenticated && currentPage !== 'login') {
