@@ -1584,8 +1584,8 @@ export default function App() {
       </div>
       </div>
       </div>
-      )
-      }
+      
+      
       <button
         onClick={() => onPressBingo()}
         disabled={autoAlgoMark ? false : !canBingo}
