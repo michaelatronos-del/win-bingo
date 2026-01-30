@@ -1828,3 +1828,4 @@ export default function App() {
   if (currentPage === 'withdrawal') return renderWithdrawalPage()
   if (currentPage === 'lobby') return renderLobbyPage()
   return renderGamePage()
+}
