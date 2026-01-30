@@ -1616,7 +1616,7 @@ export default function App() {
   </div>
 </div>
   
-  
+    )
 
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
