@@ -1478,25 +1478,25 @@ export default function App() {
           )}
 
           DownloadCopy code{/* Main Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
 
-              {/* LEFT: Player Boards (stacked) */}
-              <div className="order-2 lg:order-1 lg:col-span-1">
-                <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-200">
-                  <div className="text-sm sm:text-lg font-semibold mb-3 text-slate-900">Your Boards:</div>
-                  <div className="space-y-3 sm:space-y-4">
-                    {picks.map((boardId) => (
-                      <div key={boardId} className="bg-slate-100 rounded-xl p-2 sm:p-3 border border-slate-200">
-                        <div className="text-xs sm:text-sm text-slate-600 mb-2">Board {boardId}</div>
-                        {renderCard(boardId, true)}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 text-[10px] sm:text-xs text-slate-500">
-                    Tap called numbers to mark them. FREE is always marked.
-                  </div>
+            {/* LEFT: Player Boards (stacked) */}
+            <div className="order-2 lg:order-1 lg:col-span-1">
+              <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-200">
+                <div className="text-sm sm:text-lg font-semibold mb-3 text-slate-900">Your Boards:</div>
+                <div className="space-y-3 sm:space-y-4">
+                  {picks.map((boardId) => (
+                    <div key={boardId} className="bg-slate-100 rounded-xl p-2 sm:p-3 border border-slate-200">
+                      <div className="text-xs sm:text-sm text-slate-600 mb-2">Board {boardId}</div>
+                      {renderCard(boardId, true)}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 text-[10px] sm:text-xs text-slate-500">
+                  Tap called numbers to mark them. FREE is always marked.
                 </div>
               </div>
+            </div>
           {/* Big last-called number display - only visible during the 5s per-call countdown */}
               {phase === 'calling' && lastCalled && callCountdown > 0 && (
                 <div className="mb-3 sm:mb-4">
