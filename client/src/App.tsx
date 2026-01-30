@@ -1478,145 +1478,119 @@ export default function App() {
             </div>
           )}
 
-          {/* Page wrapper: light background */}
-          <div className="min-h-screen bg-white text-slate-900">
-              {/* Main Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
-
-                 {/* LEFT: Player Boards (stacked vertically on desktop) */}
-            <div className="order-2 lg:order-1 lg:col-span-1">
-          <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-200 flex flex-col min-h-0">
-             {/* Mobile: tab selector stays */}
-               <div className="lg:hidden flex items-center justify-between gap-2 mb-2">
-          <div className="text-xs font-semibold text-slate-700">Your Board</div>
-          {picks.length > 1 && (
-            <div className="flex gap-1">
-              {picks.map((id) => (
-                <button
-                  key={id}
-                  onClick={() => setActiveGameBoardId(id)}
-                  className={[
-                    'px-2 py-1 rounded text-[10px] font-bold',
-                    (activeGameBoardId ?? picks[0]) === id
-                      ? 'bg-amber-500 text-black'
-                      : 'bg-slate-200 text-slate-700'
-                  ].join(' ')}
-                >
-                  {id}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Mobile: show active board */}
-        <div className="lg:hidden flex-1 min-h-0 flex items-start justify-center">
-          {renderCard(activeGameBoardId ?? picks[0] ?? null, true)}
-        </div>
-
-        {/* Desktop: stack all boards vertically */}
-        <div className="hidden lg:block">
-          <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4 text-slate-900">
-            Your Boards:
-          </div>
-          <div className="space-y-3 sm:space-y-4">
-            {picks.map((boardId) => (
-              <div
-                key={boardId}
-                className="bg-slate-100 rounded-xl p-2 sm:p-3 border border-slate-200"
-              >
-                <div className="text-xs sm:text-sm text-slate-600 mb-2">
-                  Board {boardId}
-                </div>
-                {renderCard(boardId, true)}
+          {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
+            {/* Left: Main Caller Board */}
+            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
+                <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
+            <div className="flex items-center gap-2">
+                  <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
+                {String(seconds).padStart(2,"0")}s
               </div>
-            ))}
+              {phase === 'calling' && (
+                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
+                  {String(callCountdown).padStart(2,'0')}s
+                </div>
+              )}
+              {/* Compact last called display on mobile (matches the "circle" style) */}
+              {phase === 'calling' && lastCalled && callCountdown > 0 && (
+                <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
+                  {lastCalled}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-500">
-            Tap called numbers to mark them. FREE is always marked.
-          </div>
-        </div>
-      </div>
-    </div>
 
-    {/* RIGHT: Main Caller Board */}
-    <div className="order-1 lg:order-2 lg:col-span-2 bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-200 flex flex-col min-h-0">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4">
-        <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0 text-slate-900">
-          Live Game
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="px-2 sm:px-3 py-1 rounded bg-slate-200 text-slate-800 font-mono text-xs sm:text-sm"
-            title="Time until next game start"
+          {/* Big last-called number display - only visible during the 5s per-call countdown */}
+              {phase === 'calling' && lastCalled && callCountdown > 0 && (
+                <div className="mb-3 sm:mb-4">
+                  <div className="hidden sm:block text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
+                    {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
+              </div>
+            </div>
+          )}
+          
+              <div className="text-xs sm:text-sm text-slate-300 mb-2">Caller:</div>
+              <div className="mb-2 sm:mb-4 overflow-hidden sm:overflow-visible flex-1 min-h-0">
+            {renderCallerGrid(true)}
+          </div>
+          
+          <button
+            onClick={() => onPressBingo()}
+            disabled={autoAlgoMark ? false : !canBingo}
+                className={`hidden lg:block w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
+              autoAlgoMark || canBingo
+                ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
+                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            }`}
           >
-            {String(seconds).padStart(2, "0")}s
-          </div>
-          {phase === 'calling' && (
-            <div
-              className="px-2 sm:px-3 py-1 rounded bg-emerald-500 text-white font-mono text-xs sm:text-sm"
-              title="Next call in"
-            >
-              {String(callCountdown).padStart(2, '0')}s
+            BINGO!
+          </button>
+        </div>
+
+            {/* Right: Player Boards */}
+            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+              {/* Mobile: show one board with tabs, so the whole screen fits (no scroll) */}
+              <div className="lg:hidden flex items-center justify-between gap-2 mb-2">
+                <div className="text-xs font-semibold text-slate-200">Your Board</div>
+                {picks.length > 1 && (
+                  <div className="flex gap-1">
+                    {picks.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setActiveGameBoardId(id)}
+                        className={[
+                          'px-2 py-1 rounded text-[10px] font-bold',
+                          (activeGameBoardId ?? picks[0]) === id ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-200'
+                        ].join(' ')}
+                      >
+                        {id}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="lg:hidden flex-1 min-h-0 flex items-start justify-center">
+                {renderCard(activeGameBoardId ?? picks[0] ?? null, true)}
+              </div>
+
+              {/* Desktop: keep showing all boards */}
+              <div className="hidden lg:block">
+                <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
+                <div className="space-y-4 sm:space-y-6">
+                  {picks.map((boardId) => (
+                    <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-3">
+                      <div className="text-xs sm:text-sm text-slate-300 mb-2">Board {boardId}</div>
+                      {renderCard(boardId, true)}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
+                  Click on called numbers to mark them. FREE is always marked.
+                </div>
+              </div>
             </div>
-          )}
-          {/* Compact last called on mobile */}
-          {phase === 'calling' && lastCalled && callCountdown > 0 && (
-            <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
-              {lastCalled}
-            </div>
-          )}
+        </div>
+
+        {/* Mobile: big Bingo button fixed at the bottom area (like your screenshot) */}
+        <div className="lg:hidden mt-2">
+          <button
+            onClick={() => onPressBingo()}
+            disabled={autoAlgoMark ? false : !canBingo}
+            className={`w-full py-3 rounded text-base font-black ${
+              autoAlgoMark || canBingo
+                ? 'bg-fuchsia-500 hover:brightness-110 text-black'
+                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            BINGO!
+          </button>
         </div>
       </div>
-
-      {/* Big last-called number (desktop) */}
-      {phase === 'calling' && lastCalled && callCountdown > 0 && (
-        <div className="mb-3 sm:mb-4">
-          <div className="hidden sm:block text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left text-slate-900">
-            {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
-          </div>
-        </div>
-      )}
-
-      <div className="text-xs sm:text-sm text-slate-600 mb-2">Caller:</div>
-      <div className="mb-2 sm:mb-4 overflow-hidden sm:overflow-visible flex-1 min-h-0">
-        {renderCallerGrid(true)}
-      </div>
-      </div>
-      </div>
-      
-      
-      <button
-        onClick={() => onPressBingo()}
-        disabled={autoAlgoMark ? false : !canBingo}
-        className={`hidden lg:block w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
-          autoAlgoMark || canBingo
-            ? 'bg-fuchsia-500 hover:brightness-110 text-black'
-            : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-        }`}
-      >
-        BINGO!
-      </button>
     </div>
-  </div>
-   
-  {/* Mobile: big Bingo button */}
-  <div className="lg:hidden mt-2">
-    <button
-      onClick={() => onPressBingo()}
-      disabled={autoAlgoMark ? false : !canBingo}
-      className={`w-full py-3 rounded text-base font-black ${
-        autoAlgoMark || canBingo
-          ? 'bg-fuchsia-500 hover:brightness-110 text-black'
-          : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-      }`}
-    >
-      BINGO!
-    </button>
-  </div>
-</div>
-  
-    )
+  )
+  }
 
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
@@ -1811,9 +1785,8 @@ export default function App() {
           </div>
         </div>
       </div>
-    )}
+    )
   }
-
 
   // Redirect to login if not authenticated (except for login page)
   if (!isAuthenticated && currentPage !== 'login') {
