@@ -1582,7 +1582,10 @@ export default function App() {
       <div className="mb-2 sm:mb-4 overflow-hidden sm:overflow-visible flex-1 min-h-0">
         {renderCallerGrid(true)}
       </div>
-
+      </div>
+      </div>
+      )
+      }
       <button
         onClick={() => onPressBingo()}
         disabled={autoAlgoMark ? false : !canBingo}
@@ -1596,7 +1599,7 @@ export default function App() {
       </button>
     </div>
   </div>
-
+   
   {/* Mobile: big Bingo button */}
   <div className="lg:hidden mt-2">
     <button
