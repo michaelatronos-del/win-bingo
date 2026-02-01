@@ -1479,7 +1479,7 @@ export default function App() {
           )}
 
           {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
+          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
             {/* Left: Main Caller Board */}
             <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
