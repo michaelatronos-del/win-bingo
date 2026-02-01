@@ -1509,32 +1509,47 @@ export default function App() {
           </button>
         </div>
 
-            {/* Right: Player Boards */}
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
-              {/* Mobile: show one board with tabs, so the whole screen fits (no scroll) */}
-              <div className="lg:hidden flex items-center justify-between gap-2 mb-2">
-                <div className="text-xs font-semibold text-slate-200">Your Board</div>
-                {picks.length > 1 && (
-                  <div className="flex gap-1">
-                    {picks.map((id) => (
-                      <button
-                        key={id}
-                        onClick={() => setActiveGameBoardId(id)}
-                        className={[
-                          'px-2 py-1 rounded text-[10px] font-bold',
-                          (activeGameBoardId ?? picks[0]) === id ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-200'
-                        ].join(' ')}
-                      >
-                        {id}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="lg:hidden flex-1 min-h-0 flex items-start justify-center">
-                {renderCard(activeGameBoardId ?? picks[0] ?? null, true)}
-              </div>
+            {/* Right: Player Boards (ALWAYS stacked vertically, mobile + desktop) */}
+                  <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="text-xs sm:text-sm font-semibold text-slate-200">Your Boards</div>
 
+                      {/* Optional: show count */}
+                      <div className="text-[10px] sm:text-xs text-slate-400">
+                        {picks.length}/2
+                      </div>
+                    </div>
+
+                    {/* Important for mobile: allow scroll inside the box if needed */}
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                      <div className="space-y-4 sm:space-y-6">
+                        {picks.length === 0 ? (
+                          <div className="text-slate-400 text-xs">No boards selected.</div>
+                        ) : (
+                          picks.map((boardId) => (
+                            <div
+                              key={boardId}
+                              className={[
+                                "bg-slate-700 rounded-lg p-2 sm:p-3",
+                                // Optional: highlight the last tapped board
+                                (activeGameBoardId ?? picks[0]) === boardId ? "ring-2 ring-amber-400" : ""
+                              ].join(" ")}
+                              onClick={() => setActiveGameBoardId(boardId)} // optional
+                            >
+                              <div className="text-xs sm:text-sm text-slate-300 mb-2">
+                                Board {boardId}
+                              </div>
+                              {renderCard(boardId, true)}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
+                      Click on called numbers to mark them. FREE is always marked.
+                    </div>
+                  </div>
               {/* Desktop: keep showing all boards */}
               <div className="hidden lg:block">
                 <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
