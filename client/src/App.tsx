@@ -1454,9 +1454,13 @@ export default function App() {
                 </div>
               </div>
               </div>
-              <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
-                  {renderCallerGrid()} 
-                </div>
+              <div className="flex-1 overflow-y-auto">
+                <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
+                <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+                {renderCallerGrid()} 
+              </div>
+              </div>
+  
               {/* Desktop Bingo Button */}
               <button
                 onClick={() => onPressBingo()}
