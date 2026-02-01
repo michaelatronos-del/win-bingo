@@ -1478,57 +1478,88 @@ export default function App() {
             </div>
           )}
 
-          {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
-          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
-            {/* Left: Main Caller Board */}
-            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-4">
-                <div className="text-sm sm:text-lg font-semibold mb-2 sm:mb-0">Live Game</div>
-            <div className="flex items-center gap-2">
-                  <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm" title="Time until next game start">
-                {String(seconds).padStart(2,"0")}s
-              </div>
-              {phase === 'calling' && (
-                    <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm" title="Next call in">
-                  {String(callCountdown).padStart(2,'0')}s
-                </div>
-              )}
-              {/* Compact last called display on mobile (matches the "circle" style) */}
-              {phase === 'calling' && lastCalled && callCountdown > 0 && (
-                <div className="sm:hidden h-10 w-10 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-lg">
-                  {lastCalled}
-                </div>
-              )}
-            </div>
-          </div>
+                      {/* Main Layout: Caller Board (Left) and Player Boards (Right) */}
+              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0">
 
-          {/* Big last-called number display - only visible during the 5s per-call countdown */}
-              {phase === 'calling' && lastCalled && callCountdown > 0 && (
-                <div className="mb-3 sm:mb-4">
-                  <div className="hidden sm:block text-2xl sm:text-4xl md:text-5xl font-black tracking-wide text-center sm:text-left">
-                    {`${lastCalled <= 15 ? 'B' : lastCalled <= 30 ? 'I' : lastCalled <= 45 ? 'N' : lastCalled <= 60 ? 'G' : 'O'}-${lastCalled}`}
-              </div>
-            </div>
-          )}
-          
-              <div className="text-xs sm:text-sm text-slate-300 mb-2">Caller:</div>
-              <div className="mb-2 sm:mb-4 overflow-hidden sm:overflow-visible flex-1 min-h-0">
-            {renderCallerGrid(true)}
-          </div>
-          
-          <button
-            onClick={() => onPressBingo()}
-            disabled={autoAlgoMark ? false : !canBingo}
-                className={`hidden lg:block w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
-              autoAlgoMark || canBingo
-                ? 'bg-fuchsia-500 hover:brightness-110 text-black' 
-                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-            }`}
-          >
-            BINGO!
-          </button>
-        </div>
+              {/* LEFT SIDE — PLAYER BOARDS (stacked vertically on both mobile and PC) */}
+              <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+                <div className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Your Boards:</div>
 
+                <div className="space-y-4 sm:space-y-6">
+                  {picks.map((boardId) => (
+                    <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-3">
+                      {renderCard(boardId, true)}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 sm:mt-4 text-[10px] sm:text-xs text-slate-400">
+                  Click on called numbers to mark them. FREE is always marked.
+                </div>
+              </div>
+
+              {/* RIGHT SIDE — CALLER BOARD (big section) */}
+              <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="text-sm sm:text-lg font-semibold">Live Game</div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="px-2 sm:px-3 py-1 rounded bg-slate-700 font-mono text-xs sm:text-sm">
+                      {String(seconds).padStart(2, "0")}s
+                    </div>
+
+                    {phase === "calling" && (
+                      <div className="px-2 sm:px-3 py-1 rounded bg-emerald-700 font-mono text-xs sm:text-sm">
+                        {String(callCountdown).padStart(2, "0")}s
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* LAST-CALLED NUMBER — NOW ALWAYS VISIBLE ON MOBILE */}
+                {phase === "calling" && lastCalled && (
+                  <div className="mb-3 sm:mb-4">
+                    <div className="block text-3xl sm:text-4xl md:text-5xl font-black tracking-wide text-center">
+                      {`${lastCalled <= 15 ? "B" : lastCalled <= 30 ? "I" : lastCalled <= 45 ? "N" : lastCalled <= 60 ? "G" : "O"}-${lastCalled}`}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs sm:text-sm text-slate-300 mb-2">Caller:</div>
+                <div className="mb-2 sm:mb-4 overflow-hidden sm:overflow-visible flex-1 min-h-0">
+                  {renderCallerGrid(true)}
+                </div>
+
+                {/* PC-ONLY BINGO BUTTON */}
+                <button
+                  onClick={() => onPressBingo()}
+                  disabled={autoAlgoMark ? false : !canBingo}
+                  className={`hidden lg:block w-full py-2 sm:py-3 rounded text-sm sm:text-lg font-bold ${
+                    autoAlgoMark || canBingo
+                      ? "bg-fuchsia-500 hover:brightness-110 text-black"
+                      : "bg-slate-700 text-slate-400 cursor-not-allowed"
+                  }`}
+                >
+                  BINGO!
+                </button>
+              </div>
+              </div>
+
+              {/* Mobile: big Bingo button fixed at the bottom */}
+              <div className="lg:hidden mt-2">
+              <button
+                onClick={() => onPressBingo()}
+                disabled={autoAlgoMark ? false : !canBingo}
+                className={`w-full py-3 rounded text-base font-black ${
+                  autoAlgoMark || canBingo
+                    ? "bg-fuchsia-500 hover:brightness-110 text-black"
+                    : "bg-slate-700 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                BINGO!
+              </button>
+              </div>
             {/* Right: Player Boards */}
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               {/* Mobile: show one board with tabs, so the whole screen fits (no scroll) */}
