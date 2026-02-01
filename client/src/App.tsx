@@ -454,60 +454,60 @@ export default function App() {
   }
 
   // Render 75-number caller grid with B I N G O columns
-  const renderCallerGrid = (compact: boolean = false) => {
-    // Build columns: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
+  const renderCallerGrid = () => {
     const columns: number[][] = [
       Array.from({ length: 15 }, (_, i) => i + 1),
       Array.from({ length: 15 }, (_, i) => i + 16),
       Array.from({ length: 15 }, (_, i) => i + 31),
       Array.from({ length: 15 }, (_, i) => i + 46),
       Array.from({ length: 15 }, (_, i) => i + 61),
-    ]
-
-    const headers = ['B', 'I', 'N', 'G', 'O']
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
-    const headerClass = compact
-      ? 'rounded text-center font-bold text-white py-0.5 text-[10px]'
-      : 'rounded text-center font-bold text-white py-1 text-xs sm:text-sm'
-    const headerGridClass = compact ? 'grid grid-cols-5 gap-0.5 mb-1' : 'grid grid-cols-5 gap-1 mb-2'
-    const gridClass = compact ? 'grid grid-cols-5 gap-0.5' : 'grid grid-cols-5 gap-1'
-    const colClass = compact ? 'grid grid-rows-15 gap-0.5' : 'grid grid-rows-15 gap-1'
-    const cellClassBase = compact
-      ? 'h-4 w-full rounded text-[9px] flex items-center justify-center border'
-      : 'h-5 sm:h-6 md:h-7 w-full rounded text-[10px] sm:text-xs md:text-sm flex items-center justify-center border'
-
+    ];
+  
+    const headers = ['B', 'I', 'N', 'G', 'O'];
+    const headerColors = [
+      'bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'
+    ];
+  
     return (
-      <div className="w-full">
-        <div className={headerGridClass}>
-          {headers.map((h, idx) => (
-            <div key={h} className={`${headerColors[idx]} ${headerClass}`}>
+      <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
+        {/* Headers */}
+        <div className="grid grid-cols-5 gap-1.5 mb-2">
+          {headers.map((h, i) => (
+            <div
+              key={h}
+              className={`${headerColors[i]} text-white rounded-lg text-center font-black py-1 shadow-lg text-sm tracking-widest`}
+            >
               {h}
             </div>
           ))}
         </div>
-        <div className={gridClass}>
-          {columns.map((col, cIdx) => (
-            <div key={cIdx} className={colClass}>
-              {col.map((n) => {
-                const isCalled = called.includes(n)
+  
+        {/* 5 columns of numbers - flex-1 makes this stretch to fill height */}
+        <div className="grid grid-cols-5 gap-1.5 flex-1">
+          {columns.map((col, colIndex) => (
+            <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
+              {col.map((num) => {
+                const isCalled = called.includes(num);
                 return (
                   <div
-                    key={n}
+                    key={num}
                     className={[
-                      cellClassBase,
-                      isCalled ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-300'
+                      'w-full flex items-center justify-center text-[10px] sm:text-xs font-bold rounded-md transition-all duration-300 border',
+                      isCalled
+                        ? 'bg-emerald-500 text-black border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-105 z-10'
+                        : 'bg-slate-800/80 text-slate-400 border-white/5'
                     ].join(' ')}
                   >
-                    {n}
+                    {num}
                   </div>
-                )
+                );
               })}
             </div>
           ))}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Audio: try to play a sound for each call using selected pack
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
@@ -643,67 +643,65 @@ export default function App() {
   }
 
   const renderCard = (boardId: number | null, isGamePage: boolean = false) => {
-    if (!boardId) return null
-    const grid: BoardGrid | null = getBoard(boardId)
-    if (!grid) return (
-      <div className="text-slate-400">Board {boardId} not found</div>
-    )
-    
-    // Check if this board can form a bingo
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false
-    
-    const headers = ['B', 'I', 'N', 'G', 'O']
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
-    
+    if (!boardId) return null;
+    const grid: BoardGrid | null = getBoard(boardId);
+    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
+  
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
+    const headers = ['B', 'I', 'N', 'G', 'O'];
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
+  
     return (
-      <div className="w-full">
-        {/* Colored BINGO headers */}
-        <div className="grid grid-cols-5 gap-1 mb-1">
+      <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
+        {/* Modern BINGO Header */}
+        <div className="grid grid-cols-5 gap-1.5 mb-3">
           {headers.map((h, idx) => (
-            <div key={h} className={`${headerColors[idx]} rounded text-center font-bold text-white py-1 text-xs sm:text-sm`}>
+            <div
+              key={idx}
+              className={`${headerColors[idx]} rounded-lg text-center text-white font-black py-1.5 shadow-md text-xs sm:text-sm`}
+            >
               {h}
             </div>
           ))}
         </div>
-      <div className="grid grid-cols-5 gap-1">
-        {grid.map((val, idx) => {
-          const isFree = val === -1
-          const isMarked = isFree || markedNumbers.has(val)
-          const isCalled = called.includes(val)
-          const shouldHighlight = isGamePage 
-            ? (autoAlgoMark ? (isFree || isCalled) : isMarked)
-            : isCalled
-            // Show star if marked and can form bingo
-            const showStar = isGamePage && boardCanBingo && isMarked && !isFree
-
-  return (
-            <div 
-              key={idx} 
-              onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
-              className={[
-                  'aspect-square rounded text-xs sm:text-sm flex items-center justify-center border cursor-pointer relative',
-                  shouldHighlight ? 'bg-emerald-500 border-emerald-400 text-black font-semibold' : 'bg-slate-700 border-slate-600 text-slate-200',
-                isGamePage && !isFree && isCalled ? 'hover:brightness-110' : ''
-              ].join(' ')}
-            >
+  
+        <div className="grid grid-cols-5 gap-1.5">
+          {grid.map((val, idx) => {
+            const isFree = val === -1;
+            const isCalled = called.includes(val);
+            const isMarked = isFree || markedNumbers.has(val);
+            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
+  
+            return (
+              <div
+                key={idx}
+                onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
+                className={[
+                  'aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-black cursor-pointer relative transition-all duration-200 border-2',
+                  isFree
+                    ? 'bg-yellow-400 border-yellow-200 text-black shadow-lg animate-pulse'
+                    : finalState
+                    ? 'bg-emerald-500 border-emerald-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                ].join(' ')}
+              >
                 {isFree ? (
-                  <span className="text-emerald-300 font-bold text-[10px] sm:text-xs">FREE</span>
+                  <span className="text-[9px] sm:text-[11px] leading-tight">FREE</span>
                 ) : (
-                  <>
-                    <span>{val}</span>
-                    {showStar && (
-                      <span className="absolute -top-1 -left-1 text-green-400 text-lg">★</span>
-                    )}
-                  </>
+                  <span className="text-xs sm:text-base">{val}</span>
                 )}
-            </div>
-          )
-        })}
+                
+                {/* If Bingo is possible, show a small glowing star indicator */}
+                {isGamePage && boardCanBingo && finalState && !isFree && (
+                  <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
-    )
-  }
-
+    );
+  };
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
@@ -1435,11 +1433,11 @@ export default function App() {
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
             
             {/* LEFT: Caller Board */}
-            <div className="lg:col-span-2 bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2">
-                <div className="text-xs sm:text-lg font-semibold">Live Game</div>
-                <div className="flex items-center gap-2">
-                  <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
+            <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base sm:text-xl font-black text-white tracking-tight">LIVE CALLER</h2>
+                    <div className="flex items-center gap-3">     
+                       <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
                     {String(seconds).padStart(2,"0")}s
                   </div>
                   {phase === 'calling' && (
@@ -1455,12 +1453,10 @@ export default function App() {
                   )}
                 </div>
               </div>
-  
-              <div className="flex-1 overflow-y-auto">
-                <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
-                {renderCallerGrid(true)}
               </div>
-  
+              <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+                  {renderCallerGrid()} 
+                </div>
               {/* Desktop Bingo Button */}
               <button
                 onClick={() => onPressBingo()}
