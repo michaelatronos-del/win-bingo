@@ -1453,7 +1453,7 @@ export default function App() {
                   )}
                 </div>
               </div>
-              </div>
+  
               <div className="flex-1 overflow-y-auto">
                 <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
                 {renderCallerGrid(true)}
@@ -1509,6 +1509,7 @@ export default function App() {
             </button>
           </div>
         </div>
+      </div>
     )
   }
 
