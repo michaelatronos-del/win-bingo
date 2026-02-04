@@ -184,7 +184,7 @@ export default function App() {
       // exists that includes the last called number, when the auto algorithm is enabled.
       if (autoAlgoMark && !autoBingoSentRef.current) {
         const autoMarks = new Set<number>(d.called)
-        const hasAutoBingo = hasBingoWithMarksAndLast(autoMarks, d.number)
+        const hasAutoBingo = hasBingoWithMarksAndLast(autoMarks, d.number, picksRef.current)
         if (hasAutoBingo && currentBetHouse) {
           autoBingoSentRef.current = true
           s.emit('bingo', { stake: currentBetHouse })
@@ -396,10 +396,12 @@ export default function App() {
   // Core bingo checker given an explicit set of marked numbers and a last-called value.
   const hasBingoWithMarksAndLast = (
     marks: Set<number>,
-    last: number | null
+    last: number | null,
+    boardIdsOverride?: number[]
   ): boolean => {
     if (!last) return false
-    for (const boardId of picks) {
+    const boardsToCheck = boardIdsOverride ?? picks
+    for (const boardId of boardsToCheck) {
       const grid = getBoard(boardId)
       if (!grid) continue
       // map grid indices to numbers for quick checks
