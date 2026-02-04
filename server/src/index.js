@@ -23,7 +23,7 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 const BOARD_SIZE = 75; // BINGO: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
 const COUNTDOWN_SECONDS = 60;
-const CALL_INTERVAL_MS = 3000;
+const CALL_INTERVAL_MS = 5000;
 
 // Available stake amounts (bet houses)
 const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];

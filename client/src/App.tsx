@@ -454,7 +454,7 @@ export default function App() {
   }
 
   // Render 75-number caller grid with B I N G O columns
-  const renderCallerGrid = () => {
+  const renderCallerGrid = (currentNumber?: number) => {
     const columns: number[][] = [
       Array.from({ length: 15 }, (_, i) => i + 1),
       Array.from({ length: 15 }, (_, i) => i + 16),
@@ -488,12 +488,15 @@ export default function App() {
             <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
               {col.map((num) => {
                 const isCalled = called.includes(num);
+                const isCurrent = currentNumber === num;
                 return (
                   <div
                     key={num}
                     className={[
                       'w-full flex items-center justify-center text-[10px] sm:text-xs font-bold rounded-md transition-all duration-300 border',
-                      isCalled
+                      isCurrent
+                        ? 'bg-amber-400 text-black border-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.9)] scale-110 z-20 animate-pulse'
+                        : isCalled
                         ? 'bg-emerald-500 text-black border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-105 z-10'
                         : 'bg-slate-800/80 text-slate-400 border-white/5'
                     ].join(' ')}
@@ -511,6 +514,40 @@ export default function App() {
 
   // Audio: try to play a sound for each call using selected pack
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
+
+  // Helper: convert number to its spoken word for display (1–75)
+  const numberToWord = (n: number): string => {
+    const ones = [
+      '',
+      'ONE',
+      'TWO',
+      'THREE',
+      'FOUR',
+      'FIVE',
+      'SIX',
+      'SEVEN',
+      'EIGHT',
+      'NINE',
+      'TEN',
+      'ELEVEN',
+      'TWELVE',
+      'THIRTEEN',
+      'FOURTEEN',
+      'FIFTEEN',
+      'SIXTEEN',
+      'SEVENTEEN',
+      'EIGHTEEN',
+      'NINETEEN',
+    ]
+    const tens = ['', 'TEN', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY']
+
+    if (n === 0) return 'ZERO'
+    if (n < 20) return ones[n]
+    const t = Math.floor(n / 10)
+    const o = n % 10
+    if (o === 0) return tens[t]
+    return `${tens[t]}-${ones[o]}`
+  }
 
   // Cache audio elements and latest flags so calls play instantly and only for active players
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
@@ -1381,7 +1418,8 @@ export default function App() {
 
 
   const renderGamePage = () => {
-    const recentlyCalled = called.slice(-5).reverse()
+    const recentlyCalled = called.slice(-6).reverse()
+    const previousFive = recentlyCalled.filter(n => n !== lastCalled).slice(0, 5)
     
     return (
       // We use h-screen and flex-col to lock the height to exactly the phone screen
@@ -1434,21 +1472,52 @@ export default function App() {
             
             {/* LEFT: Caller Board */}
             <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-base sm:text-xl font-black text-white tracking-tight">LIVE CALLER</h2>
-                    <div className="flex items-center gap-3">     
-                       <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
-                    {String(seconds).padStart(2,"0")}s
+              <div className="flex items-center justify-between mb-4 gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-xl font-black text-white tracking-tight">LIVE CALLER</h2>
+                  <button
+                    type="button"
+                    onClick={() => setAudioOn(prev => !prev)}
+                    className="h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm"
+                    aria-label={audioOn ? 'Turn sound off' : 'Turn sound on'}
+                  >
+                    {audioOn ? '🔊' : '🔈'}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
+                    {String(seconds).padStart(2, '0')}s
                   </div>
                   {phase === 'calling' && (
                     <div className="px-2 py-1 rounded bg-emerald-700 font-mono text-[10px] sm:text-sm">
-                      {String(callCountdown).padStart(2,'0')}s
+                      {String(callCountdown).padStart(2, '0')}s
                     </div>
                   )}
-                  {/* Last Called Bubble */}
                   {lastCalled && (
-                    <div className="h-8 w-8 rounded-full bg-orange-500 text-black flex items-center justify-center font-black text-sm sm:text-lg">
-                      {lastCalled}
+                    <div className="flex items-center gap-2">
+                      <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-sm sm:text-lg shadow-[0_0_18px_rgba(251,146,60,0.9)] animate-pulse">
+                        <div className="text-[10px] sm:text-xs tracking-wide">
+                          {numberToLetter(lastCalled)}
+                        </div>
+                        <div>{lastCalled}</div>
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="text-[9px] sm:text-xs text-slate-200 uppercase tracking-wide">
+                          {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
+                        </div>
+                        {previousFive.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {previousFive.map(n => (
+                              <div
+                                key={n}
+                                className="px-1.5 py-0.5 rounded-full bg-slate-700 text-[9px] sm:text-xs text-slate-100 border border-white/10"
+                              >
+                                {numberToLetter(n)} {n}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1456,7 +1525,7 @@ export default function App() {
   
               <div className="flex-1 overflow-y-auto">
                 <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
-                {renderCallerGrid(true)}
+                {renderCallerGrid(lastCalled ?? undefined)}
               </div>
   
               {/* Desktop Bingo Button */}
