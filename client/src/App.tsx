@@ -1466,6 +1466,48 @@ export default function App() {
             </div>
           </div>
   
+          {/* CURRENT CALL STRIP */}
+          {lastCalled && (
+            <div className="mb-3">
+              <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
+                <div className="flex-1 text-[10px] sm:text-xs text-slate-200 uppercase tracking-wide">
+                  CURRENT CALL
+                  <div className="mt-0.5 text-[9px] sm:text-xs text-slate-400">
+                    {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
+                    <div className="text-[10px] sm:text-xs tracking-wide">
+                      {numberToLetter(lastCalled)}
+                    </div>
+                    <div>{lastCalled}</div>
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col items-end">
+                  <div className="text-[9px] sm:text-xs text-slate-300 uppercase tracking-wide mb-1">
+                    LAST 5 CALLED
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {previousFive.map(n => (
+                      <div
+                        key={n}
+                        className="px-1.5 py-0.5 rounded-full bg-slate-900/80 border border-white/15 text-[9px] sm:text-xs text-slate-50"
+                      >
+                        {numberToLetter(n)} {n}
+                      </div>
+                    ))}
+                    {previousFive.length === 0 && (
+                      <div className="px-1.5 py-0.5 rounded-full bg-slate-900/40 border border-white/5 text-[9px] sm:text-xs text-slate-500">
+                        Waiting…
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 3. MAIN GAME AREA (Caller & Boards) */}
           {/* flex-1 and min-h-0 are key to keeping the Bingo button at the bottom */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
@@ -1491,33 +1533,6 @@ export default function App() {
                   {phase === 'calling' && (
                     <div className="px-2 py-1 rounded bg-emerald-700 font-mono text-[10px] sm:text-sm">
                       {String(callCountdown).padStart(2, '0')}s
-                    </div>
-                  )}
-                  {lastCalled && (
-                    <div className="flex items-center gap-2">
-                      <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-sm sm:text-lg shadow-[0_0_18px_rgba(251,146,60,0.9)] animate-pulse">
-                        <div className="text-[10px] sm:text-xs tracking-wide">
-                          {numberToLetter(lastCalled)}
-                        </div>
-                        <div>{lastCalled}</div>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="text-[9px] sm:text-xs text-slate-200 uppercase tracking-wide">
-                          {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
-                        </div>
-                        {previousFive.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {previousFive.map(n => (
-                              <div
-                                key={n}
-                                className="px-1.5 py-0.5 rounded-full bg-slate-700 text-[9px] sm:text-xs text-slate-100 border border-white/10"
-                              >
-                                {numberToLetter(n)} {n}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
                     </div>
                   )}
                 </div>
