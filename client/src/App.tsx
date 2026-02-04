@@ -175,65 +175,75 @@ export default function App() {
     })
 
     // 🔧 FIXED: Call event handler with proper auto bingo trigger
-    s.on('call', (d: any) => {
-      setCalled(d.called)
-      setLastCalled(d.number)
-      // 5 second countdown between calls
-      setCallCountdown(5)
-      if (autoMark || autoAlgoMark) {
-        setMarkedNumbers(prev => {
-          const next = new Set(prev)
-          next.add(d.number)
-          return next
+        // 🔧 FIXED: Call event handler with proper auto bingo trigger
+        s.on('call', (d: any) => {
+          setCalled(d.called)
+          setLastCalled(d.number)
+          setCallCountdown(5)
+          
+          // Auto-mark numbers if enabled
+          if (autoMark || autoAlgoMark) {
+            setMarkedNumbers(prev => {
+              const next = new Set(prev)
+              next.add(d.number)
+              return next
+            })
+          }
+          
+          // 🔧 FIXED AUTO BINGO: Use fresh called array directly, not stale state
+          if (autoBingoRef.current && !autoBingoSentRef.current && currentBetHouse) {
+            // Always use the server's called array for auto-algo mode
+            const freshMarks = new Set<number>(d.called)
+            
+            // Check if any board has a winning line that includes the just-called number
+            const winResult = findBingoWinWithLastCalled(freshMarks, d.number, picksRef.current)
+            
+            if (winResult) {
+              autoBingoSentRef.current = true
+              s.emit('bingo', { stake: currentBetHouse })
+            }
+          }
+          
+          // Play audio for active players
+          if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
+            playCallSound(d.number)
+          }
         })
-      }
-      // Automatically trigger BINGO as soon as any valid winning line exists
-      // on the player's current boards, when auto bingo is enabled (covers both auto mark modes)
-      if (autoBingoRef.current && !autoBingoSentRef.current) {
-        const autoMarks = new Set<number>(autoAlgoMarkRef.current ? d.called : Array.from(markedNumbers))
-        const autoWin = hasBingoWithMarksAndLast(autoMarks, d.number, picksRef.current)
-        if (autoWin && currentBetHouse) {
-          autoBingoSentRef.current = true
-          s.emit('bingo', { stake: currentBetHouse })
-        }
-      }
-      // Only play audio for active players in the current live game, using refs to avoid stale state
-      if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
-        playCallSound(d.number)
-      }
-    })
-    
     // 🔧 FIXED: Winner event handler with server-side board support
-    s.on('winner', (d: any) => { 
-      // Try to compute a winning board/line for the local player only
-      let boardId: number | undefined
-      let lineIndices: number[] | undefined
-      // Use server-provided board data if available
-      if (d.boardId && Array.isArray(d.lineIndices)) {
-        boardId = d.boardId
-        lineIndices = d.lineIndices
-      } else if (d.playerId === playerId) {
-        const marks = new Set<number>(called)
-        const win = findAnyBingoWin(marks, picksRef.current)
-        if (win) {
-          boardId = win.boardId
-          lineIndices = win.line
-        }
-      }
-      setWinnerInfo({
-        playerId: d.playerId,
-        prize: d.prize,
-        stake: d.stake,
-        boardId,
-        lineIndices,
-      })
-      setPicks([])
-      setMarkedNumbers(new Set())
-      setCurrentPage('lobby')
-      setIsReady(false)
-      setIsWaiting(false)
-      autoBingoSentRef.current = false
-    })
+        // 🔧 FIXED: Winner event - compute winning board and line
+        s.on('winner', (d: any) => {
+          let boardId: number | undefined
+          let lineIndices: number[] | undefined
+          
+          // Use server data if provided
+          if (d.boardId && Array.isArray(d.lineIndices)) {
+            boardId = d.boardId
+            lineIndices = d.lineIndices
+          } else {
+            // Compute locally using called numbers
+            const marks = new Set<number>(d.called || called)
+            const win = findAnyBingoWin(marks, picksRef.current)
+            if (win) {
+              boardId = win.boardId
+              lineIndices = win.line
+            }
+          }
+          
+          setWinnerInfo({
+            playerId: d.playerId,
+            prize: d.prize,
+            stake: d.stake,
+            boardId,
+            lineIndices,
+          })
+          
+          setPicks([])
+          setMarkedNumbers(new Set())
+          setCurrentPage('lobby')
+          setIsReady(false)
+          setIsWaiting(false)
+          autoBingoSentRef.current = false
+        })
     
     s.on('game_start', () => {
       if (!isWaiting) {
@@ -488,7 +498,51 @@ export default function App() {
         }
         return null
       }
-    
+        // 🔧 NEW: Find bingo win that includes the last called number
+  const findBingoWinWithLastCalled = (
+    marks: Set<number>,
+    lastCalledNum: number,
+    boardIdsOverride?: number[]
+  ): { boardId: number; line: number[] } | null => {
+    const boardsToCheck = boardIdsOverride ?? picks
+    for (const boardId of boardsToCheck) {
+      const grid = getBoard(boardId)
+      if (!grid) continue
+      
+      // All possible lines (rows, cols, diagonals) as index arrays
+      const lines: number[][] = []
+      // Rows
+      for (let r = 0; r < 5; r++) {
+        lines.push([0, 1, 2, 3, 4].map(c => r * 5 + c))
+      }
+      // Columns
+      for (let c = 0; c < 5; c++) {
+        lines.push([0, 1, 2, 3, 4].map(r => r * 5 + c))
+      }
+      // Diagonals
+      lines.push([0, 6, 12, 18, 24]) // top-left to bottom-right
+      lines.push([4, 8, 12, 16, 20]) // top-right to bottom-left
+
+      for (const idxLine of lines) {
+        // Check if this line contains the last called number
+        const lineNumbers = idxLine.map(idx => grid[idx])
+        const containsLastCalled = lineNumbers.includes(lastCalledNum)
+        
+        if (!containsLastCalled) continue
+        
+        // Check if line is complete (all marked or FREE)
+        const isComplete = idxLine.every(idx => {
+          const num = grid[idx]
+          return num === -1 || marks.has(num)
+        })
+        
+        if (isComplete) {
+          return { boardId, line: idxLine }
+        }
+      }
+    }
+    return null
+  }
       // Ensure a win line exists that includes the most recent called number.
       // Optional overrides let us validate immediately on a fresh server call payload.
       const hasBingoIncludingLastCalled = (
@@ -1924,33 +1978,30 @@ export default function App() {
     <>
       {mainPage}
       {winnerInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+          <div className="w-full max-w-sm bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-xl sm:text-2xl font-bold text-emerald-300 text-center">
               Winner!
             </div>
-            <div className="text-sm sm:text-base text-slate-200 space-y-1">
-              <div>
-                <span className="text-slate-400">Player:</span>{' '}
-                <span className="font-mono break-all">{winnerInfo.playerId}</span>
-              </div>
-              <div>
-                <span className="text-slate-400">Prize:</span>{' '}
-                <span className="font-semibold">{winnerInfo.prize} Birr</span>
-              </div>
-            </div>
-            {winnerInfo.boardId && winnerInfo.lineIndices && winnerInfo.lineIndices.length > 0 && (
+            
+            {/* 🔧 FIXED: Only show the winning board with highlighted line */}
+            {winnerInfo.boardId ? (
               <div className="space-y-2">
-                <div className="text-xs sm:text-sm text-slate-300">
-                  Winning board {winnerInfo.boardId} (highlighted line):
+                <div className="text-sm text-slate-300 text-center">
+                  Board {winnerInfo.boardId}
                 </div>
-                {renderCard(winnerInfo.boardId, true, winnerInfo.lineIndices)}
+                {renderCard(winnerInfo.boardId, true, winnerInfo.lineIndices || [])}
+              </div>
+            ) : (
+              <div className="text-center text-slate-400 text-sm">
+                Winning board data unavailable
               </div>
             )}
-            <div className="flex justify-end">
+            
+            <div className="flex justify-center pt-2">
               <button
                 onClick={() => setWinnerInfo(null)}
-                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+                className="px-6 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
               >
                 OK
               </button>
