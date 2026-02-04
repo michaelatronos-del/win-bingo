@@ -48,6 +48,13 @@ export default function App() {
   const [autoMark, setAutoMark] = useState<boolean>(false)
   const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
   const [autoBingo, setAutoBingo] = useState<boolean>(false)
+  const [winnerInfo, setWinnerInfo] = useState<{
+    playerId: string
+    prize: number
+    stake: number
+    boardId?: number
+    lineIndices?: number[]
+  } | null>(null)
   const [audioPack, setAudioPack] = useState<string>('amharic') // 'amharic' | 'modern-amharic'
   const [audioOn, setAudioOn] = useState<boolean>(true)
   const callTimerRef = useRef<number | null>(null)
@@ -183,7 +190,7 @@ export default function App() {
       }
       // Automatically trigger BINGO as soon as any valid winning line exists
       // on the player's current boards, when both auto algorithm mark AND auto bingo are enabled.
-      if (autoAlgoMark && autoBingo && !autoBingoSentRef.current) {
+      if (autoAlgoMarkRef.current && autoBingoRef.current && !autoBingoSentRef.current) {
         const autoMarks = new Set<number>(d.called)
         const autoWin = findAnyBingoWin(autoMarks, picksRef.current)
         if (autoWin && currentBetHouse) {
@@ -198,7 +205,24 @@ export default function App() {
     })
     
     s.on('winner', (d: any) => { 
-      alert(`Winner: ${d.playerId}\nPrize: ${d.prize}`)
+      // Try to compute a winning board/line for the local player only
+      let boardId: number | undefined
+      let lineIndices: number[] | undefined
+      if (d.playerId === playerId) {
+        const marks = new Set<number>(called)
+        const win = findAnyBingoWin(marks, picksRef.current)
+        if (win) {
+          boardId = win.boardId
+          lineIndices = win.line
+        }
+      }
+      setWinnerInfo({
+        playerId: d.playerId,
+        prize: d.prize,
+        stake: d.stake,
+        boardId,
+        lineIndices,
+      })
       setPicks([])
       setMarkedNumbers(new Set())
       setCurrentPage('lobby')
@@ -589,10 +613,16 @@ export default function App() {
   const audioOnRef = useRef<boolean>(audioOn)
   const isWaitingRef = useRef<boolean>(isWaiting)
   const phaseRef = useRef<Phase>(phase)
+  const picksRef = useRef<number[]>(picks)
+  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
+  const autoBingoRef = useRef<boolean>(autoBingo)
 
   useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
   useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
   useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { picksRef.current = picks }, [picks])
+  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
+  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
   // Parse amount from deposit/withdrawal message
   const parseAmount = (message: string): number | null => {
     // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
@@ -714,7 +744,11 @@ export default function App() {
     }
   }
 
-  const renderCard = (boardId: number | null, isGamePage: boolean = false) => {
+  const renderCard = (
+    boardId: number | null,
+    isGamePage: boolean = false,
+    highlightLineIndices: number[] = []
+  ) => {
     if (!boardId) return null;
     const grid: BoardGrid | null = getBoard(boardId);
     if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
@@ -743,6 +777,7 @@ export default function App() {
             const isCalled = called.includes(val);
             const isMarked = isFree || markedNumbers.has(val);
             const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
+            const isHighlight = highlightLineIndices.includes(idx);
   
             return (
               <div
@@ -753,7 +788,9 @@ export default function App() {
                   isFree
                     ? 'bg-yellow-400 border-yellow-200 text-black shadow-lg animate-pulse'
                     : finalState
-                    ? 'bg-emerald-500 border-emerald-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                    ? isHighlight
+                      ? 'bg-emerald-400 border-amber-300 text-black shadow-[0_0_18px_rgba(251,191,36,0.9)] scale-105'
+                      : 'bg-emerald-500 border-emerald-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
                     : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
                 ].join(' ')}
               >
@@ -1869,12 +1906,54 @@ export default function App() {
     return renderLoginPage()
   }
 
-  if (currentPage === 'login') return renderLoginPage()
-  if (currentPage === 'welcome') return renderWelcomePage()
-  if (currentPage === 'instructions') return renderInstructionsPage()
-  if (currentPage === 'depositSelect') return renderDepositSelect()
-  if (currentPage === 'depositConfirm') return renderDepositConfirm()
-  if (currentPage === 'withdrawal') return renderWithdrawalPage()
-  if (currentPage === 'lobby') return renderLobbyPage()
-  return renderGamePage()
+  const mainPage =
+    currentPage === 'login' ? renderLoginPage()
+    : currentPage === 'welcome' ? renderWelcomePage()
+    : currentPage === 'instructions' ? renderInstructionsPage()
+    : currentPage === 'depositSelect' ? renderDepositSelect()
+    : currentPage === 'depositConfirm' ? renderDepositConfirm()
+    : currentPage === 'withdrawal' ? renderWithdrawalPage()
+    : currentPage === 'lobby' ? renderLobbyPage()
+    : renderGamePage()
+
+  return (
+    <>
+      {mainPage}
+      {winnerInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+              Winner!
+            </div>
+            <div className="text-sm sm:text-base text-slate-200 space-y-1">
+              <div>
+                <span className="text-slate-400">Player:</span>{' '}
+                <span className="font-mono break-all">{winnerInfo.playerId}</span>
+              </div>
+              <div>
+                <span className="text-slate-400">Prize:</span>{' '}
+                <span className="font-semibold">{winnerInfo.prize} Birr</span>
+              </div>
+            </div>
+            {winnerInfo.boardId && winnerInfo.lineIndices && winnerInfo.lineIndices.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs sm:text-sm text-slate-300">
+                  Winning board {winnerInfo.boardId} (highlighted line):
+                </div>
+                {renderCard(winnerInfo.boardId, true, winnerInfo.lineIndices)}
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setWinnerInfo(null)}
+                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
