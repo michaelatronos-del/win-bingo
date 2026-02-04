@@ -406,7 +406,7 @@ export default function App() {
       if (count === 5) return true
     }
     
-    Copy code    // Check diagonals
+      // Check diagonals
     let count1 = 0, count2 = 0
     for (let i = 0; i < 5; i++) {
       const num1 = board[i * 5 + i]
