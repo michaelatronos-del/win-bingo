@@ -152,6 +152,7 @@ export default function App() {
         setMarkedNumbers(new Set())
         setIsReady(false)
         setIsWaiting(false)
+        setTakenBoards([])
         autoBingoSentRef.current = false
       }
     })
@@ -174,76 +175,61 @@ export default function App() {
       }
     })
 
-    // 🔧 FIXED: Call event handler with proper auto bingo trigger
-        // 🔧 FIXED: Call event handler with proper auto bingo trigger
-        s.on('call', (d: any) => {
-          setCalled(d.called)
-          setLastCalled(d.number)
-          setCallCountdown(5)
-          
-          // Auto-mark numbers if enabled
-          if (autoMark || autoAlgoMark) {
-            setMarkedNumbers(prev => {
-              const next = new Set(prev)
-              next.add(d.number)
-              return next
-            })
-          }
-          
-          // 🔧 FIXED AUTO BINGO: Use fresh called array directly, not stale state
-          if (autoBingoRef.current && !autoBingoSentRef.current && currentBetHouse) {
-            // Always use the server's called array for auto-algo mode
-            const freshMarks = new Set<number>(d.called)
-            
-            // Check if any board has a winning line that includes the just-called number
-            const winResult = findBingoWinWithLastCalled(freshMarks, d.number, picksRef.current)
-            
-            if (winResult) {
-              autoBingoSentRef.current = true
-              s.emit('bingo', { stake: currentBetHouse })
-            }
-          }
-          
-          // Play audio for active players
-          if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
-            playCallSound(d.number)
-          }
+    // Number calls for the current room (socket is only in one room)
+    s.on('call', (d: any) => {
+      setCalled(d.called)
+      setLastCalled(d.number)
+      // 5 second countdown between calls
+      setCallCountdown(5)
+      if (autoMark || autoAlgoMark) {
+        setMarkedNumbers(prev => {
+          const next = new Set(prev)
+          next.add(d.number)
+          return next
         })
-    // 🔧 FIXED: Winner event handler with server-side board support
-        // 🔧 FIXED: Winner event - compute winning board and line
-        s.on('winner', (d: any) => {
-          let boardId: number | undefined
-          let lineIndices: number[] | undefined
-          
-          // Use server data if provided
-          if (d.boardId && Array.isArray(d.lineIndices)) {
-            boardId = d.boardId
-            lineIndices = d.lineIndices
-          } else {
-            // Compute locally using called numbers
-            const marks = new Set<number>(d.called || called)
-            const win = findAnyBingoWin(marks, picksRef.current)
-            if (win) {
-              boardId = win.boardId
-              lineIndices = win.line
-            }
-          }
-          
-          setWinnerInfo({
-            playerId: d.playerId,
-            prize: d.prize,
-            stake: d.stake,
-            boardId,
-            lineIndices,
-          })
-          
-          setPicks([])
-          setMarkedNumbers(new Set())
-          setCurrentPage('lobby')
-          setIsReady(false)
-          setIsWaiting(false)
-          autoBingoSentRef.current = false
-        })
+      }
+      // Automatically trigger BINGO as soon as any valid winning line exists
+      // on the player's current boards, when both auto algorithm mark AND auto bingo are enabled.
+      if (autoAlgoMarkRef.current && autoBingoRef.current && !autoBingoSentRef.current) {
+        const autoMarks = new Set<number>(d.called)
+        const autoWin = findAnyBingoWin(autoMarks, picksRef.current)
+        if (autoWin && currentBetHouse) {
+          autoBingoSentRef.current = true
+          s.emit('bingo', { stake: currentBetHouse })
+        }
+      }
+      // Only play audio for active players in the current live game, using refs to avoid stale state
+      if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
+        playCallSound(d.number)
+      }
+    })
+    
+    s.on('winner', (d: any) => { 
+      // Try to compute a winning board/line for the local player only
+      let boardId: number | undefined
+      let lineIndices: number[] | undefined
+      if (d.playerId === playerId) {
+        const marks = new Set<number>(called)
+        const win = findAnyBingoWin(marks, picksRef.current)
+        if (win) {
+          boardId = win.boardId
+          lineIndices = win.line
+        }
+      }
+      setWinnerInfo({
+        playerId: d.playerId,
+        prize: d.prize,
+        stake: d.stake,
+        boardId,
+        lineIndices,
+      })
+      setPicks([])
+      setMarkedNumbers(new Set())
+      setCurrentPage('lobby')
+      setIsReady(false)
+      setIsWaiting(false)
+      autoBingoSentRef.current = false
+    })
     
     s.on('game_start', () => {
       if (!isWaiting) {
@@ -416,407 +402,363 @@ export default function App() {
       if (count === 5) return true
     }
     
-        // Check diagonals
-        let count1 = 0, count2 = 0
-        for (let i = 0; i < 5; i++) {
-          const num1 = board[i * 5 + i]
-          const num2 = board[i * 5 + (4 - i)]
-          if (num1 === -1 || markedNumbers.has(num1)) count1++
-          if (num2 === -1 || markedNumbers.has(num2)) count2++
-        }
-        return count1 === 5 || count2 === 5
-      }
-    
-      const canBingo = picks.some(boardId => {
-        const board = getBoard(boardId)
-        return board ? checkBingo(board) : false
-      })
-    
-      // Core bingo checker given an explicit set of marked numbers and a last-called value.
-      const hasBingoWithMarksAndLast = (
-        marks: Set<number>,
-        last: number | null,
-        boardIdsOverride?: number[]
-      ): boolean => {
-        if (!last) return false
-        const boardsToCheck = boardIdsOverride ?? picks
-        for (const boardId of boardsToCheck) {
-          const grid = getBoard(boardId)
-          if (!grid) continue
-          // map grid indices to numbers for quick checks
-          const lines: number[][] = []
-          // rows
-          for (let r = 0; r < 5; r++) {
-            lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
-          }
-          // cols
-          for (let c = 0; c < 5; c++) {
-            lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
-          }
-          // diagonals
-          lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
-          lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
-    
-          for (const line of lines) {
-            const containsLast = line.includes(last)
-            if (!containsLast) continue
-            const complete = line.every(n => n === -1 || marks.has(n))
-            if (complete) return true
-          }
-        }
-        return false
-      }
-    
-      // Generic bingo finder that ignores "last called" and returns the first winning line, if any.
-      const findAnyBingoWin = (
-        marks: Set<number>,
-        boardIdsOverride?: number[]
-      ): { boardId: number; line: number[] } | null => {
-        const boardsToCheck = boardIdsOverride ?? picks
-        for (const boardId of boardsToCheck) {
-          const grid = getBoard(boardId)
-          if (!grid) continue
-          const lines: number[][] = []
-          for (let r = 0; r < 5; r++) {
-            lines.push([0,1,2,3,4].map(c => r * 5 + c))
-          }
-          for (let c = 0; c < 5; c++) {
-            lines.push([0,1,2,3,4].map(r => r * 5 + c))
-          }
-          lines.push([0,1,2,3,4].map(i => i * 5 + i))
-          lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
-    
-          for (const idxLine of lines) {
-            const complete = idxLine.every(idx => {
-              const num = grid[idx]
-              return num === -1 || marks.has(num)
-            })
-            if (complete) {
-              return { boardId, line: idxLine }
-            }
-          }
-        }
-        return null
-      }
-        // 🔧 NEW: Find bingo win that includes the last called number
-  const findBingoWinWithLastCalled = (
+    // Check diagonals
+    let count1 = 0, count2 = 0
+    for (let i = 0; i < 5; i++) {
+      const num1 = board[i * 5 + i]
+      const num2 = board[i * 5 + (4 - i)]
+      if (num1 === -1 || markedNumbers.has(num1)) count1++
+      if (num2 === -1 || markedNumbers.has(num2)) count2++
+    }
+    return count1 === 5 || count2 === 5
+  }
+
+  const canBingo = picks.some(boardId => {
+    const board = getBoard(boardId)
+    return board ? checkBingo(board) : false
+  })
+
+  // Core bingo checker given an explicit set of marked numbers and a last-called value.
+  const hasBingoWithMarksAndLast = (
     marks: Set<number>,
-    lastCalledNum: number,
+    last: number | null,
+    boardIdsOverride?: number[]
+  ): boolean => {
+    if (!last) return false
+    const boardsToCheck = boardIdsOverride ?? picks
+    for (const boardId of boardsToCheck) {
+      const grid = getBoard(boardId)
+      if (!grid) continue
+      // map grid indices to numbers for quick checks
+      const lines: number[][] = []
+      // rows
+      for (let r = 0; r < 5; r++) {
+        lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
+      }
+      // cols
+      for (let c = 0; c < 5; c++) {
+        lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
+      }
+      // diagonals
+      lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
+      lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
+
+      for (const line of lines) {
+        const containsLast = line.includes(last)
+        if (!containsLast) continue
+        const complete = line.every(n => n === -1 || marks.has(n))
+        if (complete) return true
+      }
+    }
+    return false
+  }
+
+  // Generic bingo finder that ignores "last called" and returns the first winning line, if any.
+  const findAnyBingoWin = (
+    marks: Set<number>,
     boardIdsOverride?: number[]
   ): { boardId: number; line: number[] } | null => {
     const boardsToCheck = boardIdsOverride ?? picks
     for (const boardId of boardsToCheck) {
       const grid = getBoard(boardId)
       if (!grid) continue
-      
-      // All possible lines (rows, cols, diagonals) as index arrays
       const lines: number[][] = []
-      // Rows
       for (let r = 0; r < 5; r++) {
-        lines.push([0, 1, 2, 3, 4].map(c => r * 5 + c))
+        lines.push([0,1,2,3,4].map(c => r * 5 + c))
       }
-      // Columns
       for (let c = 0; c < 5; c++) {
-        lines.push([0, 1, 2, 3, 4].map(r => r * 5 + c))
+        lines.push([0,1,2,3,4].map(r => r * 5 + c))
       }
-      // Diagonals
-      lines.push([0, 6, 12, 18, 24]) // top-left to bottom-right
-      lines.push([4, 8, 12, 16, 20]) // top-right to bottom-left
+      lines.push([0,1,2,3,4].map(i => i * 5 + i))
+      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
 
       for (const idxLine of lines) {
-        // Check if this line contains the last called number
-        const lineNumbers = idxLine.map(idx => grid[idx])
-        const containsLastCalled = lineNumbers.includes(lastCalledNum)
-        
-        if (!containsLastCalled) continue
-        
-        // Check if line is complete (all marked or FREE)
-        const isComplete = idxLine.every(idx => {
+        const complete = idxLine.every(idx => {
           const num = grid[idx]
           return num === -1 || marks.has(num)
         })
-        
-        if (isComplete) {
+        if (complete) {
           return { boardId, line: idxLine }
         }
       }
     }
     return null
   }
-      // Ensure a win line exists that includes the most recent called number.
-      // Optional overrides let us validate immediately on a fresh server call payload.
-      const hasBingoIncludingLastCalled = (
-        overrideCalled?: number[],
-        overrideLastCalled?: number | null
-      ): boolean => {
-        const effectiveLastCalled = overrideLastCalled ?? lastCalled
-        if (!effectiveLastCalled) return false
-        // Effective marked set: when auto algorithm is on, use called numbers as marks
-        const effectiveCalled = overrideCalled ?? called
-        const marks = new Set<number>(
-          autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
-        )
-        return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
-      }
-    
-      const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
-        if (phase !== 'calling' || isWaiting) return
-        // Validate locally before notifying server
-        if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
-          alert('No valid BINGO found that includes the last called number. Keep marking!')
-          return
-        }
-        if (!currentBetHouse) return
-        socket?.emit('bingo', { stake: currentBetHouse })
-      }
-    
-      // Render 75-number caller grid with B I N G O columns
-      const renderCallerGrid = (currentNumber?: number) => {
-        const columns: number[][] = [
-          Array.from({ length: 15 }, (_, i) => i + 1),
-          Array.from({ length: 15 }, (_, i) => i + 16),
-          Array.from({ length: 15 }, (_, i) => i + 31),
-          Array.from({ length: 15 }, (_, i) => i + 46),
-          Array.from({ length: 15 }, (_, i) => i + 61),
-        ];
-      
-        const headers = ['B', 'I', 'N', 'G', 'O'];
-        const headerColors = [
-          'bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'
-        ];
-      
-        return (
-          <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
-            {/* Headers */}
-            <div className="grid grid-cols-5 gap-1.5 mb-2">
-              {headers.map((h, i) => (
-                <div
-                  key={h}
-                  className={`${headerColors[i]} text-white rounded-lg text-center font-black py-1 shadow-lg text-sm tracking-widest`}
-                >
-                  {h}
-                </div>
-              ))}
+
+  // Ensure a win line exists that includes the most recent called number.
+  // Optional overrides let us validate immediately on a fresh server call payload.
+  const hasBingoIncludingLastCalled = (
+    overrideCalled?: number[],
+    overrideLastCalled?: number | null
+  ): boolean => {
+    const effectiveLastCalled = overrideLastCalled ?? lastCalled
+    if (!effectiveLastCalled) return false
+    // Effective marked set: when auto algorithm is on, use called numbers as marks
+    const effectiveCalled = overrideCalled ?? called
+    const marks = new Set<number>(
+      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
+    )
+    return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
+  }
+
+  const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
+    if (phase !== 'calling' || isWaiting) return
+    // Validate locally before notifying server
+    if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
+      alert('No valid BINGO found that includes the last called number. Keep marking!')
+      return
+    }
+    if (!currentBetHouse) return
+    socket?.emit('bingo', { stake: currentBetHouse })
+  }
+
+  // Render 75-number caller grid with B I N G O columns
+  const renderCallerGrid = (currentNumber?: number) => {
+    const columns: number[][] = [
+      Array.from({ length: 15 }, (_, i) => i + 1),
+      Array.from({ length: 15 }, (_, i) => i + 16),
+      Array.from({ length: 15 }, (_, i) => i + 31),
+      Array.from({ length: 15 }, (_, i) => i + 46),
+      Array.from({ length: 15 }, (_, i) => i + 61),
+    ];
+  
+    const headers = ['B', 'I', 'N', 'G', 'O'];
+    const headerColors = [
+      'bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'
+    ];
+  
+    return (
+      <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
+        {/* Headers */}
+        <div className="grid grid-cols-5 gap-1.5 mb-2">
+          {headers.map((h, i) => (
+            <div
+              key={h}
+              className={`${headerColors[i]} text-white rounded-lg text-center font-black py-1 shadow-lg text-sm tracking-widest`}
+            >
+              {h}
             </div>
-      
-            {/* 5 columns of numbers - flex-1 makes this stretch to fill height */}
-            <div className="grid grid-cols-5 gap-1.5 flex-1">
-              {columns.map((col, colIndex) => (
-                <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
-                  {col.map((num) => {
-                    const isCalled = called.includes(num);
-                    const isCurrent = currentNumber === num;
-                    return (
-                      <div
-                        key={num}
-                        className={[
-                          'w-full flex items-center justify-center text-[10px] sm:text-xs font-bold rounded-md transition-all duration-300 border',
-                          isCurrent
-                            ? 'bg-amber-400 text-black border-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.9)] scale-110 z-20 animate-pulse'
-                            : isCalled
-                            ? 'bg-emerald-500 text-black border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-105 z-10'
-                            : 'bg-slate-800/80 text-slate-400 border-white/5'
-                        ].join(' ')}
-                      >
-                        {num}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+          ))}
+        </div>
+  
+        {/* 5 columns of numbers - flex-1 makes this stretch to fill height */}
+        <div className="grid grid-cols-5 gap-1.5 flex-1">
+          {columns.map((col, colIndex) => (
+            <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
+              {col.map((num) => {
+                const isCalled = called.includes(num);
+                const isCurrent = currentNumber === num;
+                return (
+                  <div
+                    key={num}
+                    className={[
+                      'w-full flex items-center justify-center text-[10px] sm:text-xs font-bold rounded-md transition-all duration-300 border',
+                      isCurrent
+                        ? 'bg-amber-400 text-black border-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.9)] scale-110 z-20 animate-pulse'
+                        : isCalled
+                        ? 'bg-emerald-500 text-black border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-105 z-10'
+                        : 'bg-slate-800/80 text-slate-400 border-white/5'
+                    ].join(' ')}
+                  >
+                    {num}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        );
-      };
-    
-      // Audio: try to play a sound for each call using selected pack
-      const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
-    
-      // Helper: convert number to its spoken word for display (1–75)
-      const numberToWord = (n: number): string => {
-        const ones = [
-          '',
-          'ONE',
-          'TWO',
-          'THREE',
-          'FOUR',
-          'FIVE',
-          'SIX',
-          'SEVEN',
-          'EIGHT',
-          'NINE',
-          'TEN',
-          'ELEVEN',
-          'TWELVE',
-          'THIRTEEN',
-          'FOURTEEN',
-          'FIFTEEN',
-          'SIXTEEN',
-          'SEVENTEEN',
-          'EIGHTEEN',
-          'NINETEEN',
-        ]
-        const tens = ['', 'TEN', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY']
-    
-        if (n === 0) return 'ZERO'
-        if (n < 20) return ones[n]
-        const t = Math.floor(n / 10)
-        const o = n % 10
-        if (o === 0) return tens[t]
-        return `${tens[t]}-${ones[o]}`
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Audio: try to play a sound for each call using selected pack
+  const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
+
+  // Helper: convert number to its spoken word for display (1–75)
+  const numberToWord = (n: number): string => {
+    const ones = [
+      '',
+      'ONE',
+      'TWO',
+      'THREE',
+      'FOUR',
+      'FIVE',
+      'SIX',
+      'SEVEN',
+      'EIGHT',
+      'NINE',
+      'TEN',
+      'ELEVEN',
+      'TWELVE',
+      'THIRTEEN',
+      'FOURTEEN',
+      'FIFTEEN',
+      'SIXTEEN',
+      'SEVENTEEN',
+      'EIGHTEEN',
+      'NINETEEN',
+    ]
+    const tens = ['', 'TEN', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY']
+
+    if (n === 0) return 'ZERO'
+    if (n < 20) return ones[n]
+    const t = Math.floor(n / 10)
+    const o = n % 10
+    if (o === 0) return tens[t]
+    return `${tens[t]}-${ones[o]}`
+  }
+
+  // Cache audio elements and latest flags so calls play instantly and only for active players
+  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
+  const audioOnRef = useRef<boolean>(audioOn)
+  const isWaitingRef = useRef<boolean>(isWaiting)
+  const phaseRef = useRef<Phase>(phase)
+  const picksRef = useRef<number[]>(picks)
+  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
+  const autoBingoRef = useRef<boolean>(autoBingo)
+
+  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
+  useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { picksRef.current = picks }, [picks])
+  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
+  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
+  // Parse amount from deposit/withdrawal message
+  const parseAmount = (message: string): number | null => {
+    // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
+    const patterns = [
+      /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
+      /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
+      /amount[:\s]*(\d+\.?\d*)/i,
+      /(\d+\.?\d*)\s*(?:sent|transferred|deposited|credited)/i,
+    ]
+    for (const pattern of patterns) {
+      const match = message.match(pattern)
+      if (match) {
+        const amount = parseFloat(match[1])
+        if (!isNaN(amount) && amount > 0) return amount
       }
+    }
+    // Fallback: find standalone numbers that could be amounts
+    const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
+    if (numbers && numbers.length > 0) {
+      // Prefer numbers that look like currency amounts (2+ digits, possibly with decimals)
+      const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
+      if (amounts.length > 0) return Math.max(...amounts)
+    }
+    return null
+  }
+
+  const parseTransactionId = (text: string): string | null => {
+    // Look for common tags: Txn, Trans, Ref, Reference, ID
+    const patterns = [
+      /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
+      /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i,
+    ]
+    for (const pattern of patterns) {
+      const match = text.match(pattern)
+      if (match) return match[1].trim().toUpperCase()
+    }
+    // Fallback: longest alphanumeric token 8-20 chars
+    const tokens = text.match(/[A-Z0-9]{8,20}/gi)
+    if (tokens) {
+      const sorted = tokens.sort((a,b)=>b.length-a.length)
+      return sorted[0].toUpperCase()
+    }
+    return null
+  }
+
+  // Verify deposit message
+  const verifyDepositMessage = async (
+    message: string,
+    expectedAmount: number,
+    expectedAccount: string,
+    expectedName: string
+  ): Promise<{ valid: boolean; reason?: string; transactionId?: string; detectedAmount?: number }> => {
+    const msgLower = message.toLowerCase()
+    const msgNoSpaces = message.replace(/\s+/g, '')
+    const accountNoSpaces = expectedAccount.replace(/\s+/g, '')
     
-      // Cache audio elements and latest flags so calls play instantly and only for active players
-      const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-      const audioOnRef = useRef<boolean>(audioOn)
-      const isWaitingRef = useRef<boolean>(isWaiting)
-      const phaseRef = useRef<Phase>(phase)
-      const picksRef = useRef<number[]>(picks)
-      const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
-      const autoBingoRef = useRef<boolean>(autoBingo)
+    // Check account number (REQUIRED)
+    if (!msgNoSpaces.includes(accountNoSpaces)) {
+      return { valid: false, reason: 'Account number not found in the message. Please ensure you deposited to the correct account.' }
+    }
     
-      useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
-      useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
-      useEffect(() => { phaseRef.current = phase }, [phase])
-      useEffect(() => { picksRef.current = picks }, [picks])
-      useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
-      useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
-      // Parse amount from deposit/withdrawal message
-      const parseAmount = (message: string): number | null => {
-        // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
-        const patterns = [
-          /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
-          /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
-          /amount[:\s]*(\d+\.?\d*)/i,
-          /(\d+\.?\d*)\s*(?:sent|transferred|deposited|credited)/i,
-        ]
-        for (const pattern of patterns) {
-          const match = message.match(pattern)
-          if (match) {
-            const amount = parseFloat(match[1])
-            if (!isNaN(amount) && amount > 0) return amount
-          }
-        }
-        // Fallback: find standalone numbers that could be amounts
-        const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
-        if (numbers && numbers.length > 0) {
-          // Prefer numbers that look like currency amounts (2+ digits, possibly with decimals)
-          const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
-          if (amounts.length > 0) return Math.max(...amounts)
-        }
-        return null
+    // Check account holder name (OPTIONAL - if present, good; if not, that's fine as long as account number matches)
+    const nameParts = expectedName.toLowerCase().split(' ')
+    const nameFound = nameParts.some(part => part.length > 2 && msgLower.includes(part))
+    // Note: We don't fail if name is not found - account number is the primary verification
+    
+    // Extract and verify amount
+    const detectedAmount = parseAmount(message)
+    if (!detectedAmount) {
+      return { valid: false, reason: 'Could not detect amount from the message. Please include the amount in your message.' }
+    }
+    
+    // Allow small tolerance (0.01) for rounding
+    if (Math.abs(detectedAmount - expectedAmount) > 0.01) {
+      return { 
+        valid: false, 
+        reason: `Amount mismatch. Expected: ${expectedAmount} Birr, Found: ${detectedAmount} Birr. Please verify the amount.`,
+        detectedAmount 
       }
+    }
     
-      const parseTransactionId = (text: string): string | null => {
-        // Look for common tags: Txn, Trans, Ref, Reference, ID
-        const patterns = [
-          /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
-          /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i,
-        ]
-        for (const pattern of patterns) {
-          const match = text.match(pattern)
-          if (match) return match[1].trim().toUpperCase()
-        }
-        // Fallback: longest alphanumeric token 8-20 chars
-        const tokens = text.match(/[A-Z0-9]{8,20}/gi)
-        if (tokens) {
-          const sorted = tokens.sort((a,b)=>b.length-a.length)
-          return sorted[0].toUpperCase()
-        }
-        return null
-      }
+    // Extract transaction ID
+    const transactionId = parseTransactionId(message)
+    if (!transactionId) {
+      return { valid: false, reason: 'Transaction ID not found in the message. Please include the transaction reference.' }
+    }
     
-      // Verify deposit message
-      const verifyDepositMessage = async (
-        message: string,
-        expectedAmount: number,
-        expectedAccount: string,
-        expectedName: string
-      ): Promise<{ valid: boolean; reason?: string; transactionId?: string; detectedAmount?: number }> => {
-        const msgLower = message.toLowerCase()
-        const msgNoSpaces = message.replace(/\s+/g, '')
-        const accountNoSpaces = expectedAccount.replace(/\s+/g, '')
-        
-        // Check account number (REQUIRED)
-        if (!msgNoSpaces.includes(accountNoSpaces)) {
-          return { valid: false, reason: 'Account number not found in the message. Please ensure you deposited to the correct account.' }
+    return { valid: true, transactionId, detectedAmount }
+  }
+  const playCallSound = async (n: number) => {
+    const letter = numberToLetter(n)
+    // Always fetch audio from the server to avoid client-origin path issues
+    const base = `${getApiUrl()}/audio/${audioPack}`
+    const candidates = [
+      `${base}/${letter}-${n}.mp3`,
+      `${base}/${letter}_${n}.mp3`,
+      `${base}/${letter}/${n}.mp3`,
+      `${base}/${n}.mp3`,
+      `${base}/${letter}${n}.mp3`,
+    ]
+    for (const src of candidates) {
+      try {
+        let audio = audioCacheRef.current.get(src)
+        if (!audio) {
+          audio = new Audio(src)
+          audioCacheRef.current.set(src, audio)
+          // Wait for the first load only
+          await new Promise<void>((resolve, reject) => {
+            audio!.oncanplaythrough = () => resolve()
+            audio!.onerror = reject
+          })
         }
-        
-        // Check account holder name (OPTIONAL - if present, good; if not, that's fine as long as account number matches)
-        const nameParts = expectedName.toLowerCase().split(' ')
-        const nameFound = nameParts.some(part => part.length > 2 && msgLower.includes(part))
-        // Note: We don't fail if name is not found - account number is the primary verification
-        
-        // Extract and verify amount
-        const detectedAmount = parseAmount(message)
-        if (!detectedAmount) {
-          return { valid: false, reason: 'Could not detect amount from the message. Please include the amount in your message.' }
-        }
-        
-        // Allow small tolerance (0.01) for rounding
-        if (Math.abs(detectedAmount - expectedAmount) > 0.01) {
-          return { 
-            valid: false, 
-            reason: `Amount mismatch. Expected: ${expectedAmount} Birr, Found: ${detectedAmount} Birr. Please verify the amount.`,
-            detectedAmount 
-          }
-        }
-        
-        // Extract transaction ID
-        const transactionId = parseTransactionId(message)
-        if (!transactionId) {
-          return { valid: false, reason: 'Transaction ID not found in the message. Please include the transaction reference.' }
-        }
-        
-        return { valid: true, transactionId, detectedAmount }
+        audio.currentTime = 0
+        await audio.play()
+        break
+      } catch (_) {
+        continue
       }
-      const playCallSound = async (n: number) => {
-        const letter = numberToLetter(n)
-        // Always fetch audio from the server to avoid client-origin path issues
-        const base = `${getApiUrl()}/audio/${audioPack}`
-        const candidates = [
-          `${base}/${letter}-${n}.mp3`,
-          `${base}/${letter}_${n}.mp3`,
-          `${base}/${letter}/${n}.mp3`,
-          `${base}/${n}.mp3`,
-          `${base}/${letter}${n}.mp3`,
-        ]
-        for (const src of candidates) {
-          try {
-            let audio = audioCacheRef.current.get(src)
-            if (!audio) {
-              audio = new Audio(src)
-              audioCacheRef.current.set(src, audio)
-              // Wait for the first load only
-              await new Promise<void>((resolve, reject) => {
-                audio!.oncanplaythrough = () => resolve()
-                audio!.onerror = reject
-              })
-            }
-            audio.currentTime = 0
-            await audio.play()
-            break
-          } catch (_) {
-            continue
-          }
-        }
-      }
-    
-      const renderCard = (
-        boardId: number | null,
-        isGamePage: boolean = false,
-        highlightLineIndices: number[] = []
-      ) => {
-        if (!boardId) return null;
-        const grid: BoardGrid | null = getBoard(boardId);
-        if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
-      
-        const boardCanBingo = isGamePage ? checkBingo(grid) : false;
-        const headers = ['B', 'I', 'N', 'G', 'O'];
-        const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
-      
-        return (
-          <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
+    }
+  }
+
+  const renderCard = (
+    boardId: number | null,
+    isGamePage: boolean = false,
+    highlightLineIndices: number[] = []
+  ) => {
+    if (!boardId) return null;
+    const grid: BoardGrid | null = getBoard(boardId);
+    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
+  
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
+    const headers = ['B', 'I', 'N', 'G', 'O'];
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
+  
+    return (
+      <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
         {/* Modern BINGO Header */}
         <div className="grid grid-cols-5 gap-1.5 mb-3">
           {headers.map((h, idx) => (
@@ -828,7 +770,7 @@ export default function App() {
             </div>
           ))}
         </div>
-
+  
         <div className="grid grid-cols-5 gap-1.5">
           {grid.map((val, idx) => {
             const isFree = val === -1;
@@ -836,7 +778,7 @@ export default function App() {
             const isMarked = isFree || markedNumbers.has(val);
             const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
             const isHighlight = highlightLineIndices.includes(idx);
-
+  
             return (
               <div
                 key={idx}
@@ -1978,30 +1920,33 @@ export default function App() {
     <>
       {mainPage}
       {winnerInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
-          <div className="w-full max-w-sm bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-            <div className="text-xl sm:text-2xl font-bold text-emerald-300 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
               Winner!
             </div>
-            
-            {/* 🔧 FIXED: Only show the winning board with highlighted line */}
-            {winnerInfo.boardId ? (
-              <div className="space-y-2">
-                <div className="text-sm text-slate-300 text-center">
-                  Board {winnerInfo.boardId}
-                </div>
-                {renderCard(winnerInfo.boardId, true, winnerInfo.lineIndices || [])}
+            <div className="text-sm sm:text-base text-slate-200 space-y-1">
+              <div>
+                <span className="text-slate-400">Player:</span>{' '}
+                <span className="font-mono break-all">{winnerInfo.playerId}</span>
               </div>
-            ) : (
-              <div className="text-center text-slate-400 text-sm">
-                Winning board data unavailable
+              <div>
+                <span className="text-slate-400">Prize:</span>{' '}
+                <span className="font-semibold">{winnerInfo.prize} Birr</span>
+              </div>
+            </div>
+            {winnerInfo.boardId && winnerInfo.lineIndices && winnerInfo.lineIndices.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs sm:text-sm text-slate-300">
+                  Winning board {winnerInfo.boardId} (highlighted line):
+                </div>
+                {renderCard(winnerInfo.boardId, true, winnerInfo.lineIndices)}
               </div>
             )}
-            
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-end">
               <button
                 onClick={() => setWinnerInfo(null)}
-                className="px-6 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
               >
                 OK
               </button>
