@@ -1475,6 +1475,12 @@ export default function App() {
                   <div className="mt-0.5 text-[9px] sm:text-xs text-slate-400">
                     {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
                   </div>
+                  {phase === 'calling' && (
+                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] sm:text-xs text-emerald-300 border border-emerald-500/40">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Next call in {String(callCountdown).padStart(2, '0')}s</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-center">
                   <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
@@ -1527,12 +1533,9 @@ export default function App() {
                   </button>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
-                    {String(seconds).padStart(2, '0')}s
-                  </div>
-                  {phase === 'calling' && (
-                    <div className="px-2 py-1 rounded bg-emerald-700 font-mono text-[10px] sm:text-sm">
-                      {String(callCountdown).padStart(2, '0')}s
+                  {phase !== 'calling' && (
+                    <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
+                      {String(seconds).padStart(2, '0')}s
                     </div>
                   )}
                 </div>
