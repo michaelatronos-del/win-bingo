@@ -11,21 +11,7 @@ const getApiUrl = () => {
 }
 
 type Phase = 'lobby' | 'countdown' | 'calling'
-type Page =
-  | 'login'
-  | 'welcome'
-  | 'instructions'
-  | 'depositSelect'
-  | 'depositConfirm'
-  | 'withdrawal'
-  | 'lobby'
-  | 'game'
-
-type WinningLine = {
-  boardId: number
-  lineIndices: number[]
-  lineNumbers: number[]
-}
+type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game'
 
 export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null)
@@ -68,9 +54,8 @@ export default function App() {
     stake: number
     boardId?: number
     lineIndices?: number[]
-    winningNumbers?: number[]
   } | null>(null)
-  const [audioPack, setAudioPack] = useState<string>('amharic')
+  const [audioPack, setAudioPack] = useState<string>('amharic') // 'amharic' | 'modern-amharic'
   const [audioOn, setAudioOn] = useState<boolean>(true)
   const callTimerRef = useRef<number | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<string>('')
@@ -84,12 +69,6 @@ export default function App() {
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
   const autoBingoSentRef = useRef<boolean>(false)
 
-  const markedNumbersRef = useRef<Set<number>>(new Set())
-  const autoMarkRef = useRef<boolean>(autoMark)
-  const currentBetHouseRef = useRef<number | null>(currentBetHouse)
-  const pendingWinRef = useRef<WinningLine | null>(null)
-  const boardLinesCacheRef = useRef<Map<number, WinningLine[]>>(new Map())
-
   // Check for existing session on mount
   useEffect(() => {
     try {
@@ -97,6 +76,7 @@ export default function App() {
       const savedUsername = localStorage.getItem('username')
       const savedToken = localStorage.getItem('authToken')
       if (savedUserId && savedUsername && savedToken) {
+        // Verify session with server
         fetch(`${getApiUrl()}/api/auth/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -126,17 +106,18 @@ export default function App() {
 
   useEffect(() => {
     if (!isAuthenticated) return
-
-    const s = io(getApiUrl(), {
+    
+    const s = io(getApiUrl(), { 
+      // Allow both websocket and polling so poor networks can still receive calls reliably
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      auth: { userId, username },
+      auth: { userId, username }
     })
     setSocket(s)
-
+    
     s.on('init', (d: any) => {
       setPhase(d.phase)
       setSeconds(d.seconds)
@@ -146,149 +127,163 @@ export default function App() {
       setPlayerId(d.playerId)
       setIsWaiting(d.isWaiting || false)
       setCurrentBetHouse(d.stake)
+      // Only redirect to game if we're already in lobby, not if we're on welcome page
       if (d.phase === 'calling' && !d.isWaiting && currentPage === 'lobby') {
         setCurrentPage('game')
       }
     })
-
-    s.on('tick', (d: any) => {
+    
+    s.on('tick', (d: any) => { 
       setSeconds(d.seconds)
       setPlayers(d.players)
       setPrize(d.prize)
       setStake(d.stake)
     })
-
+    
     s.on('phase', (d: any) => {
       setPhase(d.phase)
+      // If game starts and we're in lobby and not waiting, redirect to game
       if (d.phase === 'calling' && currentPage === 'lobby' && !isWaiting) {
         setCurrentPage('game')
       }
+      // Whenever phase switches back to lobby, reset local selection state
       if (d.phase === 'lobby') {
         setPicks([])
         setMarkedNumbers(new Set())
-        markedNumbersRef.current = new Set()
         setIsReady(false)
         setIsWaiting(false)
         setTakenBoards([])
         autoBingoSentRef.current = false
-        pendingWinRef.current = null
       }
     })
-
+    
     s.on('players', (d: any) => {
       setPlayers(d.count || 0)
       setWaitingPlayers(d.waitingCount || 0)
     })
-
+    
     s.on('bet_houses_status', (d: any) => {
       if (d.betHouses) {
         setBetHouses(d.betHouses)
       }
     })
 
+    // Boards reserved in this room
     s.on('boards_taken', (d: any) => {
       if (d.takenBoards) {
         setTakenBoards(d.takenBoards as number[])
       }
     })
 
-    s.on('call', (d: any) => {
-      setCalled(d.called)
-      setLastCalled(d.number)
-      setCallCountdown(5)
+  // Number calls for the current room (socket is only in one room)
+s.on("call", (d: any) => {
+  setCalled(d.called);
+  setLastCalled(d.number);
+  setCallCountdown(5);
 
-      if (autoMarkRef.current || autoAlgoMarkRef.current) {
-        setMarkedNumbers(prev => {
-          const next = new Set(prev)
-          next.add(d.number)
-          markedNumbersRef.current = next
-          return next
-        })
-      }
+  // --- Auto mark newly called number if enabled
+  if (autoMark || autoAlgoMark) {
+    setMarkedNumbers(prev => {
+      const next = new Set(prev);
+      next.add(d.number);
+      return next;
+    });
+  }
 
-      if (
-        !isWaitingRef.current &&
-        phaseRef.current === 'calling' &&
-        autoBingoRef.current &&
-        !autoBingoSentRef.current
-      ) {
-        const marks = new Set<number>(d.called ?? [])
-        const win = findBingoWinIncludingLastCall(marks, d.number, picksRef.current)
-        const stakeValue = currentBetHouseRef.current
-        if (win && stakeValue) {
-          autoBingoSentRef.current = true
-          pendingWinRef.current = win
-          s.emit('bingo', { stake: stakeValue })
-        }
-      }
+  // --- FIXED AUTO‑BINGO LOGIC ---
+  const marks = new Set<number>(
+    autoAlgoMarkRef.current ? d.called : Array.from(markedNumbers)
+  );
 
-      if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
-        playCallSound(d.number)
-      }
-    })
+  if (autoBingoRef.current && !autoBingoSentRef.current) {
+    const gotBingo = hasBingoWithMarksAndLast(
+      marks,
+      d.number,
+      picksRef.current
+    );
+    if (gotBingo && currentBetHouse) {
+      autoBingoSentRef.current = true;
+      s.emit("bingo", { stake: currentBetHouse });
+    }
+  }
 
-    s.on('winner', (d: any) => {
-      let resolvedWin: WinningLine | null = null
+  // --- Audio playback for each call ---
+  if (
+    audioOnRef.current &&
+    !isWaitingRef.current &&
+    phaseRef.current === "calling"
+  ) {
+    playCallSound(d.number);
+  }
+});
 
-      if (typeof d.boardId === 'number' && Array.isArray(d.lineIndices) && d.lineIndices.length === 5) {
-        const grid = getBoard(d.boardId)
-        if (grid) {
-          resolvedWin = {
-            boardId: d.boardId,
-            lineIndices: d.lineIndices,
-            lineNumbers: d.lineIndices.map((idx: number) => grid[idx]),
-          }
-        }
-      } else if (d.playerId === playerId && pendingWinRef.current) {
-        resolvedWin = pendingWinRef.current
-      }
+// ------------------------------------------------------------
+// WINNER EVENT HANDLER (shows board + highlighted line)
+s.on("winner", (d: any) => {
+  let boardId: number | undefined;
+  let lineIndices: number[] | undefined;
 
-      setWinnerInfo({
-        playerId: d.playerId,
-        prize: d.prize,
-        stake: d.stake,
-        boardId: resolvedWin?.boardId,
-        lineIndices: resolvedWin?.lineIndices,
-        winningNumbers: resolvedWin?.lineNumbers,
-      })
+  // Prefer data from server if provided
+  if (d.boardId && Array.isArray(d.lineIndices)) {
+    boardId = d.boardId;
+    lineIndices = d.lineIndices;
+  } else if (d.playerId === playerId) {
+    // Compute locally for self if server didn’t send details
+    const marks = new Set<number>(called);
+    const win = findAnyBingoWin(marks, picksRef.current);
+    if (win) {
+      boardId = win.boardId;
+      lineIndices = win.line;
+    }
+  }
 
-      pendingWinRef.current = null
-      autoBingoSentRef.current = false
-      setPicks([])
-      setMarkedNumbers(new Set())
-      markedNumbersRef.current = new Set()
-      setCurrentPage('lobby')
-      setIsReady(false)
-      setIsWaiting(false)
-    })
+  setWinnerInfo({
+    playerId: d.playerId,
+    prize: d.prize,
+    stake: d.stake,
+    boardId,
+    lineIndices,
+  });
 
+  // Reset state for next game
+  setPicks([]);
+  setMarkedNumbers(new Set());
+  setCurrentPage("lobby");
+  setIsReady(false);
+  setIsWaiting(false);
+  autoBingoSentRef.current = false;
+});
+    
     s.on('game_start', () => {
       if (!isWaiting) {
         setCurrentPage('game')
       }
       autoBingoSentRef.current = false
     })
-
+    
     s.on('start_game_confirm', (d: any) => {
       if (d.isWaiting) {
         setIsWaiting(true)
+        // Stay on lobby/board selection page if waiting
       } else {
         setCurrentPage('game')
         setIsWaiting(false)
       }
     })
-
+    
     s.on('balance_update', (d: any) => {
       setBalance(d.balance || 0)
     })
-
+    
+    // Request bet houses status on connection
     s.emit('get_bet_houses_status')
+    
+    return () => { s.disconnect() }
+  }, [isAuthenticated, userId, username])
+  
+  // Don't auto-join - let user select bet house from welcome page
 
-    return () => {
-      s.disconnect()
-    }
-  }, [isAuthenticated, userId, username, currentPage, isWaiting])
-
+  // Keep a valid active board selection on the game page (mobile uses this for tab switching)
   useEffect(() => {
     if (currentPage !== 'game') return
     setActiveGameBoardId(prev => {
@@ -297,6 +292,7 @@ export default function App() {
     })
   }, [currentPage, picks])
 
+  // Restore picks from localStorage and persist changes
   useEffect(() => {
     try {
       const saved = localStorage.getItem('picks')
@@ -313,22 +309,25 @@ export default function App() {
     } catch {}
   }, [picks])
 
+  // Load boards HTML
   useEffect(() => {
     fetch('/boards.html')
-      .then(r => r.text())
-      .then(html => {
+      .then((r) => r.text())
+      .then((html) => { 
         loadBoards(html)
-        setBoardHtmlProvided(true)
+        setBoardHtmlProvided(true) 
       })
       .catch(() => setBoardHtmlProvided(false))
   }, [])
 
-  useEffect(() => {
+  useEffect(() => { 
     if (socket && currentBetHouse) {
-      socket.emit('select_numbers', { picks, stake: currentBetHouse })
+      socket.emit('select_numbers', { picks, stake: currentBetHouse }) 
     }
   }, [socket, picks, currentBetHouse])
 
+
+  // Manage 5s per-call countdown lifecycle
   useEffect(() => {
     if (phase !== 'calling') {
       setCallCountdown(0)
@@ -344,7 +343,9 @@ export default function App() {
   const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
 
   const togglePick = (n: number) => {
+    // Allow picking boards even during live games (if waiting)
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
+    // Prevent selecting boards that are already taken by other players
     const isTaken = takenBoards.includes(n)
     const isAlreadyPicked = picks.includes(n)
     if (isTaken && !isAlreadyPicked) return
@@ -358,12 +359,13 @@ export default function App() {
   const handleJoinBetHouse = (stakeAmount: number) => {
     if (!socket) return
     setCurrentBetHouse(stakeAmount)
-    currentBetHouseRef.current = stakeAmount
     setStake(stakeAmount)
     setPicks([])
     setIsReady(false)
     setIsWaiting(false)
     socket.emit('join_bet_house', stakeAmount)
+    // Only go to lobby if user explicitly joined (not on initial connection)
+    // If already on welcome page, stay there until they click "Play now"
     if (currentPage !== 'welcome') {
       setCurrentPage('lobby')
     }
@@ -380,14 +382,15 @@ export default function App() {
     }
     setIsReady(true)
     socket?.emit('start_game', { stake: currentBetHouse })
+    // If not waiting, redirect immediately; otherwise stay on lobby
     if (!isWaiting) {
-      setCurrentPage('game')
+    setCurrentPage('game')
     }
   }
 
   const toggleMark = (number: number) => {
     if (phase !== 'calling') return
-    if (autoAlgoMark) return
+    if (autoAlgoMark) return // disable manual marking when auto algorithm is enabled
     setMarkedNumbers(prev => {
       const newSet = new Set(prev)
       if (newSet.has(number)) {
@@ -395,12 +398,12 @@ export default function App() {
       } else {
         newSet.add(number)
       }
-      markedNumbersRef.current = newSet
       return newSet
     })
   }
 
   const checkBingo = (board: BoardGrid): boolean => {
+    // Check rows
     for (let row = 0; row < 5; row++) {
       let count = 0
       for (let col = 0; col < 5; col++) {
@@ -410,7 +413,8 @@ export default function App() {
       }
       if (count === 5) return true
     }
-
+    
+    // Check columns
     for (let col = 0; col < 5; col++) {
       let count = 0
       for (let row = 0; row < 5; row++) {
@@ -420,9 +424,9 @@ export default function App() {
       }
       if (count === 5) return true
     }
-
-    let count1 = 0,
-      count2 = 0
+    
+    // Check diagonals
+    let count1 = 0, count2 = 0
     for (let i = 0; i < 5; i++) {
       const num1 = board[i * 5 + i]
       const num2 = board[i * 5 + (4 - i)]
@@ -437,108 +441,101 @@ export default function App() {
     return board ? checkBingo(board) : false
   })
 
-  const getWinningLinesForBoard = (boardId: number): WinningLine[] => {
-    const cached = boardLinesCacheRef.current.get(boardId)
-    if (cached) return cached
-    const grid = getBoard(boardId)
-    if (!grid) return []
-    const lines: WinningLine[] = []
-
-    const pushLine = (indices: number[]) => {
-      lines.push({
-        boardId,
-        lineIndices: indices,
-        lineNumbers: indices.map(idx => grid[idx]),
-      })
-    }
-
-    for (let r = 0; r < 5; r++) {
-      pushLine([0, 1, 2, 3, 4].map(c => r * 5 + c))
-    }
-    for (let c = 0; c < 5; c++) {
-      pushLine([0, 1, 2, 3, 4].map(r => r * 5 + c))
-    }
-    pushLine([0, 1, 2, 3, 4].map(i => i * 5 + i))
-    pushLine([0, 1, 2, 3, 4].map(i => i * 5 + (4 - i)))
-
-    boardLinesCacheRef.current.set(boardId, lines)
-    return lines
-  }
-
-  const findAnyBingoWin = (marks: Set<number>, boardIdsOverride?: number[]): WinningLine | null => {
-    const boardsToCheck = boardIdsOverride ?? picksRef.current
-    for (const boardId of boardsToCheck) {
-      const lines = getWinningLinesForBoard(boardId)
-      for (const line of lines) {
-        const complete = line.lineNumbers.every(num => num === -1 || marks.has(num))
-        if (complete) {
-          return line
-        }
-      }
-    }
-    return null
-  }
-
-  const findBingoWinIncludingLastCall = (
+  // Core bingo checker given an explicit set of marked numbers and a last-called value.
+  const hasBingoWithMarksAndLast = (
     marks: Set<number>,
     last: number | null,
     boardIdsOverride?: number[]
-  ): WinningLine | null => {
-    if (!last) return null
-    const boardsToCheck = boardIdsOverride ?? picksRef.current
+  ): boolean => {
+    if (!last) return false
+    const boardsToCheck = boardIdsOverride ?? picks
     for (const boardId of boardsToCheck) {
-      const lines = getWinningLinesForBoard(boardId)
+      const grid = getBoard(boardId)
+      if (!grid) continue
+      // map grid indices to numbers for quick checks
+      const lines: number[][] = []
+      // rows
+      for (let r = 0; r < 5; r++) {
+        lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
+      }
+      // cols
+      for (let c = 0; c < 5; c++) {
+        lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
+      }
+      // diagonals
+      lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
+      lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
+
       for (const line of lines) {
-        if (!line.lineNumbers.includes(last)) continue
-        const complete = line.lineNumbers.every(num => num === -1 || marks.has(num))
+        const containsLast = line.includes(last)
+        if (!containsLast) continue
+        const complete = line.every(n => n === -1 || marks.has(n))
+        if (complete) return true
+      }
+    }
+    return false
+  }
+
+  // Generic bingo finder that ignores "last called" and returns the first winning line, if any.
+  const findAnyBingoWin = (
+    marks: Set<number>,
+    boardIdsOverride?: number[]
+  ): { boardId: number; line: number[] } | null => {
+    const boardsToCheck = boardIdsOverride ?? picks
+    for (const boardId of boardsToCheck) {
+      const grid = getBoard(boardId)
+      if (!grid) continue
+      const lines: number[][] = []
+      for (let r = 0; r < 5; r++) {
+        lines.push([0,1,2,3,4].map(c => r * 5 + c))
+      }
+      for (let c = 0; c < 5; c++) {
+        lines.push([0,1,2,3,4].map(r => r * 5 + c))
+      }
+      lines.push([0,1,2,3,4].map(i => i * 5 + i))
+      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+
+      for (const idxLine of lines) {
+        const complete = idxLine.every(idx => {
+          const num = grid[idx]
+          return num === -1 || marks.has(num)
+        })
         if (complete) {
-          return line
+          return { boardId, line: idxLine }
         }
       }
     }
     return null
   }
 
+  // Ensure a win line exists that includes the most recent called number.
+  // Optional overrides let us validate immediately on a fresh server call payload.
   const hasBingoIncludingLastCalled = (
     overrideCalled?: number[],
     overrideLastCalled?: number | null
   ): boolean => {
     const effectiveLastCalled = overrideLastCalled ?? lastCalled
     if (!effectiveLastCalled) return false
+    // Effective marked set: when auto algorithm is on, use called numbers as marks
     const effectiveCalled = overrideCalled ?? called
-    const marks = autoAlgoMark
-      ? new Set<number>(effectiveCalled)
-      : new Set<number>(markedNumbersRef.current)
-    if (autoMarkRef.current && !autoAlgoMark) {
-      effectiveCalled.forEach(n => marks.add(n))
-    }
-    return !!findBingoWinIncludingLastCall(marks, effectiveLastCalled)
+    const marks = new Set<number>(
+      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
+    )
+    return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
   }
 
   const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
     if (phase !== 'calling' || isWaiting) return
-    if (!currentBetHouseRef.current) return
-
-    const effectiveLastCalled = overrideLastCalled ?? lastCalled
-    const effectiveCalled = overrideCalled ?? called
-    const marks = autoAlgoMark
-      ? new Set<number>(effectiveCalled)
-      : new Set<number>(markedNumbersRef.current)
-    if (autoMarkRef.current && !autoAlgoMark) {
-      effectiveCalled.forEach(n => marks.add(n))
-    }
-
-    const win = findBingoWinIncludingLastCall(marks, effectiveLastCalled)
-    if (!win) {
+    // Validate locally before notifying server
+    if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
       alert('No valid BINGO found that includes the last called number. Keep marking!')
       return
     }
-
-    pendingWinRef.current = win
-    autoBingoSentRef.current = true
-    socket?.emit('bingo', { stake: currentBetHouseRef.current })
+    if (!currentBetHouse) return
+    socket?.emit('bingo', { stake: currentBetHouse })
   }
 
+  // Render 75-number caller grid with B I N G O columns
   const renderCallerGrid = (currentNumber?: number) => {
     const columns: number[][] = [
       Array.from({ length: 15 }, (_, i) => i + 1),
@@ -546,19 +543,16 @@ export default function App() {
       Array.from({ length: 15 }, (_, i) => i + 31),
       Array.from({ length: 15 }, (_, i) => i + 46),
       Array.from({ length: 15 }, (_, i) => i + 61),
-    ]
-
-    const headers = ['B', 'I', 'N', 'G', 'O']
+    ];
+  
+    const headers = ['B', 'I', 'N', 'G', 'O'];
     const headerColors = [
-      'bg-blue-500',
-      'bg-pink-500',
-      'bg-purple-500',
-      'bg-green-500',
-      'bg-orange-500',
-    ]
-
+      'bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'
+    ];
+  
     return (
       <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
+        {/* Headers */}
         <div className="grid grid-cols-5 gap-1.5 mb-2">
           {headers.map((h, i) => (
             <div
@@ -569,13 +563,14 @@ export default function App() {
             </div>
           ))}
         </div>
-
+  
+        {/* 5 columns of numbers - flex-1 makes this stretch to fill height */}
         <div className="grid grid-cols-5 gap-1.5 flex-1">
           {columns.map((col, colIndex) => (
             <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
-              {col.map(num => {
-                const isCalled = called.includes(num)
-                const isCurrent = currentNumber === num
+              {col.map((num) => {
+                const isCalled = called.includes(num);
+                const isCurrent = currentNumber === num;
                 return (
                   <div
                     key={num}
@@ -585,23 +580,24 @@ export default function App() {
                         ? 'bg-amber-400 text-black border-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.9)] scale-110 z-20 animate-pulse'
                         : isCalled
                         ? 'bg-emerald-500 text-black border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-105 z-10'
-                        : 'bg-slate-800/80 text-slate-400 border-white/5',
+                        : 'bg-slate-800/80 text-slate-400 border-white/5'
                     ].join(' ')}
                   >
                     {num}
                   </div>
-                )
+                );
               })}
             </div>
           ))}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
-  const numberToLetter = (n: number) =>
-    n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O'
+  // Audio: try to play a sound for each call using selected pack
+  const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
 
+  // Helper: convert number to its spoken word for display (1–75)
   const numberToWord = (n: number): string => {
     const ones = [
       '',
@@ -635,6 +631,7 @@ export default function App() {
     return `${tens[t]}-${ones[o]}`
   }
 
+  // Cache audio elements and latest flags so calls play instantly and only for active players
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   const audioOnRef = useRef<boolean>(audioOn)
   const isWaitingRef = useRef<boolean>(isWaiting)
@@ -643,51 +640,15 @@ export default function App() {
   const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
   const autoBingoRef = useRef<boolean>(autoBingo)
 
-  useEffect(() => {
-    audioOnRef.current = audioOn
-  }, [audioOn])
-  useEffect(() => {
-    isWaitingRef.current = isWaiting
-  }, [isWaiting])
-  useEffect(() => {
-    phaseRef.current = phase
-  }, [phase])
-  useEffect(() => {
-    picksRef.current = picks
-  }, [picks])
-  useEffect(() => {
-    autoAlgoMarkRef.current = autoAlgoMark
-  }, [autoAlgoMark])
-  useEffect(() => {
-    autoBingoRef.current = autoBingo
-  }, [autoBingo])
-  useEffect(() => {
-    markedNumbersRef.current = new Set(markedNumbers)
-  }, [markedNumbers])
-  useEffect(() => {
-    autoMarkRef.current = autoMark
-  }, [autoMark])
-  useEffect(() => {
-    currentBetHouseRef.current = currentBetHouse
-  }, [currentBetHouse])
-
-  useEffect(() => {
-    if (phase !== 'calling') return
-    if (autoAlgoMark) {
-      const next = new Set<number>(called)
-      setMarkedNumbers(next)
-      markedNumbersRef.current = next
-    } else if (autoMark) {
-      setMarkedNumbers(prev => {
-        const next = new Set(prev)
-        called.forEach(num => next.add(num))
-        markedNumbersRef.current = next
-        return next
-      })
-    }
-  }, [autoAlgoMark, autoMark, called, phase])
-
+  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
+  useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { picksRef.current = picks }, [picks])
+  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
+  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
+  // Parse amount from deposit/withdrawal message
   const parseAmount = (message: string): number | null => {
+    // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
     const patterns = [
       /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
       /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
@@ -701,8 +662,10 @@ export default function App() {
         if (!isNaN(amount) && amount > 0) return amount
       }
     }
+    // Fallback: find standalone numbers that could be amounts
     const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
     if (numbers && numbers.length > 0) {
+      // Prefer numbers that look like currency amounts (2+ digits, possibly with decimals)
       const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
       if (amounts.length > 0) return Math.max(...amounts)
     }
@@ -710,6 +673,7 @@ export default function App() {
   }
 
   const parseTransactionId = (text: string): string | null => {
+    // Look for common tags: Txn, Trans, Ref, Reference, ID
     const patterns = [
       /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
       /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i,
@@ -718,14 +682,16 @@ export default function App() {
       const match = text.match(pattern)
       if (match) return match[1].trim().toUpperCase()
     }
+    // Fallback: longest alphanumeric token 8-20 chars
     const tokens = text.match(/[A-Z0-9]{8,20}/gi)
     if (tokens) {
-      const sorted = tokens.sort((a, b) => b.length - a.length)
+      const sorted = tokens.sort((a,b)=>b.length-a.length)
       return sorted[0].toUpperCase()
     }
     return null
   }
 
+  // Verify deposit message
   const verifyDepositMessage = async (
     message: string,
     expectedAmount: number,
@@ -735,43 +701,43 @@ export default function App() {
     const msgLower = message.toLowerCase()
     const msgNoSpaces = message.replace(/\s+/g, '')
     const accountNoSpaces = expectedAccount.replace(/\s+/g, '')
-
+    
+    // Check account number (REQUIRED)
     if (!msgNoSpaces.includes(accountNoSpaces)) {
-      return {
-        valid: false,
-        reason: 'Account number not found in the message. Please ensure you deposited to the correct account.',
-      }
+      return { valid: false, reason: 'Account number not found in the message. Please ensure you deposited to the correct account.' }
     }
-
+    
+    // Check account holder name (OPTIONAL - if present, good; if not, that's fine as long as account number matches)
+    const nameParts = expectedName.toLowerCase().split(' ')
+    const nameFound = nameParts.some(part => part.length > 2 && msgLower.includes(part))
+    // Note: We don't fail if name is not found - account number is the primary verification
+    
+    // Extract and verify amount
     const detectedAmount = parseAmount(message)
     if (!detectedAmount) {
-      return {
-        valid: false,
-        reason: 'Could not detect amount from the message. Please include the amount in your message.',
-      }
+      return { valid: false, reason: 'Could not detect amount from the message. Please include the amount in your message.' }
     }
-
+    
+    // Allow small tolerance (0.01) for rounding
     if (Math.abs(detectedAmount - expectedAmount) > 0.01) {
-      return {
-        valid: false,
+      return { 
+        valid: false, 
         reason: `Amount mismatch. Expected: ${expectedAmount} Birr, Found: ${detectedAmount} Birr. Please verify the amount.`,
-        detectedAmount,
+        detectedAmount 
       }
     }
-
+    
+    // Extract transaction ID
     const transactionId = parseTransactionId(message)
     if (!transactionId) {
-      return {
-        valid: false,
-        reason: 'Transaction ID not found in the message. Please include the transaction reference.',
-      }
+      return { valid: false, reason: 'Transaction ID not found in the message. Please include the transaction reference.' }
     }
-
+    
     return { valid: true, transactionId, detectedAmount }
   }
-
   const playCallSound = async (n: number) => {
     const letter = numberToLetter(n)
+    // Always fetch audio from the server to avoid client-origin path issues
     const base = `${getApiUrl()}/audio/${audioPack}`
     const candidates = [
       `${base}/${letter}-${n}.mp3`,
@@ -786,6 +752,7 @@ export default function App() {
         if (!audio) {
           audio = new Audio(src)
           audioCacheRef.current.set(src, audio)
+          // Wait for the first load only
           await new Promise<void>((resolve, reject) => {
             audio!.oncanplaythrough = () => resolve()
             audio!.onerror = reject
@@ -803,20 +770,19 @@ export default function App() {
   const renderCard = (
     boardId: number | null,
     isGamePage: boolean = false,
-    highlightLineIndices: number[] = [],
-    readOnly: boolean = false
+    highlightLineIndices: number[] = []
   ) => {
-    if (!boardId) return null
-    const grid: BoardGrid | null = getBoard(boardId)
-    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>
-
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false
-    const headers = ['B', 'I', 'N', 'G', 'O']
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
-    const highlightSet = new Set(highlightLineIndices)
-
+    if (!boardId) return null;
+    const grid: BoardGrid | null = getBoard(boardId);
+    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
+  
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
+    const headers = ['B', 'I', 'N', 'G', 'O'];
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
+  
     return (
       <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
+        {/* Modern BINGO Header */}
         <div className="grid grid-cols-5 gap-1.5 mb-3">
           {headers.map((h, idx) => (
             <div
@@ -827,37 +793,28 @@ export default function App() {
             </div>
           ))}
         </div>
-
+  
         <div className="grid grid-cols-5 gap-1.5">
           {grid.map((val, idx) => {
-            const isFree = val === -1
-            const isCalled = called.includes(val)
-            const baseMarked = isGamePage
-              ? autoAlgoMark
-                ? isCalled || isFree
-                : markedNumbers.has(val) || isFree
-              : isCalled || isFree
-            const isHighlight = highlightSet.has(idx)
-            const isMarkedForDisplay = baseMarked || isHighlight || isFree
-
+            const isFree = val === -1;
+            const isCalled = called.includes(val);
+            const isMarked = isFree || markedNumbers.has(val);
+            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
+            const isHighlight = highlightLineIndices.includes(idx);
+  
             return (
               <div
                 key={idx}
-                onClick={() => {
-                  if (!readOnly && isGamePage && !isFree && (isCalled || markedNumbers.has(val))) {
-                    toggleMark(val)
-                  }
-                }}
+                onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
                 className={[
-                  'aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-black relative transition-all duration-200 border-2',
+                  'aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-black cursor-pointer relative transition-all duration-200 border-2',
                   isFree
                     ? 'bg-yellow-400 border-yellow-200 text-black shadow-lg animate-pulse'
-                    : isMarkedForDisplay
+                    : finalState
                     ? isHighlight
                       ? 'bg-emerald-400 border-amber-300 text-black shadow-[0_0_18px_rgba(251,191,36,0.9)] scale-105'
                       : 'bg-emerald-500 border-emerald-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500',
-                  readOnly ? 'cursor-default' : 'cursor-pointer',
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
                 ].join(' ')}
               >
                 {isFree ? (
@@ -865,26 +822,24 @@ export default function App() {
                 ) : (
                   <span className="text-xs sm:text-base">{val}</span>
                 )}
-
-                {isGamePage && boardCanBingo && isMarkedForDisplay && !isFree && !readOnly && (
+                
+                {/* If Bingo is possible, show a small glowing star indicator */}
+                {isGamePage && boardCanBingo && finalState && !isFree && (
                   <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
                 )}
               </div>
-            )
+            );
           })}
         </div>
       </div>
-    )
-  }
-
+    );
+  };
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
         <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
-            <div className="text-slate-300 text-xs sm:text-sm">
-              ID: <span className="font-mono">{playerId.slice(0, 8)}</span>
-            </div>
+            <div className="text-slate-300 text-xs sm:text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
             <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
               <span>Stake: <b>{stake} Birr</b></span>
               <span>Active: <b>{players}</b></span>
@@ -892,7 +847,7 @@ export default function App() {
               <span>Prize: <b>{prize} Birr</b></span>
             </div>
           </div>
-
+          
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
             <div className="text-lg sm:text-2xl font-bold flex items-center flex-wrap gap-2">
               Select Your Boards
@@ -903,9 +858,9 @@ export default function App() {
               )}
             </div>
             {!isWaiting && (
-              <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
-                {String(seconds).padStart(2, '0')}s
-              </div>
+            <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
+              {String(seconds).padStart(2,"0")}s
+            </div>
             )}
             {isWaiting && (
               <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-xs sm:text-sm">
@@ -914,23 +869,19 @@ export default function App() {
             )}
           </div>
 
+          {/* Audio and Auto Mark toggles visible before countdown */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
             <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <span className="text-slate-300">Audio:</span>
               <select
                 className="bg-slate-700 text-slate-100 rounded px-1 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm"
                 value={audioPack}
-                onChange={e => setAudioPack(e.target.value)}
+                onChange={(e) => setAudioPack(e.target.value)}
               >
                 <option value="amharic">Amharic</option>
                 <option value="modern-amharic">Modern Amharic</option>
               </select>
-              <input
-                type="checkbox"
-                checked={audioOn}
-                onChange={e => setAudioOn(e.target.checked)}
-                className="w-3 h-3 sm:w-4 sm:h-4"
-              />
+              <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />
               <button
                 className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-slate-700 hover:brightness-110 text-xs sm:text-sm"
                 onClick={() => playCallSound(1)}
@@ -942,7 +893,7 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={autoMark}
-                onChange={e => setAutoMark(e.target.checked)}
+                onChange={(e) => setAutoMark(e.target.checked)}
                 className="w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-slate-300">Auto mark (me)</span>
@@ -951,66 +902,50 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={autoAlgoMark}
-                onChange={e => setAutoAlgoMark(e.target.checked)}
+                onChange={(e) => setAutoAlgoMark(e.target.checked)}
                 className="w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-slate-300">Auto algorithm mark</span>
             </label>
-            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <input
-                type="checkbox"
-                checked={autoBingo}
-                onChange={e => setAutoBingo(e.target.checked)}
-                className="w-3 h-3 sm:w-4 sm:h-4"
-              />
-              <span className="text-slate-300">Auto Bingo</span>
-            </label>
           </div>
-
+          
           <div className="grid grid-cols-10 gap-1 sm:gap-2 mb-3 sm:mb-6">
             {board.map(n => {
               const isPicked = picks.includes(n)
               const isTaken = takenBoards.includes(n)
-              const disabled =
-                ((phase !== 'lobby' && phase !== 'countdown') && !isWaiting) ||
-                (isTaken && !isPicked)
+              const disabled = (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) || (isTaken && !isPicked)
               return (
                 <button
                   key={n}
                   onClick={() => togglePick(n)}
                   disabled={disabled}
                   className={[
-                    'aspect-square rounded text-xs md:text-sm flex items-center justify-center border font-semibold',
-                    isPicked
-                      ? 'bg-amber-500 border-amber-400 text-black'
-                      : isTaken
-                      ? 'bg-slate-900 border-slate-800 text-slate-600'
-                      : 'bg-slate-700 border-slate-600',
-                    disabled ? 'opacity-60 cursor-not-allowed' : 'hover:brightness-110',
-                  ].join(' ')}
+                    "aspect-square rounded text-xs md:text-sm flex items-center justify-center border font-semibold",
+                    isPicked ? "bg-amber-500 border-amber-400 text-black" : isTaken ? "bg-slate-900 border-slate-800 text-slate-600" : "bg-slate-700 border-slate-600",
+                    disabled ? "opacity-60 cursor-not-allowed" : "hover:brightness-110"
+                  ].join(" ")}
                 >
                   {n}
                 </button>
               )
             })}
           </div>
-
+          
+          {/* Selected Boards Preview */}
           {picks.length > 0 && (
             <div className="mb-3 sm:mb-6">
-              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">
-                Your Selected Boards ({picks.length}/2):
-              </div>
+              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">Your Selected Boards ({picks.length}/2):</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-                {picks.map(boardId => (
+                {picks.map((boardId, idx) => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-4">
                     <div className="text-xs sm:text-sm text-slate-400 mb-1 sm:mb-2">Board {boardId}</div>
-                    {renderCard(boardId)}
+                    {renderCard(boardId, false)}
                   </div>
                 ))}
               </div>
             </div>
           )}
-
+          
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <div className="text-slate-300 text-xs sm:text-sm">
               Selected: {picks.length}/2 boards
@@ -1022,9 +957,7 @@ export default function App() {
               {picks.length > 0 && !isWaiting && (
                 <div className="flex gap-1 sm:gap-2 mt-1 sm:mt-2">
                   {picks.map(n => (
-                    <span key={n} className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 text-black rounded text-xs sm:text-sm">
-                      Board {n}
-                    </span>
+                    <span key={n} className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 text-black rounded text-xs sm:text-sm">Board {n}</span>
                   ))}
                 </div>
               )}
@@ -1036,17 +969,17 @@ export default function App() {
               >
                 Switch Bet House
               </button>
-              <button
-                onClick={handleStartGame}
-                disabled={picks.length === 0 || isReady}
-                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-lg flex-1 sm:flex-none ${
-                  picks.length > 0 && !isReady
-                    ? 'bg-green-500 hover:bg-green-600 text-black'
-                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                }`}
-              >
+            <button
+              onClick={handleStartGame}
+              disabled={picks.length === 0 || isReady}
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-lg flex-1 sm:flex-none ${
+                picks.length > 0 && !isReady 
+                  ? 'bg-green-500 hover:bg-green-600 text-black' 
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              }`}
+            >
                 {isReady ? (isWaiting ? 'Waiting...' : 'Ready!') : 'Start Game'}
-              </button>
+        </button>
             </div>
           </div>
         </div>
@@ -1060,11 +993,9 @@ export default function App() {
         <div className="bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-8 space-y-4 sm:space-y-6">
           <div className="text-center">
             <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
-            <div className="text-slate-400 text-xs sm:text-sm">
-              Welcome! Please sign in or create an account
-            </div>
+            <div className="text-slate-400 text-xs sm:text-sm">Welcome! Please sign in or create an account</div>
           </div>
-
+          
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => {
@@ -1072,7 +1003,9 @@ export default function App() {
                 setLoginError('')
               }}
               className={`flex-1 py-2 rounded-lg font-semibold ${
-                loginMode === 'login' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'
+                loginMode === 'login' 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-slate-700 text-slate-300'
               }`}
             >
               Sign In
@@ -1083,7 +1016,9 @@ export default function App() {
                 setLoginError('')
               }}
               className={`flex-1 py-2 rounded-lg font-semibold ${
-                loginMode === 'signup' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'
+                loginMode === 'signup' 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-slate-700 text-slate-300'
               }`}
             >
               Sign Up
@@ -1102,10 +1037,10 @@ export default function App() {
               <input
                 type="text"
                 value={loginUsername}
-                onChange={e => setLoginUsername(e.target.value)}
+                onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="Enter your username"
                 className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyPress={e => {
+                onKeyPress={(e) => {
                   if (e.key === 'Enter' && !loginLoading) {
                     if (loginMode === 'login') handleLogin()
                     else handleSignup()
@@ -1118,10 +1053,10 @@ export default function App() {
               <input
                 type="password"
                 value={loginPassword}
-                onChange={e => setLoginPassword(e.target.value)}
+                onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder="Enter your password"
                 className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyPress={e => {
+                onKeyPress={(e) => {
                   if (e.key === 'Enter' && !loginLoading) {
                     if (loginMode === 'login') handleLogin()
                     else handleSignup()
@@ -1147,10 +1082,10 @@ export default function App() {
       setLoginError('Please enter username and password')
       return
     }
-
+    
     setLoginLoading(true)
     setLoginError('')
-
+    
     try {
       const response = await fetch(`${getApiUrl()}/api/auth/login`, {
         method: 'POST',
@@ -1160,19 +1095,20 @@ export default function App() {
           password: loginPassword,
         }),
       })
-
+      
       const result = await response.json()
-
+      
       if (!result.success) {
         setLoginError(result.error || 'Login failed')
         setLoginLoading(false)
         return
       }
-
+      
+      // Save session
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
-
+      
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
@@ -1191,20 +1127,20 @@ export default function App() {
       setLoginError('Please enter username and password')
       return
     }
-
+    
     if (loginUsername.trim().length < 3) {
       setLoginError('Username must be at least 3 characters')
       return
     }
-
+    
     if (loginPassword.length < 6) {
       setLoginError('Password must be at least 6 characters')
       return
     }
-
+    
     setLoginLoading(true)
     setLoginError('')
-
+    
     try {
       const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
         method: 'POST',
@@ -1214,19 +1150,20 @@ export default function App() {
           password: loginPassword,
         }),
       })
-
+      
       const result = await response.json()
-
+      
       if (!result.success) {
         setLoginError(result.error || 'Signup failed')
         setLoginLoading(false)
         return
       }
-
+      
+      // Save session
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
-
+      
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
@@ -1254,6 +1191,7 @@ export default function App() {
     }
   }
 
+  // Welcome page with balance, deposit, instructions, invite, and bet houses
   const renderWelcomePage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
@@ -1281,6 +1219,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* Balance card */}
         <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex items-center justify-between">
           <div>
             <div className="uppercase text-[10px] sm:text-xs">Balance</div>
@@ -1308,101 +1247,78 @@ export default function App() {
 
         <div className="text-base sm:text-xl font-semibold">Bet Houses</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
-          {betHouses.length > 0
-            ? betHouses.map((house: any) => {
-                const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
-                  10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
-                  20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
-                  50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
-                  100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
-                  200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
-                  500: { label: 'Premium', tag: 80, color: 'bg-purple-600' },
-                }
-                const config = cardConfig[house.stake] || {
-                  label: `${house.stake} Birr`,
-                  tag: 0,
-                  color: 'bg-slate-600',
-                }
-                const isLive = house.phase === 'calling'
-                const isCountdown = house.phase === 'countdown'
-                const isSelected = currentBetHouse === house.stake
-
-                return (
-                  <div
-                    key={house.stake}
-                    className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 ${
-                      isSelected ? 'ring-2 sm:ring-4 ring-yellow-400' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
-                      {isLive && (
-                        <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-500 text-[10px] sm:text-xs font-bold animate-pulse">
-                          LIVE
-                        </span>
-                      )}
-                      {isCountdown && (
-                        <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-500 text-[10px] sm:text-xs font-bold">
-                          Starting
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
-                    <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
-                      <div>Active: {house.activePlayers} players</div>
-                      {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
-                      <div>Prize: {house.prize} Birr</div>
-                    </div>
-                    <div className="mt-auto flex items-center justify-between gap-2">
-                      <button
-                        className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
-                        onClick={() => {
-                          handleJoinBetHouse(house.stake)
-                          setCurrentPage('lobby')
-                        }}
-                      >
-                        {isSelected ? 'Go to Lobby' : isLive ? 'Join & Wait' : 'Play now'}
-                      </button>
-                      <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">
-                        {config.tag}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            : [10, 20, 50, 100, 200].map(amount => {
-                const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
-                  10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
-                  20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
-                  50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
-                  100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
-                  200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
-                }
-                const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
-                return (
-                  <div
-                    key={amount}
-                    className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4`}
-                  >
-                    <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
-                    <div className="text-xl sm:text-3xl font-extrabold">{amount} Birr</div>
-                    <div className="mt-auto flex items-center justify-between gap-2">
-                      <button
-                        className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
-                        onClick={() => {
-                          handleJoinBetHouse(amount)
-                          setCurrentPage('lobby')
-                        }}
-                      >
-                        Play now
-                      </button>
-                      <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">
-                        {config.tag}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+          {betHouses.length > 0 ? betHouses.map((house: any) => {
+            const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
+              10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
+              20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
+              50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
+              100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
+              200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
+              500: { label: 'Premium', tag: 80, color: 'bg-purple-600' },
+            }
+            const config = cardConfig[house.stake] || { label: `${house.stake} Birr`, tag: 0, color: 'bg-slate-600' }
+            const isLive = house.phase === 'calling'
+            const isCountdown = house.phase === 'countdown'
+            const isSelected = currentBetHouse === house.stake
+            
+            return (
+              <div key={house.stake} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 ${isSelected ? 'ring-2 sm:ring-4 ring-yellow-400' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
+                  {isLive && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-500 text-[10px] sm:text-xs font-bold animate-pulse">LIVE</span>}
+                  {isCountdown && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-500 text-[10px] sm:text-xs font-bold">Starting</span>}
+                </div>
+                <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
+                <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
+                  <div>Active: {house.activePlayers} players</div>
+                  {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
+                  <div>Prize: {house.prize} Birr</div>
+                </div>
+              <div className="mt-auto flex items-center justify-between gap-2">
+                <button
+                    className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
+                  onClick={() => {
+                      handleJoinBetHouse(house.stake)
+                    setCurrentPage('lobby')
+                  }}
+                >
+                    {isSelected ? 'Go to Lobby' : isLive ? 'Join & Wait' : 'Play now'}
+                </button>
+                  <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+              </div>
+            </div>
+            )
+          }) : (
+            // Fallback if bet houses not loaded yet
+            [10, 20, 50, 100, 200].map(amount => {
+              const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
+                10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
+                20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
+                50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
+                100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
+                200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
+              }
+              const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
+              return (
+                <div key={amount} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4`}>
+                  <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
+                  <div className="text-xl sm:text-3xl font-extrabold">{amount} Birr</div>
+            <div className="mt-auto flex items-center justify-between gap-2">
+              <button
+                className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
+                onClick={() => {
+                        handleJoinBetHouse(amount)
+                  setCurrentPage('lobby')
+                }}
+              >
+                Play now
+              </button>
+                    <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+            </div>
+          </div>
+              )
+            })
+          )}
         </div>
 
         <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
