@@ -47,6 +47,7 @@ export default function App() {
   const [lastCalled, setLastCalled] = useState<number | null>(null)
   const [autoMark, setAutoMark] = useState<boolean>(false)
   const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
+  const [autoBingo, setAutoBingo] = useState<boolean>(false)
   const [audioPack, setAudioPack] = useState<string>('amharic') // 'amharic' | 'modern-amharic'
   const [audioOn, setAudioOn] = useState<boolean>(true)
   const callTimerRef = useRef<number | null>(null)
@@ -180,12 +181,12 @@ export default function App() {
           return next
         })
       }
-      // Automatically trigger BINGO for this player as soon as a valid winning line
-      // exists that includes the last called number, when the auto algorithm is enabled.
-      if (autoAlgoMark && !autoBingoSentRef.current) {
+      // Automatically trigger BINGO as soon as any valid winning line exists
+      // on the player's current boards, when both auto algorithm mark AND auto bingo are enabled.
+      if (autoAlgoMark && autoBingo && !autoBingoSentRef.current) {
         const autoMarks = new Set<number>(d.called)
-        const hasAutoBingo = hasBingoWithMarksAndLast(autoMarks, d.number, picksRef.current)
-        if (hasAutoBingo && currentBetHouse) {
+        const autoWin = findAnyBingoWin(autoMarks, picksRef.current)
+        if (autoWin && currentBetHouse) {
           autoBingoSentRef.current = true
           s.emit('bingo', { stake: currentBetHouse })
         }
@@ -426,6 +427,38 @@ export default function App() {
       }
     }
     return false
+  }
+
+  // Generic bingo finder that ignores "last called" and returns the first winning line, if any.
+  const findAnyBingoWin = (
+    marks: Set<number>,
+    boardIdsOverride?: number[]
+  ): { boardId: number; line: number[] } | null => {
+    const boardsToCheck = boardIdsOverride ?? picks
+    for (const boardId of boardsToCheck) {
+      const grid = getBoard(boardId)
+      if (!grid) continue
+      const lines: number[][] = []
+      for (let r = 0; r < 5; r++) {
+        lines.push([0,1,2,3,4].map(c => r * 5 + c))
+      }
+      for (let c = 0; c < 5; c++) {
+        lines.push([0,1,2,3,4].map(r => r * 5 + c))
+      }
+      lines.push([0,1,2,3,4].map(i => i * 5 + i))
+      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+
+      for (const idxLine of lines) {
+        const complete = idxLine.every(idx => {
+          const num = grid[idx]
+          return num === -1 || marks.has(num)
+        })
+        if (complete) {
+          return { boardId, line: idxLine }
+        }
+      }
+    }
+    return null
   }
 
   // Ensure a win line exists that includes the most recent called number.
@@ -1559,16 +1592,28 @@ export default function App() {
                 {renderCallerGrid(lastCalled ?? undefined)}
               </div>
   
-              {/* Desktop Bingo Button */}
-              <button
-                onClick={() => onPressBingo()}
-                disabled={autoAlgoMark ? false : !canBingo}
-                className={`hidden lg:block mt-4 w-full py-3 rounded text-lg font-bold ${
-                  autoAlgoMark || canBingo ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400'
-                }`}
-              >
-                BINGO!
-              </button>
+              {/* Desktop Bingo Controls */}
+              <div className="hidden lg:flex items-center gap-3 mt-4">
+                <button
+                  onClick={() => setAutoBingo(prev => !prev)}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                    autoBingo
+                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
+                      : 'bg-slate-700 border-slate-500 text-slate-200'
+                  }`}
+                >
+                  Auto Bingo: {autoBingo ? 'ON' : 'OFF'}
+                </button>
+                <button
+                  onClick={() => onPressBingo()}
+                  disabled={autoAlgoMark ? false : !canBingo}
+                  className={`flex-1 py-3 rounded text-lg font-bold ${
+                    autoAlgoMark || canBingo ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400'
+                  }`}
+                >
+                  BINGO!
+                </button>
+              </div>
             </div>
   
             {/* RIGHT: Player Boards (Stacked & Scrollable) */}
@@ -1594,8 +1639,18 @@ export default function App() {
             </div>
           </div>
   
-          {/* 4. MOBILE BINGO BUTTON (Fixed at very bottom) */}
-          <div className="lg:hidden pb-1">
+          {/* 4. MOBILE BINGO BUTTONS (Fixed at very bottom) */}
+          <div className="lg:hidden pb-1 space-y-2">
+            <button
+              onClick={() => setAutoBingo(prev => !prev)}
+              className={`w-full py-2 rounded-lg text-sm font-semibold border ${
+                autoBingo
+                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
+                  : 'bg-slate-800 border-slate-500 text-slate-200'
+              }`}
+            >
+              Auto Bingo: {autoBingo ? 'ON' : 'OFF'}
+            </button>
             <button
               onClick={() => onPressBingo()}
               disabled={autoAlgoMark ? false : !canBingo}
