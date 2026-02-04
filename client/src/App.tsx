@@ -49,9 +49,9 @@ export default function App() {
   const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
   const [autoBingo, setAutoBingo] = useState<boolean>(false)
   const [winnerInfo, setWinnerInfo] = useState<{
-  boardId: number
-  lineIndices: number[]
-} | null>(null)
+    boardId: number
+    lineIndices: number[]
+  } | null>(null)
   const [audioPack, setAudioPack] = useState<string>('amharic') // 'amharic' | 'modern-amharic'
   const [audioOn, setAudioOn] = useState<boolean>(true)
   const callTimerRef = useRef<number | null>(null)
