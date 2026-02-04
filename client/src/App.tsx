@@ -223,28 +223,18 @@ useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHou
     })
     
     s.on('winner', (d: any) => {
-      let boardId: number | undefined = typeof d.boardId === 'number' ? d.boardId : undefined
-      let lineIndices: number[] | undefined = Array.isArray(d.lineIndices) ? d.lineIndices : undefined
+      // REQUIRE server to send these so everyone can show the same winner board.
+      const boardId = Number(d.boardId)
+      const lineIndices = Array.isArray(d.lineIndices) ? d.lineIndices.map((x: any) => Number(x)) : []
     
-      // Fallback only if YOU are the winner and server didn't provide board info
-      if ((!boardId || !lineIndices) && d.playerId === playerIdRef.current) {
-        const marks = new Set<number>(calledRef.current)
-        const win =
-          findBingoWinIncludingLast(marks, lastCalledRef.current, picksRef.current) ||
-          findAnyBingoWin(marks, picksRef.current)
-    
-        if (win) {
-          boardId = win.boardId
-          lineIndices = win.line
-        }
+      if (!Number.isFinite(boardId) || lineIndices.length === 0) {
+        // We cannot reliably show the winner board for all players without server data.
+        // (Winner can compute locally, others cannot.)
+        console.warn('Winner payload missing boardId/lineIndices. Update server to include them.', d)
+        return
       }
     
-      // Only show modal if we actually have a board to show
-      if (boardId && lineIndices && lineIndices.length > 0) {
-        setWinnerInfo({ boardId, lineIndices })
-      } else {
-        setWinnerInfo(null)
-      }
+      setWinnerInfo({ boardId, lineIndices })
     
       // cleanup
       setPicks([])
@@ -810,13 +800,15 @@ const findBingoWinIncludingLast = (
     isGamePage: boolean = false,
     highlightLineIndices: number[] = []
   ) => {
-    if (!boardId) return null;
-    const grid: BoardGrid | null = getBoard(boardId);
-    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
+    if (!boardId) return null
+    const grid: BoardGrid | null = getBoard(boardId)
+    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>
   
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
-    const headers = ['B', 'I', 'N', 'G', 'O'];
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
+    const highlightSet = new Set<number>(highlightLineIndices)
+  
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false
+    const headers = ['B', 'I', 'N', 'G', 'O']
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
   
     return (
       <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
@@ -834,25 +826,37 @@ const findBingoWinIncludingLast = (
   
         <div className="grid grid-cols-5 gap-1.5">
           {grid.map((val, idx) => {
-            const isFree = val === -1;
-            const isCalled = called.includes(val);
-            const isMarked = isFree || markedNumbers.has(val);
-            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
-            const isHighlight = highlightLineIndices.includes(idx);
+            const isFree = val === -1
+            const isCalled = !isFree && called.includes(val)
+  
+            // local mark rules
+            const isMarked = isFree || markedNumbers.has(val)
+  
+            // what THIS client would normally show as marked
+            const finalState = isGamePage
+              ? (autoAlgoMark ? isCalled || isFree : isMarked)
+              : isCalled
+  
+            // IMPORTANT: allow highlight to show even if THIS client didn't mark/call it
+            const isHighlight = highlightSet.has(idx)
+            const displayActive = finalState || isHighlight || isFree
   
             return (
               <div
                 key={idx}
-                onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
+                onClick={() => {
+                  // only allow manual marking during game page + only for called non-free cells
+                  if (isGamePage && !isFree && isCalled) toggleMark(val)
+                }}
                 className={[
                   'aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-black cursor-pointer relative transition-all duration-200 border-2',
                   isFree
                     ? 'bg-yellow-400 border-yellow-200 text-black shadow-lg animate-pulse'
-                    : finalState
-                    ? isHighlight
-                      ? 'bg-emerald-400 border-amber-300 text-black shadow-[0_0_18px_rgba(251,191,36,0.9)] scale-105'
-                      : 'bg-emerald-500 border-emerald-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                    : displayActive
+                      ? isHighlight
+                        ? 'bg-emerald-400 border-amber-300 text-black shadow-[0_0_18px_rgba(251,191,36,0.9)] scale-105'
+                        : 'bg-emerald-500 border-emerald-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
                 ].join(' ')}
               >
                 {isFree ? (
@@ -860,18 +864,18 @@ const findBingoWinIncludingLast = (
                 ) : (
                   <span className="text-xs sm:text-base">{val}</span>
                 )}
-                
-                {/* If Bingo is possible, show a small glowing star indicator */}
-                {isGamePage && boardCanBingo && finalState && !isFree && (
+  
+                {/* Small indicator (keep your original behavior, but allow highlight to count as active) */}
+                {isGamePage && boardCanBingo && displayActive && !isFree && (
                   <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
                 )}
               </div>
-            );
+            )
           })}
         </div>
       </div>
-    );
-  };
+    )
+  }
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
@@ -1981,19 +1985,24 @@ const findBingoWinIncludingLast = (
     <>
       {mainPage}
       {winnerInfo && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-    <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-      <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+    <div className="w-full max-w-sm bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+      <div className="text-xl sm:text-2xl font-bold text-emerald-300 text-center">
         BINGO!
       </div>
 
-      {/* IMPORTANT: render as isGamePage = false so it uses called[] (not markedNumbers) */}
+      {/* Board number */}
+      <div className="text-sm text-slate-300 text-center">
+        Board {winnerInfo.boardId}
+      </div>
+
+      {/* Show the winning board with the winning line highlighted */}
       {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
 
-      <div className="flex justify-end">
+      <div className="flex justify-center pt-2">
         <button
           onClick={() => setWinnerInfo(null)}
-          className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+          className="px-6 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
         >
           OK
         </button>
