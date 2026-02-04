@@ -181,8 +181,8 @@ export default function App() {
         })
       }
       // Automatically trigger BINGO for this player as soon as a valid winning line
-      // exists that includes the last called number, when any auto marking is enabled.
-      if ((autoMark || autoAlgoMark) && !autoBingoSentRef.current) {
+      // exists that includes the last called number, when the auto algorithm is enabled.
+      if (autoAlgoMark && !autoBingoSentRef.current) {
         const autoMarks = new Set<number>(d.called)
         const hasAutoBingo = hasBingoWithMarksAndLast(autoMarks, d.number)
         if (hasAutoBingo && currentBetHouse) {
@@ -1420,6 +1420,13 @@ export default function App() {
   const renderGamePage = () => {
     const recentlyCalled = called.slice(-6).reverse()
     const previousFive = recentlyCalled.filter(n => n !== lastCalled).slice(0, 5)
+    const lastCallColors: Record<string, string> = {
+      B: 'bg-blue-600',
+      I: 'bg-pink-600',
+      N: 'bg-purple-600',
+      G: 'bg-green-600',
+      O: 'bg-orange-500',
+    }
     
     return (
       // We use h-screen and flex-col to lock the height to exactly the phone screen
@@ -1495,14 +1502,18 @@ export default function App() {
                     LAST 5 CALLED
                   </div>
                   <div className="flex flex-wrap justify-end gap-1">
-                    {previousFive.map(n => (
-                      <div
-                        key={n}
-                        className="px-1.5 py-0.5 rounded-full bg-slate-900/80 border border-white/15 text-[9px] sm:text-xs text-slate-50"
-                      >
-                        {numberToLetter(n)} {n}
-                      </div>
-                    ))}
+                    {previousFive.map(n => {
+                      const letter = numberToLetter(n)
+                      const color = lastCallColors[letter] ?? 'bg-slate-900/80'
+                      return (
+                        <div
+                          key={n}
+                          className={`${color} px-1.5 py-0.5 rounded-full border border-white/20 text-[9px] sm:text-xs text-white shadow-sm`}
+                        >
+                          {letter} {n}
+                        </div>
+                      )
+                    })}
                     {previousFive.length === 0 && (
                       <div className="px-1.5 py-0.5 rounded-full bg-slate-900/40 border border-white/5 text-[9px] sm:text-xs text-slate-500">
                         Waiting…
