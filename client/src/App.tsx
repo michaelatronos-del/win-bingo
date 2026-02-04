@@ -152,7 +152,6 @@ export default function App() {
         setMarkedNumbers(new Set())
         setIsReady(false)
         setIsWaiting(false)
-        setTakenBoards([])
         autoBingoSentRef.current = false
       }
     })
@@ -175,84 +174,66 @@ export default function App() {
       }
     })
 
-  // Number calls for the current room (socket is only in one room)
-s.on("call", (d: any) => {
-  setCalled(d.called);
-  setLastCalled(d.number);
-  setCallCountdown(5);
-
-  // --- Auto mark newly called number if enabled
-  if (autoMark || autoAlgoMark) {
-    setMarkedNumbers(prev => {
-      const next = new Set(prev);
-      next.add(d.number);
-      return next;
-    });
-  }
-
-  // --- FIXED AUTO‑BINGO LOGIC ---
-  const marks = new Set<number>(
-    autoAlgoMarkRef.current ? d.called : Array.from(markedNumbers)
-  );
-
-  if (autoBingoRef.current && !autoBingoSentRef.current) {
-    const gotBingo = hasBingoWithMarksAndLast(
-      marks,
-      d.number,
-      picksRef.current
-    );
-    if (gotBingo && currentBetHouse) {
-      autoBingoSentRef.current = true;
-      s.emit("bingo", { stake: currentBetHouse });
-    }
-  }
-
-  // --- Audio playback for each call ---
-  if (
-    audioOnRef.current &&
-    !isWaitingRef.current &&
-    phaseRef.current === "calling"
-  ) {
-    playCallSound(d.number);
-  }
-});
-
-// ------------------------------------------------------------
-// WINNER EVENT HANDLER (shows board + highlighted line)
-s.on("winner", (d: any) => {
-  let boardId: number | undefined;
-  let lineIndices: number[] | undefined;
-
-  // Prefer data from server if provided
-  if (d.boardId && Array.isArray(d.lineIndices)) {
-    boardId = d.boardId;
-    lineIndices = d.lineIndices;
-  } else if (d.playerId === playerId) {
-    // Compute locally for self if server didn’t send details
-    const marks = new Set<number>(called);
-    const win = findAnyBingoWin(marks, picksRef.current);
-    if (win) {
-      boardId = win.boardId;
-      lineIndices = win.line;
-    }
-  }
-
-  setWinnerInfo({
-    playerId: d.playerId,
-    prize: d.prize,
-    stake: d.stake,
-    boardId,
-    lineIndices,
-  });
-
-  // Reset state for next game
-  setPicks([]);
-  setMarkedNumbers(new Set());
-  setCurrentPage("lobby");
-  setIsReady(false);
-  setIsWaiting(false);
-  autoBingoSentRef.current = false;
-});
+    // 🔧 FIXED: Call event handler with proper auto bingo trigger
+    s.on('call', (d: any) => {
+      setCalled(d.called)
+      setLastCalled(d.number)
+      // 5 second countdown between calls
+      setCallCountdown(5)
+      if (autoMark || autoAlgoMark) {
+        setMarkedNumbers(prev => {
+          const next = new Set(prev)
+          next.add(d.number)
+          return next
+        })
+      }
+      // Automatically trigger BINGO as soon as any valid winning line exists
+      // on the player's current boards, when auto bingo is enabled (covers both auto mark modes)
+      if (autoBingoRef.current && !autoBingoSentRef.current) {
+        const autoMarks = new Set<number>(autoAlgoMarkRef.current ? d.called : Array.from(markedNumbers))
+        const autoWin = hasBingoWithMarksAndLast(autoMarks, d.number, picksRef.current)
+        if (autoWin && currentBetHouse) {
+          autoBingoSentRef.current = true
+          s.emit('bingo', { stake: currentBetHouse })
+        }
+      }
+      // Only play audio for active players in the current live game, using refs to avoid stale state
+      if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
+        playCallSound(d.number)
+      }
+    })
+    
+    // 🔧 FIXED: Winner event handler with server-side board support
+    s.on('winner', (d: any) => { 
+      // Try to compute a winning board/line for the local player only
+      let boardId: number | undefined
+      let lineIndices: number[] | undefined
+      // Use server-provided board data if available
+      if (d.boardId && Array.isArray(d.lineIndices)) {
+        boardId = d.boardId
+        lineIndices = d.lineIndices
+      } else if (d.playerId === playerId) {
+        const marks = new Set<number>(called)
+        const win = findAnyBingoWin(marks, picksRef.current)
+        if (win) {
+          boardId = win.boardId
+          lineIndices = win.line
+        }
+      }
+      setWinnerInfo({
+        playerId: d.playerId,
+        prize: d.prize,
+        stake: d.stake,
+        boardId,
+        lineIndices,
+      })
+      setPicks([])
+      setMarkedNumbers(new Set())
+      setCurrentPage('lobby')
+      setIsReady(false)
+      setIsWaiting(false)
+      autoBingoSentRef.current = false
+    })
     
     s.on('game_start', () => {
       if (!isWaiting) {
@@ -425,7 +406,7 @@ s.on("winner", (d: any) => {
       if (count === 5) return true
     }
     
-    // Check diagonals
+    Copy code    // Check diagonals
     let count1 = 0, count2 = 0
     for (let i = 0; i < 5; i++) {
       const num1 = board[i * 5 + i]
