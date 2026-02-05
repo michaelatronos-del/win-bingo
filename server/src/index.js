@@ -401,43 +401,38 @@ io.on('connection', (socket) => {
     const player = state.players.get(socket.id);
     if (!player || !player.picks || player.picks.length === 0) return;
     
-    // For now, simple validation - in real implementation, you'd validate the actual board
-    const hasValidBingo = true; // Placeholder - implement actual board validation
+    // Trust the client for which board/line won (validation is done on client for now)
+    const boardId = data?.boardId;
+    const lineIndices = Array.isArray(data?.lineIndices) ? data.lineIndices : undefined;
     
-    if (hasValidBingo) {
-      const prize = computePrizePool(state);
-      io.to(roomId).emit('winner', { playerId: socket.id, prize, stake });
+    const prize = computePrizePool(state);
+    io.to(roomId).emit('winner', { playerId: socket.id, prize, stake, boardId, lineIndices });
       
       // Award prize to winner
       const winnerBalance = userBalances.get(player.userId) || 0;
       userBalances.set(player.userId, winnerBalance + prize);
       socket.emit('balance_update', { balance: userBalances.get(player.userId) });
       
-      clearInterval(state.caller);
-      clearInterval(state.timer);
-      
-      // Reset active players, move waiting players to active for next game
-      state.players.clear();
-      state.waitingPlayers.forEach((waitingPlayer, socketId) => {
-        waitingPlayer.picks = [];
-        waitingPlayer.ready = false;
-        state.players.set(socketId, waitingPlayer);
-      });
-      state.waitingPlayers.clear();
-      state.takenBoards = new Set();
-      
-      state.phase = 'lobby';
-      io.to(roomId).emit('phase', { phase: state.phase, stake });
-      
-      // Broadcast updated bet houses status
-      io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
-      
-      startCountdown(stake);
-    } else {
-      // Invalid bingo - disqualify player
-      player.disqualified = true;
-      socket.emit('bingo_result', { valid: false, message: 'Invalid BINGO!', stake });
-    }
+    clearInterval(state.caller);
+    clearInterval(state.timer);
+    
+    // Reset active players, move waiting players to active for next game
+    state.players.clear();
+    state.waitingPlayers.forEach((waitingPlayer, socketId) => {
+      waitingPlayer.picks = [];
+      waitingPlayer.ready = false;
+      state.players.set(socketId, waitingPlayer);
+    });
+    state.waitingPlayers.clear();
+    state.takenBoards = new Set();
+    
+    state.phase = 'lobby';
+    io.to(roomId).emit('phase', { phase: state.phase, stake });
+    
+    // Broadcast updated bet houses status
+    io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+    
+    startCountdown(stake);
   });
 
   socket.on('get_bet_houses_status', () => {

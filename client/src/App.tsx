@@ -569,7 +569,17 @@ const findBingoWinIncludingLast = (
       return
     }
     if (!currentBetHouse) return
-    socket?.emit('bingo', { stake: currentBetHouse })
+    const effectiveLastCalled = overrideLastCalled ?? lastCalled
+    const effectiveCalled = overrideCalled ?? called
+    const marks = new Set<number>(
+      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
+    )
+    const win = findBingoWinIncludingLast(marks, effectiveLastCalled, picks)
+    socket?.emit('bingo', {
+      stake: currentBetHouse,
+      boardId: win?.boardId,
+      lineIndices: win?.line,
+    })
     autoBingoSentRef.current = true
   }
 
