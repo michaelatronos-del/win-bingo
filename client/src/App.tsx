@@ -51,6 +51,9 @@ export default function App() {
   const [winnerInfo, setWinnerInfo] = useState<{
     boardId: number
     lineIndices: number[]
+    playerId?: string
+    prize?: number
+    stake?: number
   } | null>(null)
   const [audioPack, setAudioPack] = useState<string>('amharic') // 'amharic' | 'modern-amharic'
   const [audioOn, setAudioOn] = useState<boolean>(true)
@@ -205,15 +208,19 @@ useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHou
         })
       }
     
-      // ---- FIX: Auto Bingo uses server-called numbers + last-called inclusion ----
+      // Auto Bingo: use authoritative called[] and require a line that includes the last call.
       if (autoBingoRef.current && !autoBingoSentRef.current) {
-        const marks = new Set<number>(d.called) // source of truth
+        const marks = new Set<number>(d.called)
         const win = findBingoWinIncludingLast(marks, d.number, picksRef.current)
-    
+
         const stakeToUse = currentBetHouseRef.current
         if (win && stakeToUse) {
           autoBingoSentRef.current = true
-          s.emit('bingo', { stake: stakeToUse })
+          s.emit('bingo', {
+            stake: stakeToUse,
+            boardId: win.boardId,
+            lineIndices: win.line,
+          })
         }
       }
     
@@ -241,7 +248,13 @@ useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHou
     
       // Only show modal if we actually have a board to show
       if (boardId && lineIndices && lineIndices.length > 0) {
-        setWinnerInfo({ boardId, lineIndices })
+        setWinnerInfo({
+          boardId,
+          lineIndices,
+          playerId: d.playerId,
+          prize: d.prize,
+          stake: d.stake,
+        })
       } else {
         setWinnerInfo(null)
       }
@@ -1991,26 +2004,50 @@ const findBingoWinIncludingLast = (
     <>
       {mainPage}
       {winnerInfo && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-    <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-      <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-        BINGO!
-      </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+              BINGO!
+            </div>
+            <div className="text-xs sm:text-sm text-slate-300 space-y-1">
+              {winnerInfo.playerId && (
+                <div>
+                  <span className="text-slate-500">Winner:</span>{' '}
+                  <span className="font-mono break-all">{winnerInfo.playerId}</span>
+                </div>
+              )}
+              {typeof winnerInfo.prize === 'number' && (
+                <div>
+                  <span className="text-slate-500">Prize:</span>{' '}
+                  <span className="font-semibold">{winnerInfo.prize} Birr</span>
+                </div>
+              )}
+              {typeof winnerInfo.stake === 'number' && (
+                <div>
+                  <span className="text-slate-500">Stake:</span>{' '}
+                  <span>{winnerInfo.stake} Birr</span>
+                </div>
+              )}
+              <div>
+                <span className="text-slate-500">Winning Board:</span>{' '}
+                <span className="font-semibold">Board {winnerInfo.boardId}</span>
+              </div>
+            </div>
 
-      {/* IMPORTANT: render as isGamePage = false so it uses called[] (not markedNumbers) */}
-      {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
+            {/* IMPORTANT: render as isGamePage = false so it uses called[] (not markedNumbers) */}
+            {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
 
-      <div className="flex justify-end">
-        <button
-          onClick={() => setWinnerInfo(null)}
-          className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
-        >
-          OK
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setWinnerInfo(null)}
+                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
