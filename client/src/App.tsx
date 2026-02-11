@@ -1305,7 +1305,18 @@ const findBingoWinIncludingLast = (
             Invite Friends
           </button>
         </div>
-
+            {/* --- NEW PRO KENO GAME BUTTON --- */}
+        <div className="py-2">
+          <a href="/prokeno.html" className="block w-full">
+            <button className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-lg sm:text-xl py-4 rounded-xl shadow-[0_0_20px_rgba(192,38,211,0.5)] transform transition hover:scale-[1.02] border border-white/10 flex items-center justify-center gap-3 relative overflow-hidden group">
+              <span className="text-2xl animate-bounce">🎰</span>
+              <span>PLAY PRO KENO 80</span>
+              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+            </button>
+          </a>
+        </div>
+        {/* -------------------------------- */}
+        
         <div className="text-base sm:text-xl font-semibold">Bet Houses</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
           {betHouses.length > 0 ? betHouses.map((house: any) => {

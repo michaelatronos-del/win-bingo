@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pro Keno 80 - Live, Tickets & Game Logs</title>
+    <style>
+        :root {
+            --bg: #05060a;
+            --panel: #101322;
+            --panel-dark: #0c0f1c;
+            --cell: #15192b;
+            --cell-border: rgba(255, 255, 255, 0.05);
+            --cell-selected: #a5ff3d;
+            --primary: #a5ff3d;
+            --accent: #ff3d71;
+            --text: #f6f7ff;
+            --muted: #8f94ba;
+            --gold: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        .app {
+            width: min(520px, 100%);
+            background: #0c0f1d;
+            border-radius: 24px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            position: relative; /* Context for absolute positioning */
+        }
+
+        /* Timer & Draw Display */
+        .game-header {
+            background: var(--panel-dark);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(165, 255, 61, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timer-box {
+            text-align: left;
+        }
+
+        .timer-label {
+            font-size: 0.65rem;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #timer {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Drawing Box */
+        .draw-slots {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(2, 40px);
+            gap: 4px;
+            height: 100px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+            justify-items: center;
+        }
+
+        .draw-ball {
+            width: 22px;
+            height: 22px;
+            background: var(--primary);
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            animation: ballPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Previous Results Row */
+        .prev-draw-container {
+            background: #080a14;
+            border-radius: 12px;
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: none;
+        }
+
+        .prev-draw-label {
+            font-size: 0.6rem;
+            color: var(--muted);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .prev-draw-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .mini-ball {
+            width: 20px;
+            height: 20px;
+            background: #252d47;
+            color: var(--primary);
+            font-size: 0.65rem;
+            font-weight: 800;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Board */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 5px;
+            background: var(--panel-dark);
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        .cell {
+            aspect-ratio: 1/1;
+            background: var(--cell);
+            border: 1px solid var(--cell-border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .cell.selected {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 12px rgba(165, 255, 61, 0.4);
+        }
+
+        .cell.drawn {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .cell.hit {
+            background: #fff;
+            color: #000;
+            outline: 3px solid var(--primary);
+            transform: scale(1.1);
+            font-weight: 900;
+            z-index: 5;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bet-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .display-stat {
+            flex: 1;
+            background: var(--panel-dark);
+            border: 1px solid var(--cell-border);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Updated Bet Stepper */
+        .bet-stepper {
+            display: flex;
+            align-items: center;
+            background: var(--panel-dark);
+            border: 1px solid var(--cell-border);
+            border-radius: 12px;
+            overflow: hidden;
+            width: 140px;
+        }
+
+        .step-btn {
+            background: transparent;
+            border: none;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 900;
+            width: 35px;
+            height: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .step-btn:hover {
+            background: rgba(165, 255, 61, 0.1);
+        }
+
+        .step-btn:active {
+            transform: scale(0.9);
+        }
+
+        .bet-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            text-align: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            width: 100%;
+            outline: none;
+            -moz-appearance: textfield;
+        }
+
+        .bet-input::-webkit-outer-spin-button,
+        .bet-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .bet-btn {
+            background: var(--primary);
+            color: #000;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: none;
+        }
+
+        .bet-btn:disabled {
+            background: #222;
+            color: #555;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btns button {
+            flex: 1;
+            padding: 12px;
+            background: var(--panel-dark);
+            border: 1px solid var(--cell-border);
+            border-radius: 8px;
+            color: var(--text);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Tabs System */
+        .ticket-tabs {
+            display: flex;
+            gap: 4px;
+            margin-top: 5px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .ticket-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 5px;
+            background: var(--panel);
+            border: 1px solid var(--cell-border);
+            border-radius: 12px 12px 0 0;
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 0.7rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-dark);
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        /* Container Section */
+        .tickets-container {
+            max-height: 280px;
+            min-height: 150px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--panel-dark);
+            padding: 12px;
+            border-radius: 0 0 12px 12px;
+            border: 1px solid var(--cell-border);
+        }
+
+        .ticket,
+        .game-log {
+            background: var(--panel);
+            padding: 12px;
+            border-radius: 12px;
+            border-left: 5px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .ticket.win {
+            border-left-color: var(--primary);
+            background: rgba(165, 255, 61, 0.05);
+        }
+
+        .game-log {
+            border-left-color: var(--muted);
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .ticket-info,
+        .log-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .ticket-numbers,
+        .log-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .ticket-payout {
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .ticket-time,
+        .log-time {
+            font-size: 0.6rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .hit-badge,
+        .log-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .hit-badge.matched {
+            background: var(--primary);
+            color: #000;
+            font-weight: 800;
+        }
+
+        .log-badge {
+            background: #252d47;
+            color: var(--primary);
+            border: 1px solid rgba(165, 255, 61, 0.2);
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--muted);
+            padding: 30px;
+            font-size: 0.85rem;
+        }
+
+        /* WIN POPUP ANIMATION */
+        .win-popup {
+            position: absolute;
+            left: 50%;
+            bottom: 20%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--gold);
+            padding: 20px 40px;
+            border-radius: 50px;
+            color: var(--gold);
+            font-size: 2rem;
+            font-weight: 900;
+            text-align: center;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            white-space: nowrap;
+            opacity: 0;
+            animation: floatUp 4s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, 50px) scale(0.5);
+            }
+            15% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(1.1);
+            }
+            30% {
+                transform: translate(-50%, -10px) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -100px);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -200px);
+            }
+        }
+
+        @keyframes ballPop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--cell);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <div class="game-header">
+            <div class="header-top">
+                <div class="timer-box">
+                    <div class="timer-label" id="timerLabel">NEXT DRAW IN</div>
+                    <div id="timer">00:30</div>
+                </div>
+                <div style="text-align: right">
+                    <div class="timer-label">TOTAL DRAW</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">20 / 80</div>
+                </div>
+            </div>
+            <div class="draw-slots" id="drawSlots"></div>
+        </div>
+
+        <div class="prev-draw-container" id="prevDrawContainer">
+            <div class="prev-draw-label">Last Draw Results</div>
+            <div class="prev-draw-list" id="prevDrawList"></div>
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="controls">
+            <div class="bet-row">
+                <div class="display-stat" id="pickedDisplay">0 / 4 Selected</div>
+
+                <div class="bet-stepper">
+                    <button class="step-btn" id="minusBtn">-</button>
+                    <input type="number" id="betInput" class="bet-input" value="2.00" min="2" step="2" readonly>
+                    <button class="step-btn" id="plusBtn">+</button>
+                </div>
+
+                <button class="bet-btn" id="betBtn">PLACE BET</button>
+            </div>
+            <div class="action-btns">
+                <button id="autoBtn">AUTO PICK (4)</button>
+                <button id="clearBtn">CLEAR</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="ticket-tabs">
+                <button class="tab-btn active" id="liveTabBtn">LIVE TICKETS</button>
+                <button class="tab-btn" id="historyTabBtn">MY TICKETS</button>
+                <button class="tab-btn" id="gameLogsTabBtn">GAME HISTORY</button>
+            </div>
+            <div class="tickets-container" id="ticketsContainer"></div>
+        </div>
+
+        <!-- Animation Container -->
+        <div id="animationContainer"></div>
+    </div>
+
+    <script>
+    const MAX_PICK = 10;
+    const AUTO_PICK_COUNT = 4;
+    const DRAW_COUNT = 20;
+    const BET_PHASE_SEC = 30;
+    const DRAW_SPEED_MS = 1000; 
+
+    let gameState = 'BETTING'; 
+    let timeLeft = BET_PHASE_SEC;
+    let selectedNumbers = new Set();
+    
+    let liveTickets = [];
+    let ticketHistory = []; 
+    let gameLogs = []; 
+    
+    let lastDrawResult = []; 
+    let currentTab = 'LIVE'; 
+    let ticketCounter = 1;
+
+    const getMultiplier = (picks, hits) => {
+        if (hits === 0) return 0;
+        if (picks === 2) { if (hits === 2) return 5; if (hits === 1) return 1; }
+        if (picks === 3) { if (hits === 3) return 50; if (hits === 1) return 1; }
+        if (picks === 4) { if (hits === 4) return 150; if (hits === 1) return 1; }
+        if (picks === 5) { if (hits === 5) return 250; if (hits === 2) return 1; }
+        if (picks === 6) { if (hits === 6) return 350; if (hits === 2) return 1; }
+        if (picks === 7) { if (hits === 7) return 450; if (hits === 2) return 1; }
+        if (picks === 8) { if (hits === 8) return 550; if (hits === 3) return 1; }
+        if (picks === 9) { if (hits === 9) return 650; if (hits === 3) return 1; }
+        if (picks === 10) { if (hits === 10) return 750; if (hits === 3) return 1; }
+        const ratio = hits / picks;
+        if (ratio > 0.33) return Math.floor(Math.pow(ratio, 3) * (picks * 50)); 
+        return 0;
+    };
+
+    const boardEl = document.getElementById('board');
+    const timerEl = document.getElementById('timer');
+    const betBtn = document.getElementById('betBtn');
+    const drawSlots = document.getElementById('drawSlots');
+    const ticketsContainer = document.getElementById('ticketsContainer');
+    const pickedDisplay = document.getElementById('pickedDisplay');
+    const prevDrawContainer = document.getElementById('prevDrawContainer');
+    const prevDrawList = document.getElementById('prevDrawList');
+    const betInput = document.getElementById('betInput');
+    const animationContainer = document.getElementById('animationContainer');
+
+    const cells = {};
+    for (let i = 1; i <= 80; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = i;
+        cell.onclick = () => handleCellClick(i);
+        boardEl.appendChild(cell);
+        cells[i] = cell;
+    }
+
+    function handleCellClick(num) {
+        if (gameState !== 'BETTING') return;
+        if (selectedNumbers.has(num)) {
+            selectedNumbers.delete(num);
+            cells[num].classList.remove('selected');
+        } else if (selectedNumbers.size < MAX_PICK) {
+            selectedNumbers.add(num);
+            cells[num].classList.add('selected');
+        }
+        pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
+    }
+
+    document.getElementById('clearBtn').onclick = () => {
+        selectedNumbers.clear();
+        Object.values(cells).forEach(c => c.classList.remove('selected'));
+        pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
+    };
+
+    document.getElementById('autoBtn').onclick = () => {
+        document.getElementById('clearBtn').click();
+        while (selectedNumbers.size < AUTO_PICK_COUNT) { 
+            handleCellClick(Math.floor(Math.random() * 80) + 1); 
+        }
+    };
+
+    document.getElementById('plusBtn').onclick = () => {
+        let val = parseFloat(betInput.value);
+        betInput.value = (val + 2).toFixed(2);
+    };
+
+    document.getElementById('minusBtn').onclick = () => {
+        let val = parseFloat(betInput.value);
+        if (val > 2) {
+            betInput.value = (val - 2).toFixed(2);
+        }
+    };
+
+    document.getElementById('liveTabBtn').onclick = () => { currentTab = 'LIVE'; updateTabUI(); renderContent(); };
+    document.getElementById('historyTabBtn').onclick = () => { currentTab = 'HISTORY'; updateTabUI(); renderContent(); };
+    document.getElementById('gameLogsTabBtn').onclick = () => { currentTab = 'LOGS'; updateTabUI(); renderContent(); };
+
+    function updateTabUI() {
+        document.getElementById('liveTabBtn').classList.toggle('active', currentTab === 'LIVE');
+        document.getElementById('historyTabBtn').classList.toggle('active', currentTab === 'HISTORY');
+        document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
+    }
+
+    betBtn.onclick = () => {
+        if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
+        const betVal = parseFloat(betInput.value);
+        if (betVal < 2) return alert("Min bet is 2 ETB");
+        const ticket = {
+            id: ticketCounter++,
+            picks: Array.from(selectedNumbers),
+            bet: betVal,
+            hits: 0,
+            drawnMatches: [],
+            payout: 0,
+            timestamp: new Date(),
+            status: 'WAITING'
+        };
+        liveTickets.push(ticket);
+        document.getElementById('clearBtn').click();
+        if (currentTab === 'LIVE') renderContent();
+    };
+
+    function renderContent() {
+        ticketsContainer.innerHTML = "";
+        
+        if (currentTab === 'LOGS') {
+            if (gameLogs.length === 0) {
+                ticketsContainer.innerHTML = `<div class="empty-msg">No game history available yet.</div>`;
+                return;
+            }
+            const displayLogs = [...gameLogs].reverse();
+            displayLogs.forEach((log) => {
+                const div = document.createElement('div');
+                div.className = 'game-log';
+                const timeStr = log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                div.innerHTML = `
+                    <div class="log-info">
+                        <div style="font-size:0.65rem; color:var(--primary); font-weight:700">GAME LOG • ${timeStr}</div>
+                        <div class="log-numbers">
+                            ${log.numbers.map(n => `<span class="log-badge">${n}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                ticketsContainer.appendChild(div);
+            });
+            return;
+        }
+
+        const source = currentTab === 'LIVE' ? liveTickets : ticketHistory;
+        if (source.length === 0) {
+            ticketsContainer.innerHTML = `<div class="empty-msg">No ${currentTab === 'LIVE' ? 'live' : 'personal'} tickets available.</div>`;
+            return;
+        }
+        
+        const displayList = currentTab === 'HISTORY' ? [...source].reverse() : source;
+        displayList.forEach(t => {
+            const div = document.createElement('div');
+            div.className = `ticket ${t.payout > 0 ? 'win' : ''}`;
+            const timeStr = t.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const resultLabel = t.status === 'DONE' ? (t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00') : '--';
+            div.innerHTML = `
+                <div class="ticket-info">
+                    <div style="font-size:0.65rem; color:var(--muted)">TICKET #${t.id} • BET ${t.bet} ETB</div>
+                    <div class="ticket-numbers">
+                        ${t.picks.map(n => {
+                            const isMatched = t.drawnMatches.includes(n);
+                            return `<span class="hit-badge ${isMatched ? 'matched' : ''}">${n}</span>`;
+                        }).join('')}
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--primary); font-weight:700">${t.hits} HITS</div>
+                    <div class="ticket-time">${timeStr}</div>
+                </div>
+                <div class="ticket-payout">${resultLabel}</div>
+            `;
+            ticketsContainer.appendChild(div);
+        });
+    }
+
+    function showWinAnimation(amount) {
+        const popup = document.createElement('div');
+        popup.className = 'win-popup';
+        popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} ETB`;
+        animationContainer.appendChild(popup);
+        
+        // Remove element after animation finishes (4s)
+        setTimeout(() => {
+            popup.remove();
+        }, 4000);
+    }
+
+    setInterval(() => {
+        if (gameState === 'BETTING') {
+            timeLeft--;
+            if (timeLeft <= 0) startDraw();
+        }
+        updateTimerDisplay();
+    }, 1000);
+
+    function updateTimerDisplay() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    async function startDraw() {
+        gameState = 'DRAWING';
+        document.getElementById('timerLabel').textContent = "DRAWING...";
+        betBtn.disabled = true;
+        drawSlots.innerHTML = "";
+        prevDrawContainer.style.display = "none"; 
+        
+        const pool = Array.from({length: 80}, (_, i) => i + 1);
+        const currentDraw = [];
+        for (let i = 0; i < DRAW_COUNT; i++) {
+            const idx = Math.floor(Math.random() * pool.length);
+            currentDraw.push(pool.splice(idx, 1)[0]);
+        }
+
+        for (let i = 0; i < currentDraw.length; i++) {
+            const num = currentDraw[i];
+            await new Promise(r => setTimeout(r, DRAW_SPEED_MS));
+            cells[num].classList.add('drawn');
+            const ball = document.createElement('div');
+            ball.className = 'draw-ball';
+            ball.textContent = num;
+            drawSlots.appendChild(ball);
+
+            liveTickets.forEach(t => {
+                if (t.picks.includes(num)) {
+                    t.hits++;
+                    t.drawnMatches.push(num);
+                    cells[num].classList.add('hit');
+                }
+            });
+            if (currentTab === 'LIVE') renderContent();
+        }
+        lastDrawResult = currentDraw; 
+        
+        gameLogs.push({
+            timestamp: new Date(),
+            numbers: [...currentDraw].sort((a,b) => a-b)
+        });
+
+        finalizeGame();
+    }
+
+    function finalizeGame() {
+        let totalWin = 0;
+
+        liveTickets.forEach(t => {
+            const mult = getMultiplier(t.picks.length, t.hits);
+            t.payout = t.bet * mult;
+            t.status = 'DONE';
+            totalWin += t.payout;
+            ticketHistory.push(t);
+        });
+        
+        if (totalWin > 0) {
+            showWinAnimation(totalWin);
+        }
+
+        const now = new Date();
+        ticketHistory = ticketHistory.filter(t => (now - t.timestamp) < 86400000);
+        gameLogs = gameLogs.filter(log => (now - log.timestamp) < 86400000);
+        
+        liveTickets = [];
+        renderContent();
+        setTimeout(resetRound, 5000);
+    }
+
+    function resetRound() {
+        gameState = 'BETTING';
+        timeLeft = BET_PHASE_SEC;
+        document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
+        betBtn.disabled = false;
+        drawSlots.innerHTML = "";
+        
+        if (lastDrawResult.length > 0) {
+            prevDrawContainer.style.display = "block";
+            prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
+        }
+
+        Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
+        updateTimerDisplay();
+        renderContent();
+    }
+
+    renderContent();
+    </script>
+</body>
+
+</html>
