@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pro Keno 80 - Live, Tickets & Game Logs</title>
+    <title>Pro Keno 80 - Live</title>
     <style>
         :root {
             --bg: #05060a;
@@ -45,7 +45,7 @@
             flex-direction: column;
             gap: 12px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-            position: relative; /* Context for absolute positioning */
+            position: relative;
         }
 
         /* Timer & Draw Display */
@@ -505,6 +505,13 @@
                     <div class="timer-label" id="timerLabel">NEXT DRAW IN</div>
                     <div id="timer">00:30</div>
                 </div>
+                
+                <!-- WALLET DISPLAY -->
+                <div style="text-align: center; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 8px; border: 1px solid var(--gold);">
+                    <div class="timer-label" style="color: var(--gold);">WALLET</div>
+                    <div id="userBalanceDisplay" style="font-size: 1.2rem; font-weight: 800; color: #fff;">Loading...</div>
+                </div>
+
                 <div style="text-align: right">
                     <div class="timer-label">TOTAL DRAW</div>
                     <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">20 / 80</div>
@@ -552,6 +559,22 @@
     </div>
 
     <script>
+    // --- CONFIGURATION ---
+    // Change this to your actual backend URL
+    const API_BASE_URL = "https://win-bingo-backend.onrender.com/api"; 
+    const USER_TOKEN = localStorage.getItem("token"); 
+
+    // If user isn't logged in, redirect to login (Uncomment for production)
+    /*
+    if (!USER_TOKEN) {
+        alert("Please log in first!");
+        window.location.href = "/"; 
+    }
+    */
+
+    // User Wallet State
+    let userBalance = 0.00;
+
     const MAX_PICK = 10;
     const AUTO_PICK_COUNT = 4;
     const DRAW_COUNT = 20;
@@ -569,6 +592,42 @@
     let lastDrawResult = []; 
     let currentTab = 'LIVE'; 
     let ticketCounter = 1;
+
+    // --- API FUNCTIONS ---
+    async function fetchUserBalance() {
+        if (!USER_TOKEN) {
+            console.warn("No token found. Using demo balance.");
+            userBalance = 1000.00; // Demo amount
+            updateBalanceDisplay();
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/user/balance`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${USER_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            if (data.balance !== undefined) {
+                userBalance = parseFloat(data.balance);
+                updateBalanceDisplay();
+            }
+        } catch (error) {
+            console.error("Error fetching balance:", error);
+            // Fallback for demo if API fails
+            userBalance = 1000.00;
+            updateBalanceDisplay();
+        }
+    }
+
+    function updateBalanceDisplay() {
+        const balEl = document.getElementById('userBalanceDisplay');
+        if(balEl) balEl.innerText = `${userBalance.toFixed(2)} ETB`;
+    }
 
     const getMultiplier = (picks, hits) => {
         if (hits === 0) return 0;
@@ -654,10 +713,22 @@
         document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
     }
 
+    // MODIFIED BET LOGIC
     betBtn.onclick = () => {
         if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
         const betVal = parseFloat(betInput.value);
+        
+        // 1. Check Local Balance
+        if (betVal > userBalance) {
+            return alert("Insufficient Balance in Wallet!");
+        }
+
         if (betVal < 2) return alert("Min bet is 2 ETB");
+        
+        // 2. Deduct locally
+        userBalance -= betVal;
+        updateBalanceDisplay();
+
         const ticket = {
             id: ticketCounter++,
             picks: Array.from(selectedNumbers),
@@ -735,7 +806,6 @@
         popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} ETB`;
         animationContainer.appendChild(popup);
         
-        // Remove element after animation finishes (4s)
         setTimeout(() => {
             popup.remove();
         }, 4000);
@@ -797,7 +867,7 @@
         finalizeGame();
     }
 
-    function finalizeGame() {
+    async function finalizeGame() {
         let totalWin = 0;
 
         liveTickets.forEach(t => {
@@ -810,6 +880,24 @@
         
         if (totalWin > 0) {
             showWinAnimation(totalWin);
+            
+            // 1. Update Local Balance
+            userBalance += totalWin;
+            updateBalanceDisplay();
+
+            // 2. CRITICAL: Update Server (Commented out for safety/testing)
+            /*
+            try {
+                await fetch(`${API_BASE_URL}/user/update-balance`, {
+                    method: 'POST',
+                    body: JSON.stringify({ amount: totalWin, type: 'win' }),
+                     headers: { 
+                         'Authorization': `Bearer ${USER_TOKEN}`,
+                         'Content-Type': 'application/json'
+                    }
+                });
+            } catch(e) { console.error("Sync failed", e); }
+            */
         }
 
         const now = new Date();
@@ -838,6 +926,8 @@
         renderContent();
     }
 
+    // INITIALIZE
+    fetchUserBalance();
     renderContent();
     </script>
 </body>
