@@ -48,6 +48,41 @@
             position: relative;
         }
 
+        /* Header with back button */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: var(--panel-dark);
+            border: 1px solid var(--cell-border);
+            color: var(--text);
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: var(--cell);
+            border-color: var(--primary);
+        }
+
+        .page-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
         /* Timer & Draw Display */
         .game-header {
             background: var(--panel-dark);
@@ -494,11 +529,46 @@
             background: var(--cell);
             border-radius: 10px;
         }
+
+        /* Balance display matching main app */
+        .balance-display {
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid var(--gold);
+        }
+
+        .balance-label {
+            font-size: 0.65rem;
+            color: var(--gold);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .balance-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .currency {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
     </style>
 </head>
 
 <body>
     <div class="app">
+        <!-- Navigation -->
+        <div class="top-nav">
+            <a href="/" class="back-btn">← Back to Bingo</a>
+            <div class="page-title">PRO KENO 80</div>
+            <div style="width: 100px;"></div> <!-- spacer for centering -->
+        </div>
+
         <div class="game-header">
             <div class="header-top">
                 <div class="timer-box">
@@ -506,10 +576,12 @@
                     <div id="timer">00:30</div>
                 </div>
                 
-                <!-- WALLET DISPLAY -->
-                <div style="text-align: center; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 8px; border: 1px solid var(--gold);">
-                    <div class="timer-label" style="color: var(--gold);">WALLET</div>
-                    <div id="userBalanceDisplay" style="font-size: 1.2rem; font-weight: 800; color: #fff;">Loading...</div>
+                <!-- WALLET DISPLAY - Synced with main app -->
+                <div class="balance-display">
+                    <div class="balance-label">BALANCE</div>
+                    <div id="userBalanceDisplay" class="balance-value">
+                        <span class="currency">Loading...</span>
+                    </div>
                 </div>
 
                 <div style="text-align: right">
@@ -529,11 +601,11 @@
 
         <div class="controls">
             <div class="bet-row">
-                <div class="display-stat" id="pickedDisplay">0 / 4 Selected</div>
+                <div class="display-stat" id="pickedDisplay">0 / 10 Selected</div>
 
                 <div class="bet-stepper">
                     <button class="step-btn" id="minusBtn">-</button>
-                    <input type="number" id="betInput" class="bet-input" value="2.00" min="2" step="2" readonly>
+                    <input type="number" id="betInput" class="bet-input" value="10.00" min="10" step="10" readonly>
                     <button class="step-btn" id="plusBtn">+</button>
                 </div>
 
@@ -560,19 +632,29 @@
 
     <script>
     // --- CONFIGURATION ---
-    // Change this to your actual backend URL
-    const API_BASE_URL = "https://win-bingo-backend.onrender.com/api"; 
-    const USER_TOKEN = localStorage.getItem("token"); 
+    // Use same API as main bingo app
+    const getApiUrl = () => {
+        // Check for environment variable style config (if deployed with main app)
+        if (window.location.hostname === 'localhost') {
+            return 'http://localhost:3001';
+        }
+        // Production: same origin
+        return window.location.origin;
+    };
+    
+    const API_BASE_URL = getApiUrl() + '/api';
+    
+    // Use SAME auth token as main bingo app
+    const USER_TOKEN = localStorage.getItem('authToken'); 
+    const USER_ID = localStorage.getItem('userId');
 
-    // If user isn't logged in, redirect to login (Uncomment for production)
-    /*
-    if (!USER_TOKEN) {
+    // If user isn't logged in, redirect to main app login
+    if (!USER_TOKEN || !USER_ID) {
         alert("Please log in first!");
-        window.location.href = "/"; 
+        window.location.href = "/";
     }
-    */
 
-    // User Wallet State
+    // User Wallet State - synced with main app
     let userBalance = 0.00;
 
     const MAX_PICK = 10;
@@ -593,15 +675,8 @@
     let currentTab = 'LIVE'; 
     let ticketCounter = 1;
 
-    // --- API FUNCTIONS ---
+    // --- API FUNCTIONS - Sync with main bingo app ---
     async function fetchUserBalance() {
-        if (!USER_TOKEN) {
-            console.warn("No token found. Using demo balance.");
-            userBalance = 1000.00; // Demo amount
-            updateBalanceDisplay();
-            return;
-        }
-
         try {
             const response = await fetch(`${API_BASE_URL}/user/balance`, {
                 method: 'GET',
@@ -615,19 +690,58 @@
             if (data.balance !== undefined) {
                 userBalance = parseFloat(data.balance);
                 updateBalanceDisplay();
+            } else {
+                throw new Error('Invalid balance response');
             }
         } catch (error) {
             console.error("Error fetching balance:", error);
-            // Fallback for demo if API fails
-            userBalance = 1000.00;
-            updateBalanceDisplay();
+            // Try alternative: fetch full user profile
+            try {
+                const profileRes = await fetch(`${API_BASE_URL}/user/profile`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${USER_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const profileData = await profileRes.json();
+                if (profileData.balance !== undefined) {
+                    userBalance = parseFloat(profileData.balance);
+                    updateBalanceDisplay();
+                } else {
+                    throw new Error('Profile fetch failed');
+                }
+            } catch (e) {
+                console.error("Fallback balance fetch failed:", e);
+                // Last resort: check if we can get from socket or localStorage
+                const savedBalance = localStorage.getItem('lastKnownBalance');
+                if (savedBalance) {
+                    userBalance = parseFloat(savedBalance);
+                    updateBalanceDisplay();
+                } else {
+                    document.getElementById('userBalanceDisplay').innerHTML = 
+                        '<span style="color: #ff6b6b; font-size: 0.9rem;">Error loading</span>';
+                }
+            }
         }
     }
 
     function updateBalanceDisplay() {
         const balEl = document.getElementById('userBalanceDisplay');
-        if(balEl) balEl.innerText = `${userBalance.toFixed(2)} ETB`;
+        if(balEl) {
+            balEl.innerHTML = `${userBalance.toFixed(2)} <span class="currency">Birr</span>`;
+            // Also save to localStorage for quick access
+            localStorage.setItem('lastKnownBalance', userBalance.toFixed(2));
+        }
     }
+
+    // Listen for balance updates from main app (if user has both tabs open)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'lastKnownBalance') {
+            userBalance = parseFloat(e.newValue) || 0;
+            updateBalanceDisplay();
+        }
+    });
 
     const getMultiplier = (picks, hits) => {
         if (hits === 0) return 0;
@@ -693,13 +807,17 @@
 
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        betInput.value = (val + 2).toFixed(2);
+        // Max bet based on balance
+        const maxBet = Math.min(1000, Math.floor(userBalance / 10) * 10);
+        if (val < maxBet) {
+            betInput.value = (val + 10).toFixed(2);
+        }
     };
 
     document.getElementById('minusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val > 2) {
-            betInput.value = (val - 2).toFixed(2);
+        if (val > 10) {
+            betInput.value = (val - 10).toFixed(2);
         }
     };
 
@@ -713,35 +831,66 @@
         document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
     }
 
-    // MODIFIED BET LOGIC
-    betBtn.onclick = () => {
+    // MODIFIED BET LOGIC with server sync
+    betBtn.onclick = async () => {
         if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
         const betVal = parseFloat(betInput.value);
         
-        // 1. Check Local Balance
+        // 1. Check Local Balance first
         if (betVal > userBalance) {
             return alert("Insufficient Balance in Wallet!");
         }
 
-        if (betVal < 2) return alert("Min bet is 2 ETB");
+        if (betVal < 10) return alert("Min bet is 10 Birr");
         
-        // 2. Deduct locally
-        userBalance -= betVal;
-        updateBalanceDisplay();
+        // 2. Try to place bet on server first (deduct from main wallet)
+        try {
+            const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${USER_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: USER_ID,
+                    amount: betVal,
+                    picks: Array.from(selectedNumbers),
+                    gameType: 'keno80'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                alert(result.error || "Failed to place bet. Please try again.");
+                // Refresh balance to be sure
+                fetchUserBalance();
+                return;
+            }
+            
+            // 3. Deduct locally only after server confirms
+            userBalance = result.newBalance || (userBalance - betVal);
+            updateBalanceDisplay();
 
-        const ticket = {
-            id: ticketCounter++,
-            picks: Array.from(selectedNumbers),
-            bet: betVal,
-            hits: 0,
-            drawnMatches: [],
-            payout: 0,
-            timestamp: new Date(),
-            status: 'WAITING'
-        };
-        liveTickets.push(ticket);
-        document.getElementById('clearBtn').click();
-        if (currentTab === 'LIVE') renderContent();
+            const ticket = {
+                id: ticketCounter++,
+                picks: Array.from(selectedNumbers),
+                bet: betVal,
+                hits: 0,
+                drawnMatches: [],
+                payout: 0,
+                timestamp: new Date(),
+                status: 'WAITING',
+                serverTicketId: result.ticketId // track server-side ticket
+            };
+            liveTickets.push(ticket);
+            document.getElementById('clearBtn').click();
+            if (currentTab === 'LIVE') renderContent();
+            
+        } catch (error) {
+            console.error("Bet placement failed:", error);
+            alert("Network error. Please check your connection and try again.");
+        }
     };
 
     function renderContent() {
@@ -803,7 +952,7 @@
     function showWinAnimation(amount) {
         const popup = document.createElement('div');
         popup.className = 'win-popup';
-        popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} ETB`;
+        popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} Birr`;
         animationContainer.appendChild(popup);
         
         setTimeout(() => {
@@ -864,40 +1013,59 @@
             numbers: [...currentDraw].sort((a,b) => a-b)
         });
 
-        finalizeGame();
+        await finalizeGame();
     }
 
     async function finalizeGame() {
         let totalWin = 0;
+        const winningTickets = [];
 
         liveTickets.forEach(t => {
             const mult = getMultiplier(t.picks.length, t.hits);
             t.payout = t.bet * mult;
             t.status = 'DONE';
             totalWin += t.payout;
+            if (t.payout > 0) {
+                winningTickets.push({
+                    ticketId: t.serverTicketId,
+                    payout: t.payout
+                });
+            }
             ticketHistory.push(t);
         });
         
-        if (totalWin > 0) {
+        // Sync wins with server
+        if (winningTickets.length > 0 || totalWin > 0) {
             showWinAnimation(totalWin);
             
-            // 1. Update Local Balance
-            userBalance += totalWin;
-            updateBalanceDisplay();
-
-            // 2. CRITICAL: Update Server (Commented out for safety/testing)
-            /*
             try {
-                await fetch(`${API_BASE_URL}/user/update-balance`, {
+                const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
                     method: 'POST',
-                    body: JSON.stringify({ amount: totalWin, type: 'win' }),
-                     headers: { 
-                         'Authorization': `Bearer ${USER_TOKEN}`,
-                         'Content-Type': 'application/json'
-                    }
+                    headers: {
+                        'Authorization': `Bearer ${USER_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: USER_ID,
+                        totalWin: totalWin,
+                        tickets: winningTickets
+                    })
                 });
-            } catch(e) { console.error("Sync failed", e); }
-            */
+                
+                const result = await response.json();
+                if (result.success && result.newBalance !== undefined) {
+                    userBalance = parseFloat(result.newBalance);
+                } else {
+                    // Fallback: add locally if server sync fails
+                    userBalance += totalWin;
+                }
+            } catch (error) {
+                console.error("Failed to sync win with server:", error);
+                // Fallback: update locally
+                userBalance += totalWin;
+            }
+            
+            updateBalanceDisplay();
         }
 
         const now = new Date();
@@ -924,11 +1092,17 @@
         Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
         updateTimerDisplay();
         renderContent();
+        
+        // Refresh balance from server to ensure sync
+        fetchUserBalance();
     }
 
     // INITIALIZE
     fetchUserBalance();
     renderContent();
+    
+    // Periodic balance sync (every 30 seconds)
+    setInterval(fetchUserBalance, 30000);
     </script>
 </body>
 
