@@ -7,7 +7,13 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
 const app = express();
-app.use(cors());
+
+// ✅ CORS (important for frontend -> backend with Authorization header)
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Serve audio files from the repository's /audio directory
@@ -90,6 +96,30 @@ function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// ✅ AUTH MIDDLEWARE FOR KENO/REST SYNC
+function getBearerToken(req) {
+  const h = req.headers.authorization || '';
+  const [type, token] = h.split(' ');
+  if (type !== 'Bearer' || !token) return null;
+  return token;
+}
+
+function requireAuth(req, res, next) {
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ success: false, error: 'Missing token' });
+
+  const session = userSessions.get(token);
+  if (!session) return res.status(401).json({ success: false, error: 'Invalid token' });
+
+  if (session.expiresAt < Date.now()) {
+    userSessions.delete(token);
+    return res.status(401).json({ success: false, error: 'Session expired' });
+  }
+
+  req.session = session; // { userId, username, expiresAt }
+  next();
+}
+
 function getOnlinePlayers(state) {
   return Array.from(state.players.values());
 }
@@ -153,7 +183,6 @@ function startCountdown(stake) {
     if (state.countdown <= 0) {
       clearInterval(state.timer);
       // Only start calling if there are players with boards selected.
-      // Consider any active player that has at least one board selected.
       const playersWithBoards = getOnlinePlayers(state).filter(
         p => Array.isArray(p.picks) && p.picks.length > 0
       );
