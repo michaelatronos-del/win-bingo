@@ -8,7 +8,7 @@ import crypto from 'crypto';
 
 const app = express();
 
-// ✅ CORS (important for frontend -> backend with Authorization header)
+// CORS with Authorization header support
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -96,7 +96,7 @@ function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// ✅ AUTH MIDDLEWARE FOR KENO/REST SYNC
+// ---- AUTH HELPERS FOR REST (KENO, BALANCE, ETC.) ----
 function getBearerToken(req) {
   const h = req.headers.authorization || '';
   const [type, token] = h.split(' ');
@@ -183,6 +183,7 @@ function startCountdown(stake) {
     if (state.countdown <= 0) {
       clearInterval(state.timer);
       // Only start calling if there are players with boards selected.
+      // Consider any active player that has at least one board selected.
       const playersWithBoards = getOnlinePlayers(state).filter(
         p => Array.isArray(p.picks) && p.picks.length > 0
       );
@@ -577,6 +578,67 @@ function parseTransactionId(text) {
   }
   return null;
 }
+
+/* =========  KENO / WALLET REST ENDPOINTS (NEW)  ========= */
+
+// 1) Balance for Keno page
+app.get('/api/user/balance', requireAuth, (req, res) => {
+  const { userId } = req.session;
+  const balance = userBalances.get(userId) || 0;
+  res.json({ balance });
+});
+
+// 2) Place Keno bet (deduct from balance)
+app.post('/api/games/keno/bet', requireAuth, (req, res) => {
+  const sessionUserId = req.session.userId;
+  const { userId: bodyUserId, amount } = req.body;
+
+  if (bodyUserId && bodyUserId !== sessionUserId) {
+    return res.json({ success: false, error: 'User mismatch' });
+  }
+
+  const amountNum = Number(amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    return res.json({ success: false, error: 'Invalid amount' });
+  }
+
+  const current = userBalances.get(sessionUserId) || 0;
+  if (current < amountNum) {
+    return res.json({ success: false, error: 'Insufficient funds' });
+  }
+
+  userBalances.set(sessionUserId, current - amountNum);
+  res.json({
+    success: true,
+    newBalance: userBalances.get(sessionUserId),
+    ticketId: Date.now(), // simple unique ID
+  });
+});
+
+// 3) Settle Keno wins (add to balance)
+app.post('/api/games/keno/settle', requireAuth, (req, res) => {
+  const sessionUserId = req.session.userId;
+  const { userId: bodyUserId, totalWin } = req.body;
+
+  if (bodyUserId && bodyUserId !== sessionUserId) {
+    return res.json({ success: false, error: 'User mismatch' });
+  }
+
+  const winNum = Number(totalWin) || 0;
+  if (winNum < 0) {
+    return res.json({ success: false, error: 'Invalid totalWin' });
+  }
+
+  const current = userBalances.get(sessionUserId) || 0;
+  userBalances.set(sessionUserId, current + winNum);
+
+  res.json({
+    success: true,
+    newBalance: userBalances.get(sessionUserId),
+  });
+});
+
+/* =========  EXISTING WALLET ENDPOINTS (DEPOSIT/WITHDRAW)  ========= */
 
 // Deposit API endpoint
 app.post('/api/deposit', (req, res) => {
