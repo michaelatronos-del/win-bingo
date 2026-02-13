@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pro Keno 80 - Live</title>
     <style>
+        /* ... (Your existing CSS styles remain exactly the same) ... */
         :root {
             --bg: #05060a;
             --panel: #101322;
@@ -48,7 +49,6 @@
             position: relative;
         }
 
-        /* Header with back button */
         .top-nav {
             display: flex;
             align-items: center;
@@ -83,7 +83,6 @@
             color: var(--primary);
         }
 
-        /* Timer & Draw Display */
         .game-header {
             background: var(--panel-dark);
             padding: 15px;
@@ -119,7 +118,6 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Drawing Box */
         .draw-slots {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -149,7 +147,6 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
         }
 
-        /* Previous Results Row */
         .prev-draw-container {
             background: #080a14;
             border-radius: 12px;
@@ -185,7 +182,6 @@
             justify-content: center;
         }
 
-        /* Board */
         .board {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -230,7 +226,6 @@
             z-index: 5;
         }
 
-        /* Controls */
         .controls {
             display: flex;
             flex-direction: column;
@@ -257,7 +252,6 @@
             justify-content: center;
         }
 
-        /* Updated Bet Stepper */
         .bet-stepper {
             display: flex;
             align-items: center;
@@ -339,7 +333,6 @@
             cursor: pointer;
         }
 
-        /* Tabs System */
         .ticket-tabs {
             display: flex;
             gap: 4px;
@@ -372,7 +365,6 @@
             border-bottom: 2px solid var(--primary);
         }
 
-        /* Container Section */
         .tickets-container {
             max-height: 280px;
             min-height: 150px;
@@ -467,7 +459,6 @@
             font-size: 0.85rem;
         }
 
-        /* WIN POPUP ANIMATION */
         .win-popup {
             position: absolute;
             left: 50%;
@@ -530,7 +521,6 @@
             border-radius: 10px;
         }
 
-        /* Balance display matching main app */
         .balance-display {
             text-align: center;
             background: rgba(0,0,0,0.5);
@@ -566,7 +556,7 @@
         <div class="top-nav">
             <a href="/" class="back-btn">← Back to Bingo</a>
             <div class="page-title">PRO KENO 80</div>
-            <div style="width: 100px;"></div> <!-- spacer for centering -->
+            <div style="width: 100px;"></div>
         </div>
 
         <div class="game-header">
@@ -576,11 +566,11 @@
                     <div id="timer">00:30</div>
                 </div>
                 
-                <!-- WALLET DISPLAY - Synced with main app -->
+                <!-- WALLET DISPLAY -->
                 <div class="balance-display">
                     <div class="balance-label">BALANCE</div>
                     <div id="userBalanceDisplay" class="balance-value">
-                        <span class="currency">Loading...</span>
+                        <span class="currency">Syncing...</span>
                     </div>
                 </div>
 
@@ -626,37 +616,29 @@
             <div class="tickets-container" id="ticketsContainer"></div>
         </div>
 
-        <!-- Animation Container -->
         <div id="animationContainer"></div>
     </div>
 
     <script>
-    // --- CONFIGURATION ---
-    // Use same API as main bingo app
+    // --- CRITICAL CONFIGURATION FIX ---
     const getApiUrl = () => {
-        // Check for environment variable style config (if deployed with main app)
-        if (window.location.hostname === 'localhost') {
-            return 'http://localhost:3001';
-        }
-        // Production: same origin
-        return window.location.origin;
+        // Since we know the server URL from your context:
+        return "https://win-bingo-backend.onrender.com";
     };
     
     const API_BASE_URL = getApiUrl() + '/api';
     
-    // Use SAME auth token as main bingo app
+    // Use EXACT same keys as your Bingo App
     const USER_TOKEN = localStorage.getItem('authToken'); 
     const USER_ID = localStorage.getItem('userId');
 
-    // If user isn't logged in, redirect to main app login
+    // If user isn't logged in, redirect to login
     if (!USER_TOKEN || !USER_ID) {
         alert("Please log in first!");
         window.location.href = "/";
     }
 
-    // User Wallet State - synced with main app
     let userBalance = 0.00;
-
     const MAX_PICK = 10;
     const AUTO_PICK_COUNT = 4;
     const DRAW_COUNT = 20;
@@ -666,18 +648,17 @@
     let gameState = 'BETTING'; 
     let timeLeft = BET_PHASE_SEC;
     let selectedNumbers = new Set();
-    
     let liveTickets = [];
     let ticketHistory = []; 
     let gameLogs = []; 
-    
     let lastDrawResult = []; 
     let currentTab = 'LIVE'; 
     let ticketCounter = 1;
 
-    // --- API FUNCTIONS - Sync with main bingo app ---
+    // --- UPDATED SYNC FUNCTIONS ---
     async function fetchUserBalance() {
         try {
+            // Using the /api/user/balance endpoint we added to your backend
             const response = await fetch(`${API_BASE_URL}/user/balance`, {
                 method: 'GET',
                 headers: {
@@ -686,43 +667,17 @@
                 }
             });
             
+            if (!response.ok) throw new Error('Auth failed');
+
             const data = await response.json();
             if (data.balance !== undefined) {
                 userBalance = parseFloat(data.balance);
                 updateBalanceDisplay();
-            } else {
-                throw new Error('Invalid balance response');
             }
         } catch (error) {
-            console.error("Error fetching balance:", error);
-            // Try alternative: fetch full user profile
-            try {
-                const profileRes = await fetch(`${API_BASE_URL}/user/profile`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${USER_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const profileData = await profileRes.json();
-                if (profileData.balance !== undefined) {
-                    userBalance = parseFloat(profileData.balance);
-                    updateBalanceDisplay();
-                } else {
-                    throw new Error('Profile fetch failed');
-                }
-            } catch (e) {
-                console.error("Fallback balance fetch failed:", e);
-                // Last resort: check if we can get from socket or localStorage
-                const savedBalance = localStorage.getItem('lastKnownBalance');
-                if (savedBalance) {
-                    userBalance = parseFloat(savedBalance);
-                    updateBalanceDisplay();
-                } else {
-                    document.getElementById('userBalanceDisplay').innerHTML = 
-                        '<span style="color: #ff6b6b; font-size: 0.9rem;">Error loading</span>';
-                }
-            }
+            console.error("Balance Sync Error:", error);
+            document.getElementById('userBalanceDisplay').innerHTML = 
+                '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
         }
     }
 
@@ -730,18 +685,10 @@
         const balEl = document.getElementById('userBalanceDisplay');
         if(balEl) {
             balEl.innerHTML = `${userBalance.toFixed(2)} <span class="currency">Birr</span>`;
-            // Also save to localStorage for quick access
+            // Keep a backup in case page reloads
             localStorage.setItem('lastKnownBalance', userBalance.toFixed(2));
         }
     }
-
-    // Listen for balance updates from main app (if user has both tabs open)
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'lastKnownBalance') {
-            userBalance = parseFloat(e.newValue) || 0;
-            updateBalanceDisplay();
-        }
-    });
 
     const getMultiplier = (picks, hits) => {
         if (hits === 0) return 0;
@@ -807,9 +754,7 @@
 
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        // Max bet based on balance
-        const maxBet = Math.min(1000, Math.floor(userBalance / 10) * 10);
-        if (val < maxBet) {
+        if (val < userBalance) {
             betInput.value = (val + 10).toFixed(2);
         }
     };
@@ -831,45 +776,35 @@
         document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
     }
 
-    // MODIFIED BET LOGIC with server sync
+    // --- UPDATED BET LOGIC ---
     betBtn.onclick = async () => {
         if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
         const betVal = parseFloat(betInput.value);
         
-        // 1. Check Local Balance first
         if (betVal > userBalance) {
-            return alert("Insufficient Balance in Wallet!");
+            return alert("Insufficient Balance!");
         }
 
-        if (betVal < 10) return alert("Min bet is 10 Birr");
-        
-        // 2. Try to place bet on server first (deduct from main wallet)
         try {
+            // Deduct from server wallet
             const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${USER_TOKEN}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    userId: USER_ID,
-                    amount: betVal,
-                    picks: Array.from(selectedNumbers),
-                    gameType: 'keno80'
-                })
+                body: JSON.stringify({ userId: USER_ID, amount: betVal })
             });
             
             const result = await response.json();
             
             if (!result.success) {
-                alert(result.error || "Failed to place bet. Please try again.");
-                // Refresh balance to be sure
+                alert(result.error || "Bet Failed");
                 fetchUserBalance();
                 return;
             }
             
-            // 3. Deduct locally only after server confirms
-            userBalance = result.newBalance || (userBalance - betVal);
+            userBalance = result.newBalance;
             updateBalanceDisplay();
 
             const ticket = {
@@ -880,16 +815,14 @@
                 drawnMatches: [],
                 payout: 0,
                 timestamp: new Date(),
-                status: 'WAITING',
-                serverTicketId: result.ticketId // track server-side ticket
+                status: 'WAITING'
             };
             liveTickets.push(ticket);
             document.getElementById('clearBtn').click();
             if (currentTab === 'LIVE') renderContent();
             
         } catch (error) {
-            console.error("Bet placement failed:", error);
-            alert("Network error. Please check your connection and try again.");
+            alert("Network Error");
         }
     };
 
@@ -921,7 +854,7 @@
 
         const source = currentTab === 'LIVE' ? liveTickets : ticketHistory;
         if (source.length === 0) {
-            ticketsContainer.innerHTML = `<div class="empty-msg">No ${currentTab === 'LIVE' ? 'live' : 'personal'} tickets available.</div>`;
+            ticketsContainer.innerHTML = `<div class="empty-msg">No tickets available.</div>`;
             return;
         }
         
@@ -933,7 +866,7 @@
             const resultLabel = t.status === 'DONE' ? (t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00') : '--';
             div.innerHTML = `
                 <div class="ticket-info">
-                    <div style="font-size:0.65rem; color:var(--muted)">TICKET #${t.id} • BET ${t.bet} ETB</div>
+                    <div style="font-size:0.65rem; color:var(--muted)">TICKET #${t.id} • BET ${t.bet} Birr</div>
                     <div class="ticket-numbers">
                         ${t.picks.map(n => {
                             const isMatched = t.drawnMatches.includes(n);
@@ -1018,60 +951,37 @@
 
     async function finalizeGame() {
         let totalWin = 0;
-        const winningTickets = [];
 
         liveTickets.forEach(t => {
             const mult = getMultiplier(t.picks.length, t.hits);
             t.payout = t.bet * mult;
             t.status = 'DONE';
             totalWin += t.payout;
-            if (t.payout > 0) {
-                winningTickets.push({
-                    ticketId: t.serverTicketId,
-                    payout: t.payout
-                });
-            }
             ticketHistory.push(t);
         });
         
-        // Sync wins with server
-        if (winningTickets.length > 0 || totalWin > 0) {
+        if (totalWin > 0) {
             showWinAnimation(totalWin);
             
             try {
+                // Settle win on server
                 const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${USER_TOKEN}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        userId: USER_ID,
-                        totalWin: totalWin,
-                        tickets: winningTickets
-                    })
+                    body: JSON.stringify({ userId: USER_ID, totalWin: totalWin })
                 });
                 
                 const result = await response.json();
-                if (result.success && result.newBalance !== undefined) {
-                    userBalance = parseFloat(result.newBalance);
-                } else {
-                    // Fallback: add locally if server sync fails
-                    userBalance += totalWin;
+                if (result.success) {
+                    userBalance = result.newBalance;
+                    updateBalanceDisplay();
                 }
-            } catch (error) {
-                console.error("Failed to sync win with server:", error);
-                // Fallback: update locally
-                userBalance += totalWin;
-            }
-            
-            updateBalanceDisplay();
+            } catch (e) { console.error("Settlement failed", e); }
         }
 
-        const now = new Date();
-        ticketHistory = ticketHistory.filter(t => (now - t.timestamp) < 86400000);
-        gameLogs = gameLogs.filter(log => (now - log.timestamp) < 86400000);
-        
         liveTickets = [];
         renderContent();
         setTimeout(resetRound, 5000);
@@ -1092,17 +1002,13 @@
         Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
         updateTimerDisplay();
         renderContent();
-        
-        // Refresh balance from server to ensure sync
-        fetchUserBalance();
+        fetchUserBalance(); // Refresh from server
     }
 
     // INITIALIZE
     fetchUserBalance();
     renderContent();
-    
-    // Periodic balance sync (every 30 seconds)
-    setInterval(fetchUserBalance, 30000);
+    setInterval(fetchUserBalance, 10000); // Periodic auto-sync
     </script>
 </body>
 
