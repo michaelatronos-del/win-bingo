@@ -68,16 +68,29 @@ export default function App() {
   const [withdrawalVerifying, setWithdrawalVerifying] = useState<boolean>(false)
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
   const autoBingoSentRef = useRef<boolean>(false)
-  // ---- FIX: refs to avoid stale state inside socket listeners ----
-const playerIdRef = useRef<string>(playerId)
-const calledRef = useRef<number[]>(called)
-const lastCalledRef = useRef<number | null>(lastCalled)
-const currentBetHouseRef = useRef<number | null>(currentBetHouse)
 
-useEffect(() => { playerIdRef.current = playerId }, [playerId])
-useEffect(() => { calledRef.current = called }, [called])
-useEffect(() => { lastCalledRef.current = lastCalled }, [lastCalled])
-useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHouse])
+  // --- NEW: Welcome bonus banner ---
+  const [showBonusClaimed, setShowBonusClaimed] = useState<boolean>(false)
+
+  // ---- FIX: refs to avoid stale state inside socket listeners ----
+  const playerIdRef = useRef<string>(playerId)
+  const calledRef = useRef<number[]>(called)
+  const lastCalledRef = useRef<number | null>(lastCalled)
+  const currentBetHouseRef = useRef<number | null>(currentBetHouse)
+
+  useEffect(() => { playerIdRef.current = playerId }, [playerId])
+  useEffect(() => { calledRef.current = called }, [called])
+  useEffect(() => { lastCalledRef.current = lastCalled }, [lastCalled])
+  useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHouse])
+
+  // --- NEW: Show welcome bonus only once ---
+  useEffect(() => {
+    if (currentPage === 'welcome' && localStorage.getItem('isNewUser') === 'true') {
+      setShowBonusClaimed(true)
+      localStorage.removeItem('isNewUser')
+    }
+  }, [currentPage])
+
   // Check for existing session on mount
   useEffect(() => {
     try {
@@ -398,7 +411,7 @@ useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHou
     socket?.emit('start_game', { stake: currentBetHouse })
     // If not waiting, redirect immediately; otherwise stay on lobby
     if (!isWaiting) {
-    setCurrentPage('game')
+      setCurrentPage('game')
     }
   }
 
@@ -521,43 +534,45 @@ useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHou
     }
     return null
   }
-   // ---- FIX: find the actual winning line that includes the last called number ----
-const findBingoWinIncludingLast = (
-  marks: Set<number>,
-  last: number | null,
-  boardIdsOverride?: number[]
-): { boardId: number; line: number[] } | null => {
-  if (!last) return null
-  const boardsToCheck = boardIdsOverride ?? picks
 
-  for (const boardId of boardsToCheck) {
-    const grid = getBoard(boardId)
-    if (!grid) continue
+  // ---- FIX: find the actual winning line that includes the last called number ----
+  const findBingoWinIncludingLast = (
+    marks: Set<number>,
+    last: number | null,
+    boardIdsOverride?: number[]
+  ): { boardId: number; line: number[] } | null => {
+    if (!last) return null
+    const boardsToCheck = boardIdsOverride ?? picks
 
-    const lines: number[][] = []
-    // rows
-    for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
-    // cols
-    for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-    // diagonals
-    lines.push([0,1,2,3,4].map(i => i * 5 + i))
-    lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+    for (const boardId of boardsToCheck) {
+      const grid = getBoard(boardId)
+      if (!grid) continue
 
-    for (const idxLine of lines) {
-      const nums = idxLine.map(idx => grid[idx])
-      if (!nums.includes(last)) continue
+      const lines: number[][] = []
+      // rows
+      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
+      // cols
+      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
+      // diagonals
+      lines.push([0,1,2,3,4].map(i => i * 5 + i))
+      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
 
-      const complete = idxLine.every(idx => {
-        const num = grid[idx]
-        return num === -1 || marks.has(num)
-      })
+      for (const idxLine of lines) {
+        const nums = idxLine.map(idx => grid[idx])
+        if (!nums.includes(last)) continue
 
-      if (complete) return { boardId, line: idxLine }
+        const complete = idxLine.every(idx => {
+          const num = grid[idx]
+          return num === -1 || marks.has(num)
+        })
+
+        if (complete) return { boardId, line: idxLine }
+      }
     }
+
+    return null
   }
 
-  return null
-}
   // Ensure a win line exists that includes the most recent called number.
   // Optional overrides let us validate immediately on a fresh server call payload.
   const hasBingoIncludingLastCalled = (
@@ -707,6 +722,7 @@ const findBingoWinIncludingLast = (
   useEffect(() => { picksRef.current = picks }, [picks])
   useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
   useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
+
   // Parse amount from deposit/withdrawal message
   const parseAmount = (message: string): number | null => {
     // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
@@ -796,6 +812,7 @@ const findBingoWinIncludingLast = (
     
     return { valid: true, transactionId, detectedAmount }
   }
+
   const playCallSound = async (n: number) => {
     const letter = numberToLetter(n)
     // Always fetch audio from the server to avoid client-origin path issues
@@ -895,6 +912,7 @@ const findBingoWinIncludingLast = (
       </div>
     );
   };
+
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
@@ -1030,17 +1048,17 @@ const findBingoWinIncludingLast = (
               >
                 Switch Bet House
               </button>
-            <button
-              onClick={handleStartGame}
-              disabled={picks.length === 0 || isReady}
-              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-lg flex-1 sm:flex-none ${
-                picks.length > 0 && !isReady 
-                  ? 'bg-green-500 hover:bg-green-600 text-black' 
-                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              }`}
-            >
+              <button
+                onClick={handleStartGame}
+                disabled={picks.length === 0 || isReady}
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-lg flex-1 sm:flex-none ${
+                  picks.length > 0 && !isReady 
+                    ? 'bg-green-500 hover:bg-green-600 text-black' 
+                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                }`}
+              >
                 {isReady ? (isWaiting ? 'Waiting...' : 'Ready!') : 'Start Game'}
-        </button>
+              </button>
             </div>
           </div>
         </div>
@@ -1183,6 +1201,7 @@ const findBingoWinIncludingLast = (
     }
   }
 
+  // --- UPDATED: welcome bonus on signup ---
   const handleSignup = async () => {
     if (!loginUsername.trim() || !loginPassword.trim()) {
       setLoginError('Please enter username and password')
@@ -1209,6 +1228,7 @@ const findBingoWinIncludingLast = (
         body: JSON.stringify({
           username: loginUsername.trim(),
           password: loginPassword,
+          initialBalance: 100
         }),
       })
       
@@ -1224,10 +1244,12 @@ const findBingoWinIncludingLast = (
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
+      localStorage.setItem('isNewUser', 'true')
       
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
+      setBalance(100)
       setLoginUsername('')
       setLoginPassword('')
       setCurrentPage('welcome')
@@ -1280,6 +1302,25 @@ const findBingoWinIncludingLast = (
           </div>
         </div>
 
+        {/* --- Welcome Bonus Notification --- */}
+        {showBonusClaimed && (
+          <div className="bg-emerald-500 text-black p-4 rounded-xl flex items-center justify-between animate-bounce shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎁</span>
+              <div>
+                <div className="font-black text-sm">WELCOME BONUS!</div>
+                <div className="text-xs font-bold">100 Birr has been added to your account.</div>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowBonusClaimed(false)}
+              className="bg-black/20 hover:bg-black/40 rounded-full w-8 h-8 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Balance card */}
         <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex items-center justify-between">
           <div>
@@ -1305,7 +1346,8 @@ const findBingoWinIncludingLast = (
             Invite Friends
           </button>
         </div>
-            {/* --- NEW PRO KENO GAME BUTTON --- */}
+
+        {/* --- NEW PRO KENO GAME BUTTON --- */}
         <div className="py-2">
           <a href="/prokeno.html" className="block w-full">
             <button className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-lg sm:text-xl py-4 rounded-xl shadow-[0_0_20px_rgba(192,38,211,0.5)] transform transition hover:scale-[1.02] border border-white/10 flex items-center justify-center gap-3 relative overflow-hidden group">
@@ -1316,6 +1358,8 @@ const findBingoWinIncludingLast = (
           </a>
         </div>
         {/* -------------------------------- */}
+        
+        {/* ... rest of your file unchanged ... */}
         
         <div className="text-base sm:text-xl font-semibold">Bet Houses</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
