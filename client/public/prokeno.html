@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pro Keno 80 - Live</title>
     <style>
-        /* ... (Your existing CSS styles remain exactly the same) ... */
         :root {
             --bg: #05060a;
             --panel: #101322;
@@ -48,6 +47,29 @@
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
             position: relative;
         }
+
+        /* Wait Overlay Styles */
+        #waitOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 6, 10, 0.85);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 24px;
+            text-align: center;
+        }
+        .wait-spinner {
+            width: 50px; height: 50px;
+            border: 5px solid var(--cell);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .top-nav {
             display: flex;
@@ -619,34 +641,32 @@
         <div id="animationContainer"></div>
     </div>
 
+    <!-- Socket.io library -->
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-    // --- CRITICAL CONFIGURATION FIX ---
+    // --- CONFIGURATION ---
     const getApiUrl = () => {
-        // Since we know the server URL from your context:
         return "https://win-bingo-backend.onrender.com";
     };
     
     const API_BASE_URL = getApiUrl() + '/api';
-    
-    // Use EXACT same keys as your Bingo App
     const USER_TOKEN = localStorage.getItem('authToken'); 
     const USER_ID = localStorage.getItem('userId');
 
-    // If user isn't logged in, redirect to login
     if (!USER_TOKEN || !USER_ID) {
         alert("Please log in first!");
         window.location.href = "/";
     }
 
+    // Socket Initialization
+    const socket = io({ auth: { userId: USER_ID, username: localStorage.getItem('username') } });
+
     let userBalance = 0.00;
     const MAX_PICK = 10;
     const AUTO_PICK_COUNT = 4;
     const DRAW_COUNT = 20;
-    const BET_PHASE_SEC = 30;
-    const DRAW_SPEED_MS = 1000; 
-
     let gameState = 'BETTING'; 
-    let timeLeft = BET_PHASE_SEC;
+    let timeLeft = 30;
     let selectedNumbers = new Set();
     let liveTickets = [];
     let ticketHistory = []; 
@@ -655,10 +675,117 @@
     let currentTab = 'LIVE'; 
     let ticketCounter = 1;
 
-    // --- UPDATED SYNC FUNCTIONS ---
+    // Overlay Creation
+    const waitOverlay = createWaitOverlay();
+
+    function createWaitOverlay() {
+        const div = document.createElement('div');
+        div.id = 'waitOverlay';
+        div.innerHTML = `<div class="wait-spinner"></div><h3>GAME IN PROGRESS</h3><p>Please wait for the next round to bet.</p>`;
+        document.querySelector('.app').appendChild(div);
+        return div;
+    }
+
+    // --- SOCKET SYNC HANDLERS ---
+    socket.on('keno_tick', (data) => {
+        if (gameState !== 'DRAWING') {
+            timeLeft = data.seconds;
+            updateTimerDisplay();
+        }
+    });
+
+    socket.on('keno_phase', (data) => {
+        if (data.phase === 'DRAWING') {
+            startDrawingUI();
+        } else {
+            resetRoundUI(data.lastDraw);
+        }
+    });
+
+    socket.on('keno_ball', (data) => {
+        renderServerBall(data.ball);
+    });
+
+    socket.on('keno_init', (data) => {
+        if (data.phase === 'DRAWING') {
+            gameState = 'DRAWING';
+            waitOverlay.style.display = 'flex';
+            data.currentBalls.forEach(ball => renderServerBall(ball));
+        }
+    });
+
+    // --- UI UPDATES ---
+    function startDrawingUI() {
+        gameState = 'DRAWING';
+        document.getElementById('timerLabel').textContent = "DRAWING...";
+        betBtn.disabled = true;
+        drawSlots.innerHTML = "";
+    }
+
+    function renderServerBall(num) {
+        if (!cells[num]) return;
+        cells[num].classList.add('drawn');
+        const ball = document.createElement('div');
+        ball.className = 'draw-ball';
+        ball.textContent = num;
+        drawSlots.appendChild(ball);
+
+        liveTickets.forEach(t => {
+            if (t.picks.includes(num)) {
+                t.hits++;
+                t.drawnMatches.push(num);
+                cells[num].classList.add('hit');
+            }
+        });
+        renderContent();
+    }
+
+    async function resetRoundUI(lastDraw) {
+        finalizeLocalPayouts();
+        
+        gameState = 'BETTING';
+        waitOverlay.style.display = 'none';
+        document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
+        betBtn.disabled = false;
+        drawSlots.innerHTML = "";
+        
+        if (lastDraw) {
+            prevDrawContainer.style.display = "block";
+            prevDrawList.innerHTML = lastDraw.map(n => `<div class="mini-ball">${n}</div>`).join('');
+            gameLogs.push({
+                timestamp: new Date(),
+                numbers: [...lastDraw].sort((a,b) => a-b)
+            });
+        }
+
+        Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
+        updateTimerDisplay();
+        fetchUserBalance();
+    }
+
+    function finalizeLocalPayouts() {
+        let totalWin = 0;
+        liveTickets.forEach(t => {
+            const mult = getMultiplier(t.picks.length, t.hits);
+            t.payout = t.bet * mult;
+            t.status = 'DONE';
+            totalWin += t.payout;
+            ticketHistory.push(t);
+        });
+        if (totalWin > 0) showWinAnimation(totalWin);
+        liveTickets = [];
+        renderContent();
+    }
+
+    function updateTimerDisplay() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        document.getElementById('timer').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // --- BALANCE SYNC ---
     async function fetchUserBalance() {
         try {
-            // Using the /api/user/balance endpoint we added to your backend
             const response = await fetch(`${API_BASE_URL}/user/balance`, {
                 method: 'GET',
                 headers: {
@@ -666,9 +793,6 @@
                     'Content-Type': 'application/json'
                 }
             });
-            
-            if (!response.ok) throw new Error('Auth failed');
-
             const data = await response.json();
             if (data.balance !== undefined) {
                 userBalance = parseFloat(data.balance);
@@ -676,8 +800,7 @@
             }
         } catch (error) {
             console.error("Balance Sync Error:", error);
-            document.getElementById('userBalanceDisplay').innerHTML = 
-                '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
+            document.getElementById('userBalanceDisplay').innerHTML = '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
         }
     }
 
@@ -685,11 +808,11 @@
         const balEl = document.getElementById('userBalanceDisplay');
         if(balEl) {
             balEl.innerHTML = `${userBalance.toFixed(2)} <span class="currency">Birr</span>`;
-            // Keep a backup in case page reloads
             localStorage.setItem('lastKnownBalance', userBalance.toFixed(2));
         }
     }
 
+    // --- GAME MATH ---
     const getMultiplier = (picks, hits) => {
         if (hits === 0) return 0;
         if (picks === 2) { if (hits === 2) return 5; if (hits === 1) return 1; }
@@ -706,8 +829,8 @@
         return 0;
     };
 
+    // --- BOARD GENERATION ---
     const boardEl = document.getElementById('board');
-    const timerEl = document.getElementById('timer');
     const betBtn = document.getElementById('betBtn');
     const drawSlots = document.getElementById('drawSlots');
     const ticketsContainer = document.getElementById('ticketsContainer');
@@ -739,6 +862,7 @@
         pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
     }
 
+    // --- EVENT LISTENERS ---
     document.getElementById('clearBtn').onclick = () => {
         selectedNumbers.clear();
         Object.values(cells).forEach(c => c.classList.remove('selected'));
@@ -776,17 +900,12 @@
         document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
     }
 
-    // --- UPDATED BET LOGIC ---
     betBtn.onclick = async () => {
         if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
         const betVal = parseFloat(betInput.value);
-        
-        if (betVal > userBalance) {
-            return alert("Insufficient Balance!");
-        }
+        if (betVal > userBalance) return alert("Insufficient Balance!");
 
         try {
-            // Deduct from server wallet
             const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
                 method: 'POST',
                 headers: {
@@ -795,15 +914,12 @@
                 },
                 body: JSON.stringify({ userId: USER_ID, amount: betVal })
             });
-            
             const result = await response.json();
-            
             if (!result.success) {
                 alert(result.error || "Bet Failed");
                 fetchUserBalance();
                 return;
             }
-            
             userBalance = result.newBalance;
             updateBalanceDisplay();
 
@@ -819,8 +935,7 @@
             };
             liveTickets.push(ticket);
             document.getElementById('clearBtn').click();
-            if (currentTab === 'LIVE') renderContent();
-            
+            renderContent();
         } catch (error) {
             alert("Network Error");
         }
@@ -828,25 +943,15 @@
 
     function renderContent() {
         ticketsContainer.innerHTML = "";
-        
         if (currentTab === 'LOGS') {
             if (gameLogs.length === 0) {
-                ticketsContainer.innerHTML = `<div class="empty-msg">No game history available yet.</div>`;
+                ticketsContainer.innerHTML = `<div class="empty-msg">No history.</div>`;
                 return;
             }
-            const displayLogs = [...gameLogs].reverse();
-            displayLogs.forEach((log) => {
+            [...gameLogs].reverse().forEach((log) => {
                 const div = document.createElement('div');
                 div.className = 'game-log';
-                const timeStr = log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                div.innerHTML = `
-                    <div class="log-info">
-                        <div style="font-size:0.65rem; color:var(--primary); font-weight:700">GAME LOG • ${timeStr}</div>
-                        <div class="log-numbers">
-                            ${log.numbers.map(n => `<span class="log-badge">${n}</span>`).join('')}
-                        </div>
-                    </div>
-                `;
+                div.innerHTML = `<div class="log-info"><div style="font-size:0.65rem; color:var(--primary); font-weight:700">${log.timestamp.toLocaleTimeString()}</div><div class="log-numbers">${log.numbers.map(n => `<span class="log-badge">${n}</span>`).join('')}</div></div>`;
                 ticketsContainer.appendChild(div);
             });
             return;
@@ -854,30 +959,14 @@
 
         const source = currentTab === 'LIVE' ? liveTickets : ticketHistory;
         if (source.length === 0) {
-            ticketsContainer.innerHTML = `<div class="empty-msg">No tickets available.</div>`;
+            ticketsContainer.innerHTML = `<div class="empty-msg">No tickets.</div>`;
             return;
         }
         
-        const displayList = currentTab === 'HISTORY' ? [...source].reverse() : source;
-        displayList.forEach(t => {
+        [...source].reverse().forEach(t => {
             const div = document.createElement('div');
             div.className = `ticket ${t.payout > 0 ? 'win' : ''}`;
-            const timeStr = t.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const resultLabel = t.status === 'DONE' ? (t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00') : '--';
-            div.innerHTML = `
-                <div class="ticket-info">
-                    <div style="font-size:0.65rem; color:var(--muted)">TICKET #${t.id} • BET ${t.bet} Birr</div>
-                    <div class="ticket-numbers">
-                        ${t.picks.map(n => {
-                            const isMatched = t.drawnMatches.includes(n);
-                            return `<span class="hit-badge ${isMatched ? 'matched' : ''}">${n}</span>`;
-                        }).join('')}
-                    </div>
-                    <div style="font-size:0.75rem; color:var(--primary); font-weight:700">${t.hits} HITS</div>
-                    <div class="ticket-time">${timeStr}</div>
-                </div>
-                <div class="ticket-payout">${resultLabel}</div>
-            `;
+            div.innerHTML = `<div class="ticket-info"><div style="font-size:0.65rem; color:var(--muted)">TICKET #${t.id} • ${t.bet} Birr</div><div class="ticket-numbers">${t.picks.map(n => `<span class="hit-badge ${t.drawnMatches.includes(n) ? 'matched' : ''}">${n}</span>`).join('')}</div><div style="font-size:0.75rem; color:var(--primary)">${t.hits} HITS</div></div><div class="ticket-payout">${t.status === 'DONE' ? t.payout.toFixed(2) : '--'}</div>`;
             ticketsContainer.appendChild(div);
         });
     }
@@ -887,128 +976,12 @@
         popup.className = 'win-popup';
         popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} Birr`;
         animationContainer.appendChild(popup);
-        
-        setTimeout(() => {
-            popup.remove();
-        }, 4000);
+        setTimeout(() => popup.remove(), 4000);
     }
 
-    setInterval(() => {
-        if (gameState === 'BETTING') {
-            timeLeft--;
-            if (timeLeft <= 0) startDraw();
-        }
-        updateTimerDisplay();
-    }, 1000);
-
-    function updateTimerDisplay() {
-        const m = Math.floor(timeLeft / 60);
-        const s = timeLeft % 60;
-        timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    async function startDraw() {
-        gameState = 'DRAWING';
-        document.getElementById('timerLabel').textContent = "DRAWING...";
-        betBtn.disabled = true;
-        drawSlots.innerHTML = "";
-        prevDrawContainer.style.display = "none"; 
-        
-        const pool = Array.from({length: 80}, (_, i) => i + 1);
-        const currentDraw = [];
-        for (let i = 0; i < DRAW_COUNT; i++) {
-            const idx = Math.floor(Math.random() * pool.length);
-            currentDraw.push(pool.splice(idx, 1)[0]);
-        }
-
-        for (let i = 0; i < currentDraw.length; i++) {
-            const num = currentDraw[i];
-            await new Promise(r => setTimeout(r, DRAW_SPEED_MS));
-            cells[num].classList.add('drawn');
-            const ball = document.createElement('div');
-            ball.className = 'draw-ball';
-            ball.textContent = num;
-            drawSlots.appendChild(ball);
-
-            liveTickets.forEach(t => {
-                if (t.picks.includes(num)) {
-                    t.hits++;
-                    t.drawnMatches.push(num);
-                    cells[num].classList.add('hit');
-                }
-            });
-            if (currentTab === 'LIVE') renderContent();
-        }
-        lastDrawResult = currentDraw; 
-        
-        gameLogs.push({
-            timestamp: new Date(),
-            numbers: [...currentDraw].sort((a,b) => a-b)
-        });
-
-        await finalizeGame();
-    }
-
-    async function finalizeGame() {
-        let totalWin = 0;
-
-        liveTickets.forEach(t => {
-            const mult = getMultiplier(t.picks.length, t.hits);
-            t.payout = t.bet * mult;
-            t.status = 'DONE';
-            totalWin += t.payout;
-            ticketHistory.push(t);
-        });
-        
-        if (totalWin > 0) {
-            showWinAnimation(totalWin);
-            
-            try {
-                // Settle win on server
-                const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${USER_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ userId: USER_ID, totalWin: totalWin })
-                });
-                
-                const result = await response.json();
-                if (result.success) {
-                    userBalance = result.newBalance;
-                    updateBalanceDisplay();
-                }
-            } catch (e) { console.error("Settlement failed", e); }
-        }
-
-        liveTickets = [];
-        renderContent();
-        setTimeout(resetRound, 5000);
-    }
-
-    function resetRound() {
-        gameState = 'BETTING';
-        timeLeft = BET_PHASE_SEC;
-        document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
-        betBtn.disabled = false;
-        drawSlots.innerHTML = "";
-        
-        if (lastDrawResult.length > 0) {
-            prevDrawContainer.style.display = "block";
-            prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
-        }
-
-        Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
-        updateTimerDisplay();
-        renderContent();
-        fetchUserBalance(); // Refresh from server
-    }
-
-    // INITIALIZE
+    // Initialize
     fetchUserBalance();
     renderContent();
-    setInterval(fetchUserBalance, 10000); // Periodic auto-sync
     </script>
 </body>
 
