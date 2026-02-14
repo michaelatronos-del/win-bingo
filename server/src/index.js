@@ -263,6 +263,69 @@ function getAllBetHousesStatus() {
   return statuses;
 }
 
+/* =========  GLOBAL KENO STATE & LOOP (SERVER-DRIVEN)  ========= */
+
+let kenoState = {
+  phase: 'BETTING', // 'BETTING' or 'DRAWING'
+  countdown: 30,
+  drawResult: [],
+  currentBallIndex: 0,
+  timer: null
+};
+
+function startKenoLoop() {
+  setInterval(() => {
+    if (kenoState.phase === 'BETTING') {
+      kenoState.countdown--;
+
+      // Broadcast time to all Keno players
+      io.emit('keno_tick', {
+        phase: kenoState.phase,
+        seconds: kenoState.countdown
+      });
+
+      if (kenoState.countdown <= 0) {
+        // Start Drawing Phase
+        kenoState.phase = 'DRAWING';
+        kenoState.countdown = 0;
+
+        // Generate 20 unique numbers once for everyone
+        const pool = Array.from({ length: 80 }, (_, i) => i + 1);
+        kenoState.drawResult = [];
+        for (let i = 0; i < 20; i++) {
+          const idx = Math.floor(Math.random() * pool.length);
+          kenoState.drawResult.push(pool.splice(idx, 1)[0]);
+        }
+
+        kenoState.currentBallIndex = 0;
+        io.emit('keno_phase', { phase: 'DRAWING' });
+        runKenoDrawing();
+      }
+    }
+  }, 1000);
+}
+
+function runKenoDrawing() {
+  const drawInterval = setInterval(() => {
+    if (kenoState.currentBallIndex < 20) {
+      const ball = kenoState.drawResult[kenoState.currentBallIndex];
+      io.emit('keno_ball', { ball, index: kenoState.currentBallIndex });
+      kenoState.currentBallIndex++;
+    } else {
+      clearInterval(drawInterval);
+      // Wait 5 seconds to show results then reset to betting
+      setTimeout(() => {
+        kenoState.phase = 'BETTING';
+        kenoState.countdown = 30;
+        io.emit('keno_phase', { phase: 'BETTING', lastDraw: kenoState.drawResult });
+      }, 5000);
+    }
+  }, 1000); // Ball speed
+}
+
+// Start the Keno loop immediately
+startKenoLoop();
+
 // Track which room each socket is in
 const socketRooms = new Map(); // socket.id -> stake amount
 
@@ -286,6 +349,13 @@ io.on('connection', (socket) => {
 
   // Send all bet houses status on connection
   socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+
+  // Send current Keno status so joiners know if a game is in progress
+  socket.emit('keno_init', {
+    phase: kenoState.phase,
+    seconds: kenoState.countdown,
+    currentBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex)
+  });
 
   // Join a specific bet house (stake amount)
   socket.on('join_bet_house', (stakeAmount) => {
