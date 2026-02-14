@@ -71,6 +71,10 @@ const userBalances = new Map();
 const transactionIds = new Set();
 const withdrawalRequests = new Map();
 
+// Keno pick statistics for hot numbers
+const kenoPickStats = new Map(); // number -> array of timestamps
+const kenoOnlinePlayers = new Set(); // socket IDs of players in keno room
+
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
@@ -100,6 +104,40 @@ function requireAuth(req, res, next) {
 
   req.session = session;
   next();
+}
+
+// Function to track picked numbers for hot numbers stats
+function recordKenoPicks(picks) {
+  const now = Date.now();
+  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+
+  picks.forEach(num => {
+    if (!kenoPickStats.has(num)) {
+      kenoPickStats.set(num, []);
+    }
+    kenoPickStats.get(num).push(now);
+
+    // Clean up old entries older than 24 hours
+    const timestamps = kenoPickStats.get(num).filter(t => t > twentyFourHoursAgo);
+    kenoPickStats.set(num, timestamps);
+  });
+}
+
+// Function to get hot numbers sorted by pick count
+function getHotNumbers() {
+  const now = Date.now();
+  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+
+  const counts = [];
+  for (let i = 1; i <= 80; i++) {
+    const timestamps = kenoPickStats.get(i) || [];
+    const recentCount = timestamps.filter(t => t > twentyFourHoursAgo).length;
+    counts.push({ number: i, count: recentCount });
+  }
+
+  // Sort by count descending
+  counts.sort((a, b) => b.count - a.count);
+  return counts;
 }
 
 function getOnlinePlayers(state) {
@@ -355,17 +393,25 @@ io.on('connection', (socket) => {
 
   socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
+  // Send keno init with hot numbers and online count
   socket.emit('keno_init', {
     phase: kenoState.phase,
     seconds: kenoState.countdown,
     gameId: kenoState.gameId,
     currentBallIndex: kenoState.currentBallIndex,
     drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex),
-    isDrawing: kenoState.phase === 'DRAWING'
+    isDrawing: kenoState.phase === 'DRAWING',
+    hotNumbers: getHotNumbers().slice(0, 20),
+    onlinePlayers: kenoOnlinePlayers.size
   });
 
+  // Join keno room with online tracking
   socket.on('join_keno', () => {
     socket.join('keno_room');
+    kenoOnlinePlayers.add(socket.id);
+
+    // Broadcast updated online count to all in keno room
+    io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
 
     socket.emit('keno_state_sync', {
       phase: kenoState.phase,
@@ -373,12 +419,17 @@ io.on('connection', (socket) => {
       gameId: kenoState.gameId,
       currentBallIndex: kenoState.currentBallIndex,
       drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex),
-      allBalls: kenoState.phase === 'DRAWING' ? null : kenoState.drawResult
+      allBalls: kenoState.phase === 'DRAWING' ? null : kenoState.drawResult,
+      hotNumbers: getHotNumbers().slice(0, 20),
+      onlinePlayers: kenoOnlinePlayers.size
     });
   });
 
+  // Leave keno room with online tracking
   socket.on('leave_keno', () => {
     socket.leave('keno_room');
+    kenoOnlinePlayers.delete(socket.id);
+    io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
   });
 
   socket.on('join_bet_house', (stakeAmount) => {
@@ -518,9 +569,9 @@ io.on('connection', (socket) => {
     const prize = computePrizePool(state);
     io.to(roomId).emit('winner', { playerId: socket.id, prize, stake, boardId, lineIndices });
 
-    const winnerBalance = userBalances.get(player.userId) || 0;
-    userBalances.set(player.userId, winnerBalance + prize);
-    socket.emit('balance_update', { balance: userBalances.get(player.userId) });
+    const winnerBalance = userBalances.get(player.oderId) || 0;
+    userBalances.set(player.oderId, winnerBalance + prize);
+    socket.emit('balance_update', { balance: userBalances.get(player.oderId) });
 
     clearInterval(state.caller);
     clearInterval(state.timer);
@@ -576,6 +627,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    // Handle bingo room disconnect
     const stake = socketRooms.get(socket.id);
     if (stake) {
       const state = getGameState(stake);
@@ -602,6 +654,12 @@ io.on('connection', (socket) => {
         stake,
         takenBoards: Array.from(state.takenBoards),
       });
+    }
+
+    // Handle keno room disconnect - remove from online players
+    if (kenoOnlinePlayers.has(socket.id)) {
+      kenoOnlinePlayers.delete(socket.id);
+      io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
     }
   });
 });
@@ -639,7 +697,7 @@ function parseTransactionId(text) {
   }
   const tokens = text.match(/[A-Z0-9]{8,20}/gi);
   if (tokens) {
-    const sorted = tokens.sort((a,b)=>b.length-a.length);
+    const sorted = tokens.sort((a, b) => b.length - a.length);
     return sorted[0].toUpperCase();
   }
   return null;
@@ -651,9 +709,10 @@ app.get('/api/user/balance', requireAuth, (req, res) => {
   res.json({ balance });
 });
 
+// Keno bet endpoint with picks tracking and broadcasting
 app.post('/api/games/keno/bet', requireAuth, (req, res) => {
   const sessionUserId = req.session.userId;
-  const { amount } = req.body;
+  const { amount, picks, gameId } = req.body;
 
   if (kenoState.phase !== 'BETTING') {
     return res.json({ success: false, error: 'Betting is closed. Wait for next round.' });
@@ -669,11 +728,38 @@ app.post('/api/games/keno/bet', requireAuth, (req, res) => {
     return res.json({ success: false, error: 'Insufficient funds' });
   }
 
+  // Validate picks
+  if (!Array.isArray(picks) || picks.length < 2 || picks.length > 10) {
+    return res.json({ success: false, error: 'Invalid number of picks (2-10 required)' });
+  }
+
+  const validPicks = picks.every(p => Number.isInteger(p) && p >= 1 && p <= 80);
+  if (!validPicks) {
+    return res.json({ success: false, error: 'Invalid picks (must be 1-80)' });
+  }
+
   userBalances.set(sessionUserId, current - amountNum);
+
+  // Record picks for hot numbers stats
+  recordKenoPicks(picks);
+
+  const ticketId = Date.now();
+
+  // Broadcast this bet to all other players in keno room
+  const username = userIdToUsername.get(sessionUserId) || 'Player';
+  io.to('keno_room').emit('keno_player_bet', {
+    oderId: sessionUserId,
+    username: username,
+    gameId: gameId || kenoState.gameId,
+    picks: picks,
+    amount: amountNum,
+    ticketId: ticketId
+  });
+
   res.json({
     success: true,
     newBalance: userBalances.get(sessionUserId),
-    ticketId: Date.now(),
+    ticketId: ticketId,
     gameId: kenoState.gameId
   });
 });
@@ -704,6 +790,12 @@ app.get('/api/games/keno/state', (req, res) => {
     currentBallIndex: kenoState.currentBallIndex,
     drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex)
   });
+});
+
+// Hot numbers endpoint
+app.get('/api/games/keno/hot-numbers', requireAuth, (req, res) => {
+  const numbers = getHotNumbers();
+  res.json({ numbers });
 });
 
 app.post('/api/deposit', (req, res) => {
@@ -885,27 +977,27 @@ app.post('/api/auth/signup', (req, res) => {
       return res.json({ success: false, error: 'Username already exists' });
     }
 
-    const userId = crypto.randomBytes(16).toString('hex');
+    const oderId = crypto.randomBytes(16).toString('hex');
     const passwordHash = hashPassword(password);
 
     users.set(usernameLower, {
-      userId,
+      oderId,
       passwordHash,
       createdAt: Date.now()
     });
 
-    userIdToUsername.set(userId, usernameLower);
-    userBalances.set(userId, 100);
+    userIdToUsername.set(oderId, usernameLower);
+    userBalances.set(oderId, 100);
 
     const token = generateToken();
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
-    userSessions.set(token, { userId, username: usernameLower, expiresAt });
+    userSessions.set(token, { oderId, username: usernameLower, expiresAt });
 
-    console.log(`User signed up: ${usernameLower} (${userId}) -> Welcome bonus applied: 100 Birr`);
+    console.log(`User signed up: ${usernameLower} (${oderId}) -> Welcome bonus applied: 100 Birr`);
 
     res.json({
       success: true,
-      userId,
+      oderId,
       username: usernameLower,
       token,
       balance: 100,
@@ -938,17 +1030,17 @@ app.post('/api/auth/login', (req, res) => {
 
     const token = generateToken();
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
-    userSessions.set(token, { userId: user.userId, username: usernameLower, expiresAt });
+    userSessions.set(token, { oderId: user.oderId, username: usernameLower, expiresAt });
 
-    if (!userBalances.has(user.userId)) {
-      userBalances.set(user.userId, 0);
+    if (!userBalances.has(user.oderId)) {
+      userBalances.set(user.oderId, 0);
     }
 
-    console.log(`User logged in: ${usernameLower} (${user.userId})`);
+    console.log(`User logged in: ${usernameLower} (${user.oderId})`);
 
     res.json({
       success: true,
-      userId: user.userId,
+      oderId: user.oderId,
       username: usernameLower,
       token
     });
@@ -960,15 +1052,15 @@ app.post('/api/auth/login', (req, res) => {
 
 app.post('/api/auth/verify', (req, res) => {
   try {
-    const { userId, token } = req.body;
+    const { oderId, token } = req.body;
 
-    if (!userId || !token) {
+    if (!oderId || !token) {
       return res.json({ success: false });
     }
 
     const session = userSessions.get(token);
 
-    if (!session || session.userId !== userId) {
+    if (!session || session.oderId !== oderId) {
       return res.json({ success: false });
     }
 
@@ -977,7 +1069,7 @@ app.post('/api/auth/verify', (req, res) => {
       return res.json({ success: false });
     }
 
-    const username = userIdToUsername.get(userId);
+    const username = userIdToUsername.get(oderId);
     if (!username) {
       return res.json({ success: false });
     }
@@ -994,6 +1086,19 @@ setInterval(() => {
   for (const [token, session] of userSessions.entries()) {
     if (session.expiresAt < now) {
       userSessions.delete(token);
+    }
+  }
+}, 60 * 60 * 1000);
+
+// Periodic cleanup of old keno pick stats (every hour)
+setInterval(() => {
+  const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+  for (const [num, timestamps] of kenoPickStats.entries()) {
+    const filtered = timestamps.filter(t => t > twentyFourHoursAgo);
+    if (filtered.length === 0) {
+      kenoPickStats.delete(num);
+    } else {
+      kenoPickStats.set(num, filtered);
     }
   }
 }, 60 * 60 * 1000);
