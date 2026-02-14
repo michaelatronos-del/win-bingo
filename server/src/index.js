@@ -8,7 +8,6 @@ import crypto from 'crypto';
 
 const app = express();
 
-// CORS with Authorization header support
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -16,10 +15,8 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve audio files from the repository's /audio directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// projectRoot: server/src -> ../../
 const projectRoot = path.resolve(__dirname, '..', '..');
 const audioDir = path.join(projectRoot, 'audio');
 app.use('/audio', express.static(audioDir));
@@ -27,27 +24,22 @@ app.use('/audio', express.static(audioDir));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-const BOARD_SIZE = 75; // BINGO: B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
+const BOARD_SIZE = 75;
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
-
-// Available stake amounts (bet houses)
 const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];
 
-// Game states for each stake amount (bet house)
-// Key: stake amount, Value: game state object
 const gameStates = new Map();
 
-// Helper to create an empty game state for a given stake
 function createEmptyGameState(stake, roomIdOverride) {
   const roomId = roomIdOverride || `room-${stake}`;
   return {
     roomId,
     phase: 'lobby',
     countdown: COUNTDOWN_SECONDS,
-    players: new Map(), // active players in current game
-    waitingPlayers: new Map(), // players waiting for next game
-    takenBoards: new Set(), // reserved board numbers in current selection phase
+    players: new Map(),
+    waitingPlayers: new Map(),
+    takenBoards: new Set(),
     stake,
     called: [],
     timer: null,
@@ -55,48 +47,38 @@ function createEmptyGameState(stake, roomIdOverride) {
   };
 }
 
-// Initialize game states for all stake amounts
 AVAILABLE_STAKES.forEach(stake => {
   const roomId = `room-${stake}`;
   gameStates.set(stake, createEmptyGameState(stake, roomId));
 });
 
-// Helper to get room ID from stake
 function getRoomId(stake) {
   return `room-${stake}`;
 }
 
-// Helper to get game state for a stake
 function getGameState(stake) {
   if (!gameStates.has(stake)) {
-    // Initialize if doesn't exist
     const roomId = getRoomId(stake);
     gameStates.set(stake, createEmptyGameState(stake, roomId));
   }
   return gameStates.get(stake);
 }
 
-// Store user accounts
-const users = new Map(); // username -> { userId, passwordHash, createdAt }
-const userSessions = new Map(); // token -> { userId, username, expiresAt }
-const userIdToUsername = new Map(); // userId -> username
+const users = new Map();
+const userSessions = new Map();
+const userIdToUsername = new Map();
+const userBalances = new Map();
+const transactionIds = new Set();
+const withdrawalRequests = new Map();
 
-// Store player balances and transaction history (now using userId)
-const userBalances = new Map(); // userId -> balance
-const transactionIds = new Set(); // Set of used transaction IDs
-const withdrawalRequests = new Map(); // userId -> { amount, account, timestamp }
-
-// Helper function to hash passwords
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Helper function to generate session token
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// ---- AUTH HELPERS FOR REST (KENO, BALANCE, ETC.) ----
 function getBearerToken(req) {
   const h = req.headers.authorization || '';
   const [type, token] = h.split(' ');
@@ -116,7 +98,7 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, error: 'Session expired' });
   }
 
-  req.session = session; // { userId, username, expiresAt }
+  req.session = session;
   next();
 }
 
@@ -135,7 +117,6 @@ function getTotalSelectedBoards(state) {
 }
 
 function computePrizePool(state) {
-  // Prize = 80% of (total selected boards * stake)
   const totalBetAmount = getTotalSelectedBoards(state) * state.stake;
   return Math.floor(totalBetAmount * 0.8);
 }
@@ -149,13 +130,11 @@ function startCountdown(stake) {
   state.countdown = COUNTDOWN_SECONDS;
   state.called = [];
 
-  // Move waiting players to active players if game is starting
   state.waitingPlayers.forEach((player, socketId) => {
     state.players.set(socketId, player);
     state.waitingPlayers.delete(socketId);
   });
 
-  // Reset taken boards based on current active players
   state.takenBoards = new Set();
   state.players.forEach(player => {
     if (Array.isArray(player.picks)) {
@@ -182,15 +161,12 @@ function startCountdown(stake) {
 
     if (state.countdown <= 0) {
       clearInterval(state.timer);
-      // Only start calling if there are players with boards selected.
-      // Consider any active player that has at least one board selected.
       const playersWithBoards = getOnlinePlayers(state).filter(
         p => Array.isArray(p.picks) && p.picks.length > 0
       );
       if (playersWithBoards.length > 0) {
         startCalling(stake);
       } else {
-        // No players ready, restart lobby
         state.phase = 'lobby';
         io.to(roomId).emit('phase', { phase: state.phase, stake });
         startCountdown(stake);
@@ -207,11 +183,9 @@ function startCalling(stake) {
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('game_start', { stake });
 
-  // Generate BINGO numbers: 1..75
   const numbers = [];
   for (let i = 1; i <= 75; i++) numbers.push(i);
 
-  // Shuffle
   for (let i = numbers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
@@ -222,11 +196,9 @@ function startCalling(stake) {
   state.caller = setInterval(() => {
     if (idx >= numbers.length) {
       clearInterval(state.caller);
-      // Game over, restart lobby and move waiting players in
       state.phase = 'lobby';
       io.to(roomId).emit('phase', { phase: state.phase, stake });
 
-      // Reset active players, move waiting players to active
       state.players.clear();
       state.waitingPlayers.forEach((player, socketId) => {
         state.players.set(socketId, player);
@@ -242,7 +214,6 @@ function startCalling(stake) {
   }, CALL_INTERVAL_MS);
 }
 
-// Get status of all bet houses
 function getAllBetHousesStatus() {
   const statuses = [];
   AVAILABLE_STAKES.forEach(stake => {
@@ -263,42 +234,53 @@ function getAllBetHousesStatus() {
   return statuses;
 }
 
-/* =========  GLOBAL KENO STATE & LOOP (SERVER-DRIVEN)  ========= */
+/* =========  KENO STATE (SERVER-DRIVEN)  ========= */
+
+const KENO_BET_DURATION = 30;
+const KENO_DRAW_INTERVAL = 1000;
+const KENO_POST_DRAW_DELAY = 5000;
 
 let kenoState = {
-  phase: 'BETTING', // 'BETTING' or 'DRAWING'
-  countdown: 30,
+  phase: 'BETTING',
+  countdown: KENO_BET_DURATION,
   drawResult: [],
   currentBallIndex: 0,
-  timer: null
+  drawInterval: null,
+  gameId: 1
 };
+
+function generateKenoDraw() {
+  const pool = Array.from({ length: 80 }, (_, i) => i + 1);
+  const result = [];
+  for (let i = 0; i < 20; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+  return result;
+}
 
 function startKenoLoop() {
   setInterval(() => {
     if (kenoState.phase === 'BETTING') {
       kenoState.countdown--;
 
-      // Broadcast time to all Keno players
       io.emit('keno_tick', {
         phase: kenoState.phase,
-        seconds: kenoState.countdown
+        seconds: kenoState.countdown,
+        gameId: kenoState.gameId
       });
 
       if (kenoState.countdown <= 0) {
-        // Start Drawing Phase
         kenoState.phase = 'DRAWING';
-        kenoState.countdown = 0;
-
-        // Generate 20 unique numbers once for everyone
-        const pool = Array.from({ length: 80 }, (_, i) => i + 1);
-        kenoState.drawResult = [];
-        for (let i = 0; i < 20; i++) {
-          const idx = Math.floor(Math.random() * pool.length);
-          kenoState.drawResult.push(pool.splice(idx, 1)[0]);
-        }
-
+        kenoState.drawResult = generateKenoDraw();
         kenoState.currentBallIndex = 0;
-        io.emit('keno_phase', { phase: 'DRAWING' });
+
+        io.emit('keno_draw_start', {
+          phase: 'DRAWING',
+          gameId: kenoState.gameId,
+          totalBalls: 20
+        });
+
         runKenoDrawing();
       }
     }
@@ -306,58 +288,99 @@ function startKenoLoop() {
 }
 
 function runKenoDrawing() {
-  const drawInterval = setInterval(() => {
+  kenoState.drawInterval = setInterval(() => {
     if (kenoState.currentBallIndex < 20) {
       const ball = kenoState.drawResult[kenoState.currentBallIndex];
-      io.emit('keno_ball', { ball, index: kenoState.currentBallIndex });
+      io.emit('keno_ball', {
+        ball,
+        index: kenoState.currentBallIndex,
+        gameId: kenoState.gameId
+      });
       kenoState.currentBallIndex++;
     } else {
-      clearInterval(drawInterval);
-      // Wait 5 seconds to show results then reset to betting
+      clearInterval(kenoState.drawInterval);
+      kenoState.drawInterval = null;
+
+      io.emit('keno_draw_complete', {
+        gameId: kenoState.gameId,
+        allBalls: kenoState.drawResult
+      });
+
       setTimeout(() => {
+        kenoState.gameId++;
         kenoState.phase = 'BETTING';
-        kenoState.countdown = 30;
-        io.emit('keno_phase', { phase: 'BETTING', lastDraw: kenoState.drawResult });
-      }, 5000);
+        kenoState.countdown = KENO_BET_DURATION;
+        kenoState.drawResult = [];
+        kenoState.currentBallIndex = 0;
+
+        io.emit('keno_new_round', {
+          phase: 'BETTING',
+          seconds: kenoState.countdown,
+          gameId: kenoState.gameId
+        });
+      }, KENO_POST_DRAW_DELAY);
     }
-  }, 1000); // Ball speed
+  }, KENO_DRAW_INTERVAL);
 }
 
-// Start the Keno loop immediately
 startKenoLoop();
 
-// Track which room each socket is in
-const socketRooms = new Map(); // socket.id -> stake amount
+const socketRooms = new Map();
 
 io.on('connection', (socket) => {
   const auth = socket.handshake.auth;
   const userId = auth?.userId;
   const username = auth?.username;
+  const token = auth?.token;
 
-  if (!userId || !username) {
-    socket.disconnect();
-    return;
+  if (token) {
+    const session = userSessions.get(token);
+    if (session && session.expiresAt > Date.now()) {
+      socket.userId = session.userId;
+      socket.username = session.username;
+    }
   }
 
-  // Initialize balance if not exists
-  if (!userBalances.has(userId)) {
-    userBalances.set(userId, 0);
+  if (!socket.userId && userId && username) {
+    socket.userId = userId;
+    socket.username = username;
   }
 
-  // Send balance to client
-  socket.emit('balance_update', { balance: userBalances.get(userId) || 0 });
+  if (socket.userId) {
+    if (!userBalances.has(socket.userId)) {
+      userBalances.set(socket.userId, 0);
+    }
+    socket.emit('balance_update', { balance: userBalances.get(socket.userId) || 0 });
+  }
 
-  // Send all bet houses status on connection
   socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
-  // Send current Keno status so joiners know if a game is in progress
   socket.emit('keno_init', {
     phase: kenoState.phase,
     seconds: kenoState.countdown,
-    currentBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex)
+    gameId: kenoState.gameId,
+    currentBallIndex: kenoState.currentBallIndex,
+    drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex),
+    isDrawing: kenoState.phase === 'DRAWING'
   });
 
-  // Join a specific bet house (stake amount)
+  socket.on('join_keno', () => {
+    socket.join('keno_room');
+
+    socket.emit('keno_state_sync', {
+      phase: kenoState.phase,
+      seconds: kenoState.countdown,
+      gameId: kenoState.gameId,
+      currentBallIndex: kenoState.currentBallIndex,
+      drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex),
+      allBalls: kenoState.phase === 'DRAWING' ? null : kenoState.drawResult
+    });
+  });
+
+  socket.on('leave_keno', () => {
+    socket.leave('keno_room');
+  });
+
   socket.on('join_bet_house', (stakeAmount) => {
     const stake = Number(stakeAmount);
     if (!AVAILABLE_STAKES.includes(stake)) {
@@ -365,7 +388,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Leave previous room if any
     const previousStake = socketRooms.get(socket.id);
     if (previousStake && previousStake !== stake) {
       const prevState = getGameState(previousStake);
@@ -380,30 +402,26 @@ io.on('connection', (socket) => {
       });
     }
 
-    // Join new room
     const state = getGameState(stake);
     const roomId = state.roomId;
     socket.join(roomId);
     socketRooms.set(socket.id, stake);
 
-    // Add player to waiting players (they can select boards even during live games)
     const player = {
       id: socket.id,
-      userId: userId,
-      name: username,
+      oderId: socket.userId,
+      name: socket.username,
       stake: stake,
       picks: [],
       ready: false
     };
 
-    // If game is live, add to waiting players; otherwise add to active players
     if (state.phase === 'calling') {
       state.waitingPlayers.set(socket.id, player);
     } else {
       state.players.set(socket.id, player);
     }
 
-    // Send current state to player
     socket.emit('init', {
       phase: state.phase,
       seconds: state.countdown,
@@ -414,14 +432,12 @@ io.on('connection', (socket) => {
       isWaiting: state.phase === 'calling'
     });
 
-    // Update room with player count
     io.to(roomId).emit('players', {
       count: getTotalSelectedBoards(state),
       waitingCount: state.waitingPlayers.size,
       stake: stake
     });
 
-    // Broadcast updated bet houses status to all clients
     io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
   });
 
@@ -438,18 +454,15 @@ io.on('connection', (socket) => {
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (!player) return;
 
-    // Release previously taken boards for this player
     if (Array.isArray(player.picks)) {
       player.picks.forEach(boardId => state.takenBoards.delete(boardId));
     }
 
-    // Reserve new boards and assign to player
     const uniquePicks = Array.from(new Set(picks));
     const availablePicks = uniquePicks.filter(boardId => !state.takenBoards.has(boardId));
     availablePicks.forEach(boardId => state.takenBoards.add(boardId));
     player.picks = availablePicks;
 
-    // Notify room about taken boards so other players can see which boards are unavailable
     const roomId = state.roomId;
     io.to(roomId).emit('boards_taken', {
       stake,
@@ -469,22 +482,17 @@ io.on('connection', (socket) => {
 
     player.ready = true;
 
-    // If player was waiting and game is live, keep them in waiting
-    // Otherwise, move them to active players if not already there
     if (state.phase !== 'calling' && state.waitingPlayers.has(socket.id)) {
       state.waitingPlayers.delete(socket.id);
       state.players.set(socket.id, player);
     }
 
-    // Confirm the player is ready
     socket.emit('start_game_confirm', { stake, isWaiting: state.phase === 'calling' });
 
-    // If we're in countdown phase and player is ready, they can join the game
     if (state.phase === 'countdown') {
       socket.emit('game_start', { stake });
     }
 
-    // Update room
     const roomId = state.roomId;
     io.to(roomId).emit('players', {
       count: getOnlinePlayers(state).length,
@@ -504,14 +512,12 @@ io.on('connection', (socket) => {
     const player = state.players.get(socket.id);
     if (!player || !player.picks || player.picks.length === 0) return;
 
-    // Trust the client for which board/line won (validation is done on client for now)
     const boardId = data?.boardId;
     const lineIndices = Array.isArray(data?.lineIndices) ? data.lineIndices : undefined;
 
     const prize = computePrizePool(state);
     io.to(roomId).emit('winner', { playerId: socket.id, prize, stake, boardId, lineIndices });
 
-    // Award prize to winner
     const winnerBalance = userBalances.get(player.userId) || 0;
     userBalances.set(player.userId, winnerBalance + prize);
     socket.emit('balance_update', { balance: userBalances.get(player.userId) });
@@ -519,7 +525,6 @@ io.on('connection', (socket) => {
     clearInterval(state.caller);
     clearInterval(state.timer);
 
-    // Reset active players, move waiting players to active for next game
     state.players.clear();
     state.waitingPlayers.forEach((waitingPlayer, socketId) => {
       waitingPlayer.picks = [];
@@ -532,7 +537,6 @@ io.on('connection', (socket) => {
     state.phase = 'lobby';
     io.to(roomId).emit('phase', { phase: state.phase, stake });
 
-    // Broadcast updated bet houses status
     io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
     startCountdown(stake);
@@ -542,20 +546,17 @@ io.on('connection', (socket) => {
     socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
   });
 
-  // Allow player to leave current game (but stay connected)
   socket.on('leave_current_game', () => {
     const stake = socketRooms.get(socket.id);
     if (!stake) return;
     const state = getGameState(stake);
     const roomId = state.roomId;
 
-    // Release any boards taken by this player
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (player && Array.isArray(player.picks)) {
       player.picks.forEach(boardId => state.takenBoards.delete(boardId));
     }
 
-    // Remove player from current game state and room
     state.players.delete(socket.id);
     state.waitingPlayers.delete(socket.id);
     socket.leave(roomId);
@@ -567,7 +568,6 @@ io.on('connection', (socket) => {
       stake,
     });
 
-    // Broadcast updated bet houses and taken boards
     io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
     io.to(roomId).emit('boards_taken', {
       stake,
@@ -581,7 +581,6 @@ io.on('connection', (socket) => {
       const state = getGameState(stake);
       const roomId = state.roomId;
 
-      // Release any boards taken by this player
       const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
       if (player && Array.isArray(player.picks)) {
         player.picks.forEach(boardId => state.takenBoards.delete(boardId));
@@ -597,10 +596,8 @@ io.on('connection', (socket) => {
         stake: stake
       });
 
-      // Broadcast updated bet houses status
       io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
-      // Broadcast updated taken boards for this stake
       io.to(roomId).emit('boards_taken', {
         stake,
         takenBoards: Array.from(state.takenBoards),
@@ -609,7 +606,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Helper functions for verification
 function parseAmount(message) {
   const patterns = [
     /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
@@ -649,22 +645,18 @@ function parseTransactionId(text) {
   return null;
 }
 
-/* =========  KENO / WALLET REST ENDPOINTS (NEW)  ========= */
-
-// 1) Balance for Keno page
 app.get('/api/user/balance', requireAuth, (req, res) => {
   const { userId } = req.session;
   const balance = userBalances.get(userId) || 0;
   res.json({ balance });
 });
 
-// 2) Place Keno bet (deduct from balance)
 app.post('/api/games/keno/bet', requireAuth, (req, res) => {
   const sessionUserId = req.session.userId;
-  const { userId: bodyUserId, amount } = req.body;
+  const { amount } = req.body;
 
-  if (bodyUserId && bodyUserId !== sessionUserId) {
-    return res.json({ success: false, error: 'User mismatch' });
+  if (kenoState.phase !== 'BETTING') {
+    return res.json({ success: false, error: 'Betting is closed. Wait for next round.' });
   }
 
   const amountNum = Number(amount);
@@ -681,18 +673,14 @@ app.post('/api/games/keno/bet', requireAuth, (req, res) => {
   res.json({
     success: true,
     newBalance: userBalances.get(sessionUserId),
-    ticketId: Date.now(), // simple unique ID
+    ticketId: Date.now(),
+    gameId: kenoState.gameId
   });
 });
 
-// 3) Settle Keno wins (add to balance)
 app.post('/api/games/keno/settle', requireAuth, (req, res) => {
   const sessionUserId = req.session.userId;
-  const { userId: bodyUserId, totalWin } = req.body;
-
-  if (bodyUserId && bodyUserId !== sessionUserId) {
-    return res.json({ success: false, error: 'User mismatch' });
-  }
+  const { totalWin, gameId } = req.body;
 
   const winNum = Number(totalWin) || 0;
   if (winNum < 0) {
@@ -708,9 +696,16 @@ app.post('/api/games/keno/settle', requireAuth, (req, res) => {
   });
 });
 
-/* =========  EXISTING WALLET ENDPOINTS (DEPOSIT/WITHDRAW)  ========= */
+app.get('/api/games/keno/state', (req, res) => {
+  res.json({
+    phase: kenoState.phase,
+    seconds: kenoState.countdown,
+    gameId: kenoState.gameId,
+    currentBallIndex: kenoState.currentBallIndex,
+    drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex)
+  });
+});
 
-// Deposit API endpoint
 app.post('/api/deposit', (req, res) => {
   try {
     const { userId, amount, provider, account, accountName, message, transactionId } = req.body;
@@ -719,7 +714,6 @@ app.post('/api/deposit', (req, res) => {
       return res.json({ success: false, error: 'Missing required fields' });
     }
 
-    // Verify user exists
     if (!userIdToUsername.has(userId)) {
       return res.json({ success: false, error: 'Invalid user' });
     }
@@ -729,19 +723,16 @@ app.post('/api/deposit', (req, res) => {
       return res.json({ success: false, error: 'Invalid amount' });
     }
 
-    // Check if transaction ID was already used
     if (transactionIds.has(transactionId)) {
       return res.json({ success: false, error: 'This transaction ID has already been used' });
     }
 
-    // Verify account number in message
     const msgNoSpaces = message.replace(/\s+/g, '');
     const accountNoSpaces = account.replace(/\s+/g, '');
     if (!msgNoSpaces.includes(accountNoSpaces)) {
       return res.json({ success: false, error: 'Account number not found in confirmation message' });
     }
 
-    // Verify amount matches
     const detectedAmount = parseAmount(message);
     if (!detectedAmount || Math.abs(detectedAmount - amountNum) > 0.01) {
       return res.json({
@@ -750,19 +741,11 @@ app.post('/api/deposit', (req, res) => {
       });
     }
 
-    // All checks passed - process deposit
     const currentBalance = userBalances.get(userId) || 0;
     userBalances.set(userId, currentBalance + amountNum);
     transactionIds.add(transactionId);
 
-    // Notify client of balance update (search across all rooms)
-    const playerSocket = Array.from(io.sockets.sockets.values()).find(s => {
-      const stake = socketRooms.get(s.id);
-      if (!stake) return false;
-      const state = getGameState(stake);
-      const player = state.players.get(s.id) || state.waitingPlayers.get(s.id);
-      return player && player.userId === userId;
-    });
+    const playerSocket = Array.from(io.sockets.sockets.values()).find(s => s.userId === userId);
     if (playerSocket) {
       playerSocket.emit('balance_update', { balance: userBalances.get(userId) });
     }
@@ -780,7 +763,6 @@ app.post('/api/deposit', (req, res) => {
   }
 });
 
-// Withdrawal API endpoint
 app.post('/api/withdrawal', (req, res) => {
   try {
     const { userId, amount, account } = req.body;
@@ -789,7 +771,6 @@ app.post('/api/withdrawal', (req, res) => {
       return res.json({ success: false, error: 'Missing required fields' });
     }
 
-    // Verify user exists
     if (!userIdToUsername.has(userId)) {
       return res.json({ success: false, error: 'Invalid user' });
     }
@@ -804,24 +785,15 @@ app.post('/api/withdrawal', (req, res) => {
       return res.json({ success: false, error: 'Insufficient balance' });
     }
 
-    // Store withdrawal request
     withdrawalRequests.set(userId, {
       amount: amountNum,
       account: account,
       timestamp: Date.now()
     });
 
-    // Deduct balance immediately
     userBalances.set(userId, currentBalance - amountNum);
 
-    // Notify client of balance update
-    const playerSocket = Array.from(io.sockets.sockets.values()).find(s => {
-      const stake = socketRooms.get(s.id);
-      if (!stake) return false;
-      const state = getGameState(stake);
-      const player = state.players.get(s.id) || state.waitingPlayers.get(s.id);
-      return player && player.userId === userId;
-    });
+    const playerSocket = Array.from(io.sockets.sockets.values()).find(s => s.userId === userId);
     if (playerSocket) {
       playerSocket.emit('balance_update', { balance: userBalances.get(userId) });
     }
@@ -839,7 +811,6 @@ app.post('/api/withdrawal', (req, res) => {
   }
 });
 
-// Withdrawal verification API endpoint
 app.post('/api/withdrawal/verify', (req, res) => {
   try {
     const { userId, amount, account, message, transactionId } = req.body;
@@ -848,14 +819,12 @@ app.post('/api/withdrawal/verify', (req, res) => {
       return res.json({ success: false, error: 'Missing required fields' });
     }
 
-    // Verify user exists
     if (!userIdToUsername.has(userId)) {
       return res.json({ success: false, error: 'Invalid user' });
     }
 
     const amountNum = Number(amount);
 
-    // Verify amount in message
     const detectedAmount = parseAmount(message);
     if (!detectedAmount || Math.abs(detectedAmount - amountNum) > 0.01) {
       return res.json({
@@ -864,25 +833,21 @@ app.post('/api/withdrawal/verify', (req, res) => {
       });
     }
 
-    // Verify transaction ID
     const detectedTxnId = parseTransactionId(message);
     if (!detectedTxnId || detectedTxnId !== transactionId.toUpperCase()) {
       return res.json({ success: false, error: 'Transaction ID mismatch' });
     }
 
-    // Check if transaction ID was already used
     if (transactionIds.has(transactionId.toUpperCase())) {
       return res.json({ success: false, error: 'This transaction ID has already been used' });
     }
 
-    // Verify account in message
     const msgNoSpaces = message.replace(/\s+/g, '');
     const accountNoSpaces = account.replace(/\s+/g, '');
     if (!msgNoSpaces.includes(accountNoSpaces)) {
       return res.json({ success: false, error: 'Account number not found in confirmation message' });
     }
 
-    // All checks passed
     transactionIds.add(transactionId.toUpperCase());
     withdrawalRequests.delete(userId);
 
@@ -898,7 +863,6 @@ app.post('/api/withdrawal/verify', (req, res) => {
   }
 });
 
-// Authentication API endpoints
 app.post('/api/auth/signup', (req, res) => {
   try {
     const { username, password } = req.body;
@@ -921,7 +885,6 @@ app.post('/api/auth/signup', (req, res) => {
       return res.json({ success: false, error: 'Username already exists' });
     }
 
-    // Create user
     const userId = crypto.randomBytes(16).toString('hex');
     const passwordHash = hashPassword(password);
 
@@ -932,13 +895,10 @@ app.post('/api/auth/signup', (req, res) => {
     });
 
     userIdToUsername.set(userId, usernameLower);
-
-    // ✅ Welcome Bonus: start new users with 100 Birr
     userBalances.set(userId, 100);
 
-    // Create session
     const token = generateToken();
-    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
     userSessions.set(token, { userId, username: usernameLower, expiresAt });
 
     console.log(`User signed up: ${usernameLower} (${userId}) -> Welcome bonus applied: 100 Birr`);
@@ -948,7 +908,7 @@ app.post('/api/auth/signup', (req, res) => {
       userId,
       username: usernameLower,
       token,
-      balance: 100, // optional: helps client show it instantly
+      balance: 100,
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -976,12 +936,10 @@ app.post('/api/auth/login', (req, res) => {
       return res.json({ success: false, error: 'Invalid username or password' });
     }
 
-    // Create session
     const token = generateToken();
-    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
     userSessions.set(token, { userId: user.userId, username: usernameLower, expiresAt });
 
-    // Initialize balance if not exists
     if (!userBalances.has(user.userId)) {
       userBalances.set(user.userId, 0);
     }
@@ -1031,7 +989,6 @@ app.post('/api/auth/verify', (req, res) => {
   }
 });
 
-// Clean up expired sessions periodically
 setInterval(() => {
   const now = Date.now();
   for (const [token, session] of userSessions.entries()) {
@@ -1039,9 +996,8 @@ setInterval(() => {
       userSessions.delete(token);
     }
   }
-}, 60 * 60 * 1000); // Every hour
+}, 60 * 60 * 1000);
 
-// API endpoint to get all bet houses status
 app.get('/api/bet-houses', (_req, res) => {
   res.json({ success: true, betHouses: getAllBetHousesStatus() });
 });
@@ -1056,7 +1012,6 @@ app.get('/', (_req, res) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server listening on :${PORT}`);
-  // Initialize countdowns for all bet houses
   AVAILABLE_STAKES.forEach(stake => {
     const state = getGameState(stake);
     if (!state.timer && state.phase === 'lobby') {
@@ -1066,12 +1021,6 @@ server.listen(PORT, () => {
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`\n❌ Error: Port ${PORT} is already in use!`);
-    console.error(`Please either:`);
-    console.error(`  1. Kill the process using port ${PORT}`);
-    console.error(`  2. Or set a different PORT environment variable`);
-    console.error(`\nTo find and kill the process on Windows:`);
-    console.error(`  netstat -ano | findstr :${PORT}`);
-    console.error(`  taskkill /F /PID <PID_NUMBER>`);
     process.exit(1);
   } else {
     console.error('Server error:', err);

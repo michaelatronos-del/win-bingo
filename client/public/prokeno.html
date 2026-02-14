@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pro Keno 80 - Live</title>
+    <title>Pro Keno 80 - Live Sync</title>
+    <!-- 1. Include Socket.IO Client -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        /* ... (Your existing CSS styles remain exactly the same) ... */
         :root {
             --bg: #05060a;
             --panel: #101322;
@@ -152,7 +153,7 @@
             border-radius: 12px;
             padding: 8px;
             border: 1px solid rgba(255, 255, 255, 0.03);
-            display: none;
+            display: none; /* Hidden by default */
         }
 
         .prev-draw-label {
@@ -189,7 +190,25 @@
             background: var(--panel-dark);
             padding: 10px;
             border-radius: 12px;
+            position: relative; /* For Overlay */
         }
+
+        /* NEW: Overlay for Sync/Waiting */
+        .board-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 12px;
+            backdrop-filter: blur(2px);
+            flex-direction: column;
+            text-align: center;
+        }
+        .wait-msg { color: var(--primary); font-weight: 800; font-size: 1.5rem; text-shadow: 0 0 10px rgba(165,255,61,0.5); }
+        .hidden { display: none !important; }
 
         .cell {
             aspect-ratio: 1/1;
@@ -315,6 +334,7 @@
         .bet-btn:disabled {
             background: #222;
             color: #555;
+            cursor: not-allowed;
         }
 
         .action-btns {
@@ -481,25 +501,11 @@
         }
 
         @keyframes floatUp {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, 50px) scale(0.5);
-            }
-            15% {
-                opacity: 1;
-                transform: translate(-50%, 0) scale(1.1);
-            }
-            30% {
-                transform: translate(-50%, -10px) scale(1);
-            }
-            80% {
-                opacity: 1;
-                transform: translate(-50%, -100px);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -200px);
-            }
+            0% { opacity: 0; transform: translate(-50%, 50px) scale(0.5); }
+            15% { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
+            30% { transform: translate(-50%, -10px) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -100px); }
+            100% { opacity: 0; transform: translate(-50%, -200px); }
         }
 
         @keyframes ballPop {
@@ -587,7 +593,13 @@
             <div class="prev-draw-list" id="prevDrawList"></div>
         </div>
 
-        <div class="board" id="board"></div>
+        <div class="board" id="board">
+            <!-- Sync Overlay -->
+            <div class="board-overlay hidden" id="waitOverlay">
+                <div class="wait-msg">DRAW IN PROGRESS</div>
+                <div style="font-size: 0.8rem; color: #fff;">Please wait for next round</div>
+            </div>
+        </div>
 
         <div class="controls">
             <div class="bet-row">
@@ -620,103 +632,56 @@
     </div>
 
     <script>
-    // --- CRITICAL CONFIGURATION FIX ---
-    const getApiUrl = () => {
-        // Since we know the server URL from your context:
-        return "https://win-bingo-backend.onrender.com";
-    };
-    
-    const API_BASE_URL = getApiUrl() + '/api';
-    
-    // Use EXACT same keys as your Bingo App
+    // --- 1. CONFIG & AUTH ---
     const USER_TOKEN = localStorage.getItem('authToken'); 
     const USER_ID = localStorage.getItem('userId');
+    const USERNAME = localStorage.getItem('username');
 
-    // If user isn't logged in, redirect to login
     if (!USER_TOKEN || !USER_ID) {
         alert("Please log in first!");
         window.location.href = "/";
     }
 
-    let userBalance = 0.00;
+    // --- 2. SOCKET INITIALIZATION ---
+    // Note: Assuming socket server is on the same origin. 
+    // If not, use: io('https://your-backend.com', ...)
+    const socket = io('/', {
+        auth: {
+            token: USER_TOKEN,
+            userId: USER_ID,
+            username: USERNAME
+        }
+    });
+
+    // --- 3. STATE VARIABLES ---
     const MAX_PICK = 10;
     const AUTO_PICK_COUNT = 4;
-    const DRAW_COUNT = 20;
-    const BET_PHASE_SEC = 30;
-    const DRAW_SPEED_MS = 1000; 
-
+    
     let gameState = 'BETTING'; 
-    let timeLeft = BET_PHASE_SEC;
     let selectedNumbers = new Set();
-    let liveTickets = [];
-    let ticketHistory = []; 
-    let gameLogs = []; 
-    let lastDrawResult = []; 
     let currentTab = 'LIVE'; 
-    let ticketCounter = 1;
+    
+    // Arrays for different tab views
+    let liveTickets = [];    // Active round tickets
+    let ticketHistory = [];  // Past tickets
+    let gameLogs = [];       // Draw history results
 
-    // --- UPDATED SYNC FUNCTIONS ---
-    async function fetchUserBalance() {
-        try {
-            // Using the /api/user/balance endpoint we added to your backend
-            const response = await fetch(`${API_BASE_URL}/user/balance`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${USER_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (!response.ok) throw new Error('Auth failed');
-
-            const data = await response.json();
-            if (data.balance !== undefined) {
-                userBalance = parseFloat(data.balance);
-                updateBalanceDisplay();
-            }
-        } catch (error) {
-            console.error("Balance Sync Error:", error);
-            document.getElementById('userBalanceDisplay').innerHTML = 
-                '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
-        }
-    }
-
-    function updateBalanceDisplay() {
-        const balEl = document.getElementById('userBalanceDisplay');
-        if(balEl) {
-            balEl.innerHTML = `${userBalance.toFixed(2)} <span class="currency">Birr</span>`;
-            // Keep a backup in case page reloads
-            localStorage.setItem('lastKnownBalance', userBalance.toFixed(2));
-        }
-    }
-
-    const getMultiplier = (picks, hits) => {
-        if (hits === 0) return 0;
-        if (picks === 2) { if (hits === 2) return 5; if (hits === 1) return 1; }
-        if (picks === 3) { if (hits === 3) return 50; if (hits === 1) return 1; }
-        if (picks === 4) { if (hits === 4) return 150; if (hits === 1) return 1; }
-        if (picks === 5) { if (hits === 5) return 250; if (hits === 2) return 1; }
-        if (picks === 6) { if (hits === 6) return 350; if (hits === 2) return 1; }
-        if (picks === 7) { if (hits === 7) return 450; if (hits === 2) return 1; }
-        if (picks === 8) { if (hits === 8) return 550; if (hits === 3) return 1; }
-        if (picks === 9) { if (hits === 9) return 650; if (hits === 3) return 1; }
-        if (picks === 10) { if (hits === 10) return 750; if (hits === 3) return 1; }
-        const ratio = hits / picks;
-        if (ratio > 0.33) return Math.floor(Math.pow(ratio, 3) * (picks * 50)); 
-        return 0;
-    };
-
+    // --- 4. DOM ELEMENTS ---
     const boardEl = document.getElementById('board');
     const timerEl = document.getElementById('timer');
+    const timerLabel = document.getElementById('timerLabel');
     const betBtn = document.getElementById('betBtn');
     const drawSlots = document.getElementById('drawSlots');
     const ticketsContainer = document.getElementById('ticketsContainer');
     const pickedDisplay = document.getElementById('pickedDisplay');
+    const betInput = document.getElementById('betInput');
+    const waitOverlay = document.getElementById('waitOverlay');
     const prevDrawContainer = document.getElementById('prevDrawContainer');
     const prevDrawList = document.getElementById('prevDrawList');
-    const betInput = document.getElementById('betInput');
     const animationContainer = document.getElementById('animationContainer');
+    const userBalanceDisplay = document.getElementById('userBalanceDisplay');
 
+    // --- 5. INITIALIZE BOARD UI ---
     const cells = {};
     for (let i = 1; i <= 80; i++) {
         const cell = document.createElement('div');
@@ -725,6 +690,108 @@
         cell.onclick = () => handleCellClick(i);
         boardEl.appendChild(cell);
         cells[i] = cell;
+    }
+
+    // --- 6. SOCKET EVENTS (SYNC ENGINE) ---
+
+    // A. Connected
+    socket.on('connect', () => {
+        console.log("Connected to Keno Server");
+        // Request latest status if needed, though 'keno_init' usually sends it
+    });
+
+    // B. Balance Update
+    socket.on('balance_update', (data) => {
+        const bal = parseFloat(data.balance);
+        userBalanceDisplay.innerHTML = `${bal.toFixed(2)} <span class="currency">Birr</span>`;
+    });
+
+    // C. Initialize Game State (Late Joiners)
+    socket.on('keno_init', (data) => {
+        updateGameState(data.phase);
+        
+        // If joining mid-draw, show balls drawn so far
+        if (data.phase === 'DRAWING' && data.drawnSoFar) {
+            data.drawnSoFar.forEach(num => addBallToUI(num));
+        }
+    });
+
+    // D. Timer Tick
+    socket.on('keno_tick', (data) => {
+        const sec = data.seconds;
+        timerEl.textContent = `00:${String(sec).padStart(2, '0')}`;
+        
+        // Fail-safe: ensure UI matches server phase
+        if (gameState !== 'BETTING') updateGameState('BETTING');
+    });
+
+    // E. Phase Change
+    socket.on('keno_phase', (data) => {
+        updateGameState(data.phase);
+        
+        if (data.phase === 'BETTING') {
+            resetBoardUI();
+            
+            // Move finished live tickets to history
+            if (liveTickets.length > 0) {
+                // Reverse to show newest first in history
+                ticketHistory.unshift(...liveTickets.reverse());
+                liveTickets = []; 
+                renderContent();
+            }
+
+            // Show Last Draw Result if provided
+            if (data.lastDraw && data.lastDraw.length > 0) {
+                updateLastDrawUI(data.lastDraw);
+            }
+        }
+    });
+
+    // F. Ball Drawn
+    socket.on('keno_ball', (data) => {
+        addBallToUI(data.ball);
+    });
+
+    // G. Bet Confirmed by Server
+    socket.on('keno_bet_confirmed', (data) => {
+        const ticket = {
+            id: data.ticketId.toString().slice(-4).toUpperCase(), // Short ID
+            picks: data.picks,
+            bet: data.amount,
+            hits: 0,
+            drawnMatches: [],
+            payout: 0,
+            timestamp: new Date(),
+            status: 'WAITING'
+        };
+        liveTickets.unshift(ticket); // Add to top
+        clearSelectionUI();
+        renderContent();
+    });
+
+    // H. Win / Result
+    socket.on('keno_win', (data) => handleResult(data, true));
+    socket.on('keno_result', (data) => handleResult(data, false));
+
+    socket.on('error', (data) => {
+        alert(data.message);
+    });
+
+    // --- 7. LOGIC FUNCTIONS ---
+
+    function updateGameState(phase) {
+        gameState = phase;
+        if (phase === 'BETTING') {
+            waitOverlay.classList.add('hidden');
+            betBtn.disabled = false;
+            betBtn.textContent = "PLACE BET";
+            timerLabel.textContent = "NEXT DRAW IN";
+        } else {
+            waitOverlay.classList.remove('hidden');
+            betBtn.disabled = true;
+            betBtn.textContent = "DRAWING...";
+            timerLabel.textContent = "DRAWING...";
+        }
     }
 
     function handleCellClick(num) {
@@ -739,14 +806,94 @@
         pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
     }
 
-    document.getElementById('clearBtn').onclick = () => {
+    function placeBet() {
+        if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
+        const amt = document.getElementById('betInput').value;
+        
+        // Emit to server
+        socket.emit('place_keno_bet', {
+            picks: Array.from(selectedNumbers),
+            amount: amt
+        });
+    }
+
+    function handleResult(data, isWin) {
+        // Find ticket in liveTickets
+        const ticket = liveTickets.find(t => t.id === data.ticketId.toString().slice(-4).toUpperCase()) 
+                       || liveTickets.find(t => String(t.id).includes(String(data.ticketId))); // Fallback check
+
+        if (ticket) {
+            ticket.hits = data.hits;
+            ticket.payout = data.payout;
+            ticket.status = 'DONE';
+            
+            // Highlight matches on ticket UI
+            if (isWin) {
+                showWinAnimation(data.payout);
+            }
+            renderContent();
+        }
+    }
+
+    function addBallToUI(num) {
+        // 1. Add visual ball to top slots
+        const ball = document.createElement('div');
+        ball.className = 'draw-ball';
+        ball.textContent = num;
+        drawSlots.appendChild(ball);
+
+        // 2. Highlight board cell
+        if (cells[num]) cells[num].classList.add('drawn');
+
+        // 3. Check for hits on Live Tickets locally for immediate UI feedback
+        liveTickets.forEach(t => {
+            if (t.picks.includes(num) && !t.drawnMatches.includes(num)) {
+                t.drawnMatches.push(num);
+                // Note: Actual hit count comes from server eventually, 
+                // but we can update visuals here
+            }
+        });
+        
+        // 4. Highlight matches on selected board (if user is watching their picks)
+        if(selectedNumbers.has(num)) {
+            cells[num].classList.add('hit');
+        }
+
+        if (currentTab === 'LIVE') renderContent();
+    }
+
+    function resetBoardUI() {
+        drawSlots.innerHTML = "";
+        Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
+        // Don't clear selections automatically unless desired. 
+        // Typically Keno keeps selections for re-bet, but clears 'hit' markers.
+    }
+
+    function updateLastDrawUI(numbers) {
+        prevDrawContainer.style.display = "block";
+        prevDrawList.innerHTML = numbers.map(n => `<div class="mini-ball">${n}</div>`).join('');
+        
+        // Add to logs
+        gameLogs.unshift({
+            timestamp: new Date(),
+            numbers: numbers.sort((a,b)=>a-b)
+        });
+        if (gameLogs.length > 20) gameLogs.pop(); // Keep last 20 logs
+        if (currentTab === 'LOGS') renderContent();
+    }
+
+    // --- 8. UI HELPERS ---
+
+    function clearSelectionUI() {
         selectedNumbers.clear();
         Object.values(cells).forEach(c => c.classList.remove('selected'));
         pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
-    };
+    }
+
+    document.getElementById('clearBtn').onclick = clearSelectionUI;
 
     document.getElementById('autoBtn').onclick = () => {
-        document.getElementById('clearBtn').click();
+        clearSelectionUI();
         while (selectedNumbers.size < AUTO_PICK_COUNT) { 
             handleCellClick(Math.floor(Math.random() * 80) + 1); 
         }
@@ -754,18 +901,17 @@
 
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val < userBalance) {
-            betInput.value = (val + 10).toFixed(2);
-        }
+        betInput.value = (val + 10).toFixed(2);
     };
 
     document.getElementById('minusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val > 10) {
-            betInput.value = (val - 10).toFixed(2);
-        }
+        if (val > 10) betInput.value = (val - 10).toFixed(2);
     };
 
+    document.getElementById('betBtn').onclick = placeBet;
+
+    // Tabs
     document.getElementById('liveTabBtn').onclick = () => { currentTab = 'LIVE'; updateTabUI(); renderContent(); };
     document.getElementById('historyTabBtn').onclick = () => { currentTab = 'HISTORY'; updateTabUI(); renderContent(); };
     document.getElementById('gameLogsTabBtn').onclick = () => { currentTab = 'LOGS'; updateTabUI(); renderContent(); };
@@ -776,56 +922,6 @@
         document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
     }
 
-    // --- UPDATED BET LOGIC ---
-    betBtn.onclick = async () => {
-        if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
-        const betVal = parseFloat(betInput.value);
-        
-        if (betVal > userBalance) {
-            return alert("Insufficient Balance!");
-        }
-
-        try {
-            // Deduct from server wallet
-            const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${USER_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ userId: USER_ID, amount: betVal })
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                alert(result.error || "Bet Failed");
-                fetchUserBalance();
-                return;
-            }
-            
-            userBalance = result.newBalance;
-            updateBalanceDisplay();
-
-            const ticket = {
-                id: ticketCounter++,
-                picks: Array.from(selectedNumbers),
-                bet: betVal,
-                hits: 0,
-                drawnMatches: [],
-                payout: 0,
-                timestamp: new Date(),
-                status: 'WAITING'
-            };
-            liveTickets.push(ticket);
-            document.getElementById('clearBtn').click();
-            if (currentTab === 'LIVE') renderContent();
-            
-        } catch (error) {
-            alert("Network Error");
-        }
-    };
-
     function renderContent() {
         ticketsContainer.innerHTML = "";
         
@@ -834,8 +930,7 @@
                 ticketsContainer.innerHTML = `<div class="empty-msg">No game history available yet.</div>`;
                 return;
             }
-            const displayLogs = [...gameLogs].reverse();
-            displayLogs.forEach((log) => {
+            gameLogs.forEach((log) => {
                 const div = document.createElement('div');
                 div.className = 'game-log';
                 const timeStr = log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -858,25 +953,37 @@
             return;
         }
         
-        const displayList = currentTab === 'HISTORY' ? [...source].reverse() : source;
-        displayList.forEach(t => {
+        source.forEach(t => {
             const div = document.createElement('div');
+            // Add 'win' class if payout > 0
             div.className = `ticket ${t.payout > 0 ? 'win' : ''}`;
+            
             const timeStr = t.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const resultLabel = t.status === 'DONE' ? (t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00') : '--';
+            let resultLabel = '--';
+            if (t.status === 'DONE') {
+                resultLabel = t.payout > 0 ? `+${parseFloat(t.payout).toFixed(2)}` : '0.00';
+            } else {
+                resultLabel = 'Waiting...';
+            }
+
             div.innerHTML = `
                 <div class="ticket-info">
                     <div style="font-size:0.65rem; color:var(--muted)">TICKET #${t.id} • BET ${t.bet} Birr</div>
                     <div class="ticket-numbers">
                         ${t.picks.map(n => {
+                            // Check drawnMatches for visual highlight
                             const isMatched = t.drawnMatches.includes(n);
                             return `<span class="hit-badge ${isMatched ? 'matched' : ''}">${n}</span>`;
                         }).join('')}
                     </div>
-                    <div style="font-size:0.75rem; color:var(--primary); font-weight:700">${t.hits} HITS</div>
+                    <div style="font-size:0.75rem; color:var(--primary); font-weight:700">
+                         ${t.drawnMatches.length} HIT(S)
+                    </div>
                     <div class="ticket-time">${timeStr}</div>
                 </div>
-                <div class="ticket-payout">${resultLabel}</div>
+                <div class="ticket-payout" style="${t.payout > 0 ? 'color:var(--primary)' : 'color:var(--muted)'}">
+                    ${resultLabel}
+                </div>
             `;
             ticketsContainer.appendChild(div);
         });
@@ -885,7 +992,7 @@
     function showWinAnimation(amount) {
         const popup = document.createElement('div');
         popup.className = 'win-popup';
-        popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} Birr`;
+        popup.innerHTML = `YOU WON<br>${parseFloat(amount).toFixed(2)} Birr`;
         animationContainer.appendChild(popup);
         
         setTimeout(() => {
@@ -893,123 +1000,6 @@
         }, 4000);
     }
 
-    setInterval(() => {
-        if (gameState === 'BETTING') {
-            timeLeft--;
-            if (timeLeft <= 0) startDraw();
-        }
-        updateTimerDisplay();
-    }, 1000);
-
-    function updateTimerDisplay() {
-        const m = Math.floor(timeLeft / 60);
-        const s = timeLeft % 60;
-        timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    async function startDraw() {
-        gameState = 'DRAWING';
-        document.getElementById('timerLabel').textContent = "DRAWING...";
-        betBtn.disabled = true;
-        drawSlots.innerHTML = "";
-        prevDrawContainer.style.display = "none"; 
-        
-        const pool = Array.from({length: 80}, (_, i) => i + 1);
-        const currentDraw = [];
-        for (let i = 0; i < DRAW_COUNT; i++) {
-            const idx = Math.floor(Math.random() * pool.length);
-            currentDraw.push(pool.splice(idx, 1)[0]);
-        }
-
-        for (let i = 0; i < currentDraw.length; i++) {
-            const num = currentDraw[i];
-            await new Promise(r => setTimeout(r, DRAW_SPEED_MS));
-            cells[num].classList.add('drawn');
-            const ball = document.createElement('div');
-            ball.className = 'draw-ball';
-            ball.textContent = num;
-            drawSlots.appendChild(ball);
-
-            liveTickets.forEach(t => {
-                if (t.picks.includes(num)) {
-                    t.hits++;
-                    t.drawnMatches.push(num);
-                    cells[num].classList.add('hit');
-                }
-            });
-            if (currentTab === 'LIVE') renderContent();
-        }
-        lastDrawResult = currentDraw; 
-        
-        gameLogs.push({
-            timestamp: new Date(),
-            numbers: [...currentDraw].sort((a,b) => a-b)
-        });
-
-        await finalizeGame();
-    }
-
-    async function finalizeGame() {
-        let totalWin = 0;
-
-        liveTickets.forEach(t => {
-            const mult = getMultiplier(t.picks.length, t.hits);
-            t.payout = t.bet * mult;
-            t.status = 'DONE';
-            totalWin += t.payout;
-            ticketHistory.push(t);
-        });
-        
-        if (totalWin > 0) {
-            showWinAnimation(totalWin);
-            
-            try {
-                // Settle win on server
-                const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${USER_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ userId: USER_ID, totalWin: totalWin })
-                });
-                
-                const result = await response.json();
-                if (result.success) {
-                    userBalance = result.newBalance;
-                    updateBalanceDisplay();
-                }
-            } catch (e) { console.error("Settlement failed", e); }
-        }
-
-        liveTickets = [];
-        renderContent();
-        setTimeout(resetRound, 5000);
-    }
-
-    function resetRound() {
-        gameState = 'BETTING';
-        timeLeft = BET_PHASE_SEC;
-        document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
-        betBtn.disabled = false;
-        drawSlots.innerHTML = "";
-        
-        if (lastDrawResult.length > 0) {
-            prevDrawContainer.style.display = "block";
-            prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
-        }
-
-        Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
-        updateTimerDisplay();
-        renderContent();
-        fetchUserBalance(); // Refresh from server
-    }
-
-    // INITIALIZE
-    fetchUserBalance();
-    renderContent();
-    setInterval(fetchUserBalance, 10000); // Periodic auto-sync
     </script>
 </body>
-
 </html>
