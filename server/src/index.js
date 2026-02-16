@@ -24,14 +24,14 @@ app.use('/audio', express.static(audioDir));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-const BOARD_SIZE = 75;
+// --- BINGO CONFIGURATION ---
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
 const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];
 
 // --- ADMIN BOT CONFIGURATION ---
 const ADMIN_BOT_ID = 'SYSTEM_ADMIN';
-const ADMIN_BOT_NAME = 'Admin'; // Name displayed to users
+const ADMIN_BOT_NAME = 'Admin'; 
 const ADMIN_SOCKET_ID = 'admin-bot-socket';
 
 const gameStates = new Map();
@@ -50,8 +50,8 @@ function createEmptyGameState(stake, roomIdOverride) {
     timer: null,
     caller: null,
     // Bot specific state
-    riggedNumbers: null, // If set, calling uses this sequence
-    botTargetWin: null   // { boardId, lineIndices }
+    riggedNumbers: null, 
+    botTargetWin: null   
   };
 }
 
@@ -72,11 +72,8 @@ function getGameState(stake) {
   return gameStates.get(stake);
 }
 
-// --- HELPER: GENERATE BOARD CONTENT (To know winning numbers) ---
-// This uses a seeded random approach based on boardId to ensure consistency
-// B(1-15), I(16-30), N(31-45), G(46-60), O(61-75)
+// --- HELPER: GENERATE BOARD CONTENT (Deterministic for Bot) ---
 function generateBoard(boardId) {
-    // Simple pseudo-random generator based on boardId
     let seed = boardId;
     const random = () => {
         var x = Math.sin(seed++) * 10000;
@@ -92,7 +89,6 @@ function generateBoard(boardId) {
         { min: 61, max: 75 }
     ];
 
-    // Generate columns
     const columns = [];
     for (let c = 0; c < 5; c++) {
         const colNums = new Set();
@@ -103,11 +99,10 @@ function generateBoard(boardId) {
         columns.push(Array.from(colNums));
     }
 
-    // Transpose to rows (0-24 index)
     for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
             if (r === 2 && c === 2) {
-                grid.push(-1); // Free space
+                grid.push(-1); 
             } else {
                 grid.push(columns[c][r]);
             }
@@ -116,6 +111,7 @@ function generateBoard(boardId) {
     return grid;
 }
 
+// --- USER DATA STORES ---
 const users = new Map();
 const userSessions = new Map();
 const userIdToUsername = new Map();
@@ -183,6 +179,7 @@ function requireAuth(req, res, next) {
   next();
 }
 
+// --- BINGO LOGIC HELPERS ---
 function getOnlinePlayers(state) {
   return Array.from(state.players.values());
 }
@@ -198,7 +195,6 @@ function getTotalSelectedBoards(state) {
 }
 
 function computePrizePool(state) {
-  // Prize = 80% of (total selected boards * stake)
   const totalBetAmount = getTotalSelectedBoards(state) * state.stake;
   return Math.floor(totalBetAmount * 0.8);
 }
@@ -226,13 +222,10 @@ function manageAdminBot(state) {
 
     // 2. If Real Boards <= 50 AND at least 2 real boards exist: Add Bot & Rig Game
     if (realBoardsCount <= 50 && realBoardsCount >= 2) {
-        
         // A. Select 10 random available boards for the bot
         const botPicks = [];
         let attempts = 0;
         while (botPicks.length < 10 && attempts < 1000) {
-            const r = Math.floor(Math.random() * 100) + 1; // Assuming 100 max boards for simplicity or derived fromTaken
-            // Actually, let's just pick random numbers 1-200 to be safe
             const randBoardId = Math.floor(Math.random() * 200) + 1; 
             if (!state.takenBoards.has(randBoardId) && !botPicks.includes(randBoardId)) {
                 botPicks.push(randBoardId);
@@ -258,6 +251,7 @@ function manageAdminBot(state) {
         botPicks.forEach(b => state.takenBoards.add(b));
 
         // C. RIGGING: Choose a winning board and line for the bot
+        // We pick the first board in the bot's list to be the winner
         const winningBoardId = botPicks[0];
         const grid = generateBoard(winningBoardId);
         
@@ -265,7 +259,6 @@ function manageAdminBot(state) {
         const winningLineNumbers = [grid[0], grid[1], grid[2], grid[3], grid[4]];
         
         // D. Construct the Call Sequence
-        // Standard numbers 1-75
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
         
         // Remove winning numbers from the pool
@@ -277,12 +270,11 @@ function manageAdminBot(state) {
             [allNumbers[i], allNumbers[j]] = [allNumbers[j], allNumbers[i]];
         }
 
-        // Place winning numbers early (e.g., within first 10 calls) to ensure bot wins fast
-        // Mix them with 5 random "filler" numbers for the first 10 calls
+        // Place winning numbers early (mixed with 5 filler numbers)
         const filler = allNumbers.splice(0, 5);
         const firstBatch = [...winningLineNumbers, ...filler];
         
-        // Shuffle the first batch so it's not obvious
+        // Shuffle the first batch
         for (let i = firstBatch.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [firstBatch[i], firstBatch[j]] = [firstBatch[j], firstBatch[i]];
@@ -309,13 +301,11 @@ function startCountdown(stake) {
   state.countdown = COUNTDOWN_SECONDS;
   state.called = [];
 
-  // Move waiting players to active players if game is starting
   state.waitingPlayers.forEach((player, socketId) => {
     state.players.set(socketId, player);
     state.waitingPlayers.delete(socketId);
   });
 
-  // Reset taken boards based on current active players
   state.takenBoards = new Set();
   state.players.forEach(player => {
     if (Array.isArray(player.picks)) {
@@ -344,9 +334,7 @@ function startCountdown(stake) {
       clearInterval(state.timer);
       
       // --- ADMIN BOT INTERVENTION ---
-      // Check logic right before game starts
       manageAdminBot(state); 
-      // Update clients with final player count (including bot)
       io.to(roomId).emit('players', {
           count: getTotalSelectedBoards(state),
           waitingCount: state.waitingPlayers.size,
@@ -362,7 +350,6 @@ function startCountdown(stake) {
         // Pass rigged numbers if bot is playing
         startCalling(stake, state.riggedNumbers);
       } else {
-        // No players ready, restart lobby
         state.phase = 'lobby';
         io.to(roomId).emit('phase', { phase: state.phase, stake });
         startCountdown(stake);
@@ -381,10 +368,8 @@ function startCalling(stake, riggedDeck = null) {
 
   let numbers = [];
   if (riggedDeck) {
-      // Use the pre-calculated deck that ensures Bot wins
       numbers = riggedDeck;
   } else {
-      // Standard Random Game
       for (let i = 1; i <= 75; i++) numbers.push(i);
       for (let i = numbers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -396,25 +381,22 @@ function startCalling(stake, riggedDeck = null) {
   clearInterval(state.caller);
   
   state.caller = setInterval(() => {
-    // 1. Check if Bot wins on this tick (if bot is active)
+    // Check if Bot wins on this tick
     if (state.botTargetWin) {
-        // Check if all needed numbers have been called
         const calledSet = new Set(state.called);
         const needed = Array.from(state.botTargetWin.winNumbers);
         const hasWon = needed.every(n => calledSet.has(n));
 
         if (hasWon) {
-            // Trigger Bot Win
             const prize = computePrizePool(state);
             io.to(roomId).emit('winner', { 
-                playerId: ADMIN_BOT_NAME, // Show "Admin" or "System" as name
+                playerId: ADMIN_BOT_NAME, 
                 prize, 
                 stake, 
                 boardId: state.botTargetWin.boardId, 
                 lineIndices: state.botTargetWin.lineIndices 
             });
             
-            // End Game Logic
             clearInterval(state.caller);
             state.players.clear();
             state.waitingPlayers.forEach((player, socketId) => {
@@ -454,7 +436,114 @@ function startCalling(stake, riggedDeck = null) {
   }, CALL_INTERVAL_MS);
 }
 
-// ... (Rest of Keno Logic and Socket Handlers remain the same) ...
+function getAllBetHousesStatus() {
+  const statuses = [];
+  AVAILABLE_STAKES.forEach(stake => {
+    const state = getGameState(stake);
+    const activePlayers = getTotalSelectedBoards(state);
+    const waitingPlayers = state.waitingPlayers.size;
+    statuses.push({
+      stake,
+      phase: state.phase,
+      activePlayers,
+      waitingPlayers,
+      totalPlayers: activePlayers + waitingPlayers,
+      prize: computePrizePool(state),
+      countdown: state.countdown,
+      called: state.called.length
+    });
+  });
+  return statuses;
+}
+
+/* =========  KENO STATE (SERVER-DRIVEN)  ========= */
+
+const KENO_BET_DURATION = 30;
+const KENO_DRAW_INTERVAL = 1000;
+const KENO_POST_DRAW_DELAY = 5000;
+
+let kenoState = {
+  phase: 'BETTING',
+  countdown: KENO_BET_DURATION,
+  drawResult: [],
+  currentBallIndex: 0,
+  drawInterval: null,
+  gameId: 1
+};
+
+function generateKenoDraw() {
+  const pool = Array.from({ length: 80 }, (_, i) => i + 1);
+  const result = [];
+  for (let i = 0; i < 20; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+  return result;
+}
+
+function startKenoLoop() {
+  setInterval(() => {
+    if (kenoState.phase === 'BETTING') {
+      kenoState.countdown--;
+
+      io.emit('keno_tick', {
+        phase: kenoState.phase,
+        seconds: kenoState.countdown,
+        gameId: kenoState.gameId
+      });
+
+      if (kenoState.countdown <= 0) {
+        kenoState.phase = 'DRAWING';
+        kenoState.drawResult = generateKenoDraw();
+        kenoState.currentBallIndex = 0;
+
+        io.emit('keno_draw_start', {
+          phase: 'DRAWING',
+          gameId: kenoState.gameId,
+          totalBalls: 20
+        });
+
+        runKenoDrawing();
+      }
+    }
+  }, 1000);
+}
+
+function runKenoDrawing() {
+  kenoState.drawInterval = setInterval(() => {
+    if (kenoState.currentBallIndex < 20) {
+      const ball = kenoState.drawResult[kenoState.currentBallIndex];
+      io.emit('keno_ball', {
+        ball,
+        index: kenoState.currentBallIndex,
+        gameId: kenoState.gameId
+      });
+      kenoState.currentBallIndex++;
+    } else {
+      clearInterval(kenoState.drawInterval);
+      kenoState.drawInterval = null;
+
+      io.emit('keno_draw_complete', {
+        gameId: kenoState.gameId,
+        allBalls: kenoState.drawResult
+      });
+
+      setTimeout(() => {
+        kenoState.gameId++;
+        kenoState.phase = 'BETTING';
+        kenoState.countdown = KENO_BET_DURATION;
+        kenoState.drawResult = [];
+        kenoState.currentBallIndex = 0;
+
+        io.emit('keno_new_round', {
+          phase: 'BETTING',
+          seconds: kenoState.countdown,
+          gameId: kenoState.gameId
+        });
+      }, KENO_POST_DRAW_DELAY);
+    }
+  }, KENO_DRAW_INTERVAL);
+}
 
 startKenoLoop();
 
@@ -488,6 +577,7 @@ io.on('connection', (socket) => {
 
   socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
+  // --- KENO INIT (WITH HOT NUMBERS) ---
   socket.emit('keno_init', {
     phase: kenoState.phase,
     seconds: kenoState.countdown,
@@ -502,6 +592,7 @@ io.on('connection', (socket) => {
   socket.on('join_keno', () => {
     socket.join('keno_room');
     kenoOnlinePlayers.add(socket.id);
+    
     io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
 
     socket.emit('keno_state_sync', {
@@ -674,7 +765,8 @@ io.on('connection', (socket) => {
     });
     state.waitingPlayers.clear();
     state.takenBoards = new Set();
-    // Clear bot state
+    
+    // Clear Bot State on Win
     state.riggedNumbers = null;
     state.botTargetWin = null;
 
@@ -720,6 +812,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    // Remove from keno stats
     if (kenoOnlinePlayers.has(socket.id)) {
         kenoOnlinePlayers.delete(socket.id);
         io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
@@ -755,7 +848,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// ... (Rest of Helper Functions and Routes remain the same) ...
 function parseAmount(message) {
   const patterns = [
     /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
