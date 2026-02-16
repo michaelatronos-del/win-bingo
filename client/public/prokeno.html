@@ -801,12 +801,18 @@
     const SERVER_URL = getServerUrl();
     const API_BASE_URL = SERVER_URL + '/api';
     
-    const USER_TOKEN = localStorage.getItem('authToken'); 
+    // --- AUTH FIX: Check for both 'authToken' AND 'token' ---
+    // The previous frontend might have saved it as 'token', causing a mismatch.
+    const USER_TOKEN = localStorage.getItem('authToken') || localStorage.getItem('token'); 
     const USER_ID = localStorage.getItem('userId');
     const USERNAME = localStorage.getItem('username') || 'Player';
 
+    console.log("Auth Status Check:", { foundToken: !!USER_TOKEN, userId: USER_ID });
+
     if (!USER_TOKEN || !USER_ID) {
-        alert("Please log in first!");
+        console.warn("No login credentials found. Redirecting to root.");
+        // Commented out alert to prevent blocking loops, can re-enable if preferred
+        // alert("Please log in first!");
         window.location.href = "/";
     }
 
@@ -872,6 +878,8 @@
     }
 
     function initSocket() {
+        if (!USER_TOKEN) return; // Stop if no token
+
         socket = io(SERVER_URL, {
             auth: {
                 token: USER_TOKEN,
@@ -925,7 +933,6 @@
         });
 
         socket.on('keno_state_sync', (data) => {
-            console.log('State sync:', data);
             currentGameId = data.gameId;
             gameState = data.phase;
             timeLeft = data.seconds;
@@ -938,7 +945,6 @@
                     displayExistingBalls(data.drawnBalls);
                 }
             }
-            
             updateUI();
         });
 
@@ -952,7 +958,6 @@
         });
 
         socket.on('keno_draw_start', (data) => {
-            console.log('Draw starting:', data);
             gameState = 'DRAWING';
             currentGameId = data.gameId;
             drawnBalls = [];
@@ -970,10 +975,7 @@
         });
 
         socket.on('keno_ball', (data) => {
-            console.log('Ball drawn:', data.ball, 'index:', data.index);
-            
             if (data.gameId !== currentGameId) return;
-            
             drawnBalls.push(data.ball);
             
             if (!joinedMidGame) {
@@ -1006,26 +1008,19 @@
         });
 
         socket.on('keno_draw_complete', (data) => {
-            console.log('Draw complete:', data);
-            
             if (data.gameId !== currentGameId) return;
-            
             lastDrawResult = data.allBalls;
-            
             gameLogs.push({
                 timestamp: new Date(),
                 numbers: [...data.allBalls].sort((a, b) => a - b),
                 gameId: data.gameId
             });
-            
             if (!joinedMidGame) {
                 finalizeGame(data.allBalls);
             }
         });
 
         socket.on('keno_new_round', (data) => {
-            console.log('New round:', data);
-            
             gameState = 'BETTING';
             timeLeft = data.seconds;
             currentGameId = data.gameId;
@@ -1040,10 +1035,7 @@
 
         // Receive other players' bets
         socket.on('keno_player_bet', (data) => {
-            console.log('Other player bet:', data);
-            
             if (data.oderId === USER_ID) return; // Skip own bets
-            
             const ticket = {
                 oderId: data.oderId,
                 username: data.username || 'Player',
@@ -1054,17 +1046,13 @@
                 drawnMatches: [],
                 timestamp: new Date()
             };
-            
-            // Check if already drawn balls hit this ticket
             drawnBalls.forEach(ball => {
                 if (ticket.picks.includes(ball)) {
                     ticket.hits++;
                     ticket.drawnMatches.push(ball);
                 }
             });
-            
             otherPlayersTickets.push(ticket);
-            
             if (currentTab === 'LIVE') renderContent();
         });
 
@@ -1087,13 +1075,10 @@
     }
 
     function updateHotNumbersOnBoard() {
-        // Clear existing hot indicators
         Object.values(cells).forEach(cell => {
             const indicator = cell.querySelector('.hot-indicator');
             if (indicator) indicator.remove();
         });
-        
-        // Add hot indicators to top 10 numbers
         const top10 = hotNumbers.slice(0, 10);
         top10.forEach((item, index) => {
             if (cells[item.number]) {
@@ -1123,7 +1108,6 @@
 
     function updateUI() {
         updateTimerDisplay();
-        
         if (gameState === 'BETTING') {
             document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
             betBtn.disabled = false;
@@ -1131,7 +1115,6 @@
             document.getElementById('timerLabel').textContent = "DRAWING...";
             betBtn.disabled = true;
         }
-        
         if (lastDrawResult.length > 0 && gameState === 'BETTING') {
             prevDrawContainer.style.display = 'block';
             prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
@@ -1143,16 +1126,15 @@
         Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
         document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
         betBtn.disabled = false;
-        
         if (lastDrawResult.length > 0) {
             prevDrawContainer.style.display = 'block';
             prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
         }
-        
         updateHotNumbersOnBoard();
     }
 
     async function fetchUserBalance() {
+        if (!USER_TOKEN) return;
         try {
             const response = await fetch(`${API_BASE_URL}/user/balance`, {
                 method: 'GET',
@@ -1161,9 +1143,7 @@
                     'Content-Type': 'application/json'
                 }
             });
-            
             if (!response.ok) throw new Error('Auth failed');
-
             const data = await response.json();
             if (data.balance !== undefined) {
                 userBalance = parseFloat(data.balance);
@@ -1171,12 +1151,12 @@
             }
         } catch (error) {
             console.error("Balance Sync Error:", error);
-            document.getElementById('userBalanceDisplay').innerHTML = 
-                '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
+            // Don't modify innerHTML on error to avoid flickering if temporary
         }
     }
 
     async function fetchHotNumbers() {
+        if (!USER_TOKEN) return;
         try {
             const response = await fetch(`${API_BASE_URL}/games/keno/hot-numbers`, {
                 method: 'GET',
@@ -1185,7 +1165,6 @@
                     'Content-Type': 'application/json'
                 }
             });
-            
             if (response.ok) {
                 const data = await response.json();
                 if (data.numbers) {
@@ -1208,7 +1187,6 @@
 
     function handleCellClick(num) {
         if (gameState !== 'BETTING' || joinedMidGame) return;
-        
         if (selectedNumbers.has(num)) {
             selectedNumbers.delete(num);
             cells[num].classList.remove('selected');
@@ -1235,16 +1213,12 @@
 
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val < userBalance) {
-            betInput.value = (val + 10).toFixed(2);
-        }
+        if (val < userBalance) betInput.value = (val + 10).toFixed(2);
     };
 
     document.getElementById('minusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val > 10) {
-            betInput.value = (val - 10).toFixed(2);
-        }
+        if (val > 10) betInput.value = (val - 10).toFixed(2);
     };
 
     document.getElementById('liveTabBtn').onclick = () => { currentTab = 'LIVE'; updateTabUI(); renderContent(); };
@@ -1260,27 +1234,14 @@
     }
 
     betBtn.onclick = async () => {
-        if (gameState !== 'BETTING') {
-            return alert("Betting is closed! Wait for next round.");
-        }
-        
-        if (joinedMidGame) {
-            return alert("Please wait for the next round to place bets.");
-        }
-        
-        if (selectedNumbers.size < 2) {
-            return alert("Pick at least 2 numbers!");
-        }
-        
+        if (gameState !== 'BETTING') return alert("Betting is closed! Wait for next round.");
+        if (joinedMidGame) return alert("Please wait for the next round to place bets.");
+        if (selectedNumbers.size < 2) return alert("Pick at least 2 numbers!");
         const betVal = parseFloat(betInput.value);
-        
-        if (betVal > userBalance) {
-            return alert("Insufficient Balance!");
-        }
+        if (betVal > userBalance) return alert("Insufficient Balance!");
 
         try {
             const picksArray = Array.from(selectedNumbers);
-            
             const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
                 method: 'POST',
                 headers: {
@@ -1294,15 +1255,12 @@
                     gameId: currentGameId
                 })
             });
-            
             const result = await response.json();
-            
             if (!result.success) {
                 alert(result.error || "Bet Failed");
                 fetchUserBalance();
                 return;
             }
-            
             userBalance = result.newBalance;
             updateBalanceDisplay();
 
@@ -1320,7 +1278,6 @@
             liveTickets.push(ticket);
             document.getElementById('clearBtn').click();
             if (currentTab === 'LIVE') renderContent();
-            
         } catch (error) {
             console.error('Bet error:', error);
             alert("Network Error");
@@ -1359,31 +1316,24 @@
         }
 
         if (currentTab === 'LIVE') {
-            // Render my tickets first
             if (liveTickets.length === 0 && otherPlayersTickets.length === 0) {
                 ticketsContainer.innerHTML = `<div class="empty-msg">No live tickets. Place a bet!</div>`;
                 return;
             }
-            
-            // My tickets
             if (liveTickets.length > 0) {
                 const myHeader = document.createElement('div');
                 myHeader.style.cssText = 'font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;';
                 myHeader.textContent = '📋 MY TICKETS';
                 ticketsContainer.appendChild(myHeader);
-                
                 liveTickets.forEach(t => {
                     ticketsContainer.appendChild(createTicketElement(t, false));
                 });
             }
-            
-            // Other players' tickets
             if (otherPlayersTickets.length > 0) {
                 const divider = document.createElement('div');
                 divider.className = 'section-divider';
                 divider.textContent = `👥 OTHER PLAYERS (${otherPlayersTickets.length})`;
                 ticketsContainer.appendChild(divider);
-                
                 otherPlayersTickets.forEach(t => {
                     ticketsContainer.appendChild(createTicketElement(t, true));
                 });
@@ -1391,13 +1341,11 @@
             return;
         }
 
-        // HISTORY tab
         const source = ticketHistory;
         if (source.length === 0) {
             ticketsContainer.innerHTML = `<div class="empty-msg">No ticket history yet.</div>`;
             return;
         }
-        
         const displayList = [...source].reverse();
         displayList.forEach(t => {
             ticketsContainer.appendChild(createTicketElement(t, false, true));
@@ -1413,7 +1361,6 @@
         if (isHistory || t.status === 'DONE') {
             resultLabel = t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00';
         }
-        
         let ownerLabel = '';
         if (isOtherUser) {
             ownerLabel = `<div class="ticket-owner">👤 ${t.username || 'Player'}</div>`;
@@ -1443,7 +1390,6 @@
             fetchHotNumbers();
             return;
         }
-
         let html = `
             <div class="stats-header">
                 <div class="stats-title">🔥 MOST PICKED NUMBERS</div>
@@ -1451,20 +1397,12 @@
             </div>
             <div class="hot-numbers-grid">
         `;
-
         hotNumbers.forEach((item, index) => {
             let rankClass = '';
             let rankLabel = '';
-            
-            if (index < 5) {
-                rankClass = 'top-5';
-                rankLabel = `🏆 #${index + 1}`;
-            } else if (index < 10) {
-                rankClass = 'top-10';
-                rankLabel = `#${index + 1}`;
-            } else {
-                rankLabel = `#${index + 1}`;
-            }
+            if (index < 5) { rankClass = 'top-5'; rankLabel = `🏆 #${index + 1}`; }
+            else if (index < 10) { rankClass = 'top-10'; rankLabel = `#${index + 1}`; }
+            else { rankLabel = `#${index + 1}`; }
 
             html += `
                 <div class="hot-number-item ${rankClass}" onclick="quickSelectNumber(${item.number})">
@@ -1474,10 +1412,8 @@
                 </div>
             `;
         });
-
         html += `</div>`;
         
-        // Add cold numbers section
         if (hotNumbers.length >= 80) {
             const coldNumbers = [...hotNumbers].reverse().slice(0, 10);
             html += `
@@ -1487,7 +1423,6 @@
                 </div>
                 <div class="hot-numbers-grid">
             `;
-            
             coldNumbers.forEach((item, index) => {
                 html += `
                     <div class="hot-number-item" onclick="quickSelectNumber(${item.number})">
@@ -1497,20 +1432,16 @@
                     </div>
                 `;
             });
-            
             html += `</div>`;
         }
-
         ticketsContainer.innerHTML = html;
     }
 
-    // Quick select a number from hot numbers
     window.quickSelectNumber = function(num) {
         if (gameState !== 'BETTING' || joinedMidGame) {
             alert("Wait for betting phase to select numbers!");
             return;
         }
-        
         if (!selectedNumbers.has(num) && selectedNumbers.size < MAX_PICK) {
             selectedNumbers.add(num);
             cells[num].classList.add('selected');
@@ -1523,10 +1454,7 @@
         popup.className = 'win-popup';
         popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} Birr`;
         animationContainer.appendChild(popup);
-        
-        setTimeout(() => {
-            popup.remove();
-        }, 4000);
+        setTimeout(() => { popup.remove(); }, 4000);
     }
 
     function updateTimerDisplay() {
@@ -1537,7 +1465,6 @@
 
     async function finalizeGame(allBalls) {
         let totalWin = 0;
-
         liveTickets.forEach(t => {
             if (t.gameId === currentGameId) {
                 const mult = getMultiplier(t.picks.length, t.hits);
@@ -1553,7 +1480,6 @@
         
         if (totalWin > 0) {
             showWinAnimation(totalWin);
-            
             try {
                 const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
                     method: 'POST',
@@ -1567,7 +1493,6 @@
                         gameId: currentGameId 
                     })
                 });
-                
                 const result = await response.json();
                 if (result.success) {
                     userBalance = result.newBalance;
@@ -1577,16 +1502,18 @@
                 console.error("Settlement failed", e); 
             }
         }
-
         renderContent();
     }
 
-    fetchUserBalance();
-    initSocket();
-    renderContent();
-    fetchHotNumbers();
-    setInterval(fetchUserBalance, 30000);
-    setInterval(fetchHotNumbers, 60000); // Refresh hot numbers every minute
+    // Only run if we have a token
+    if (USER_TOKEN) {
+        fetchUserBalance();
+        initSocket();
+        renderContent();
+        fetchHotNumbers();
+        setInterval(fetchUserBalance, 30000);
+        setInterval(fetchHotNumbers, 60000);
+    }
     </script>
 </body>
 
