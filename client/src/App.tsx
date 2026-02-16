@@ -17,7 +17,22 @@ type Language = 'en' | 'am' | 'ti' | 'or'
 // --- TRANSLATIONS CONFIGURATION ---
 const translations = {
   en: {
+    // General
     hello: 'Hello',
+    back: 'Back',
+    close: 'Close',
+    loading: 'Processing...',
+    ok: 'OK',
+    // Login
+    signin: 'Sign In',
+    signup: 'Sign Up',
+    username: 'Username',
+    password: 'Password',
+    enter_username: 'Enter your username',
+    enter_password: 'Enter your password',
+    create_account: 'Create Account',
+    welcome_login_msg: 'Welcome! Please sign in or create an account',
+    // Welcome/Lobby
     deposit: '+ Deposit',
     withdraw: 'Withdraw',
     logout: 'Logout',
@@ -36,10 +51,73 @@ const translations = {
     select_lang: 'Select Language',
     welcome_bonus_title: 'WELCOME BONUS!',
     welcome_bonus_msg: '100 Birr has been added to your account.',
-    players: 'players'
+    players_label: 'Players',
+    stake: 'Stake',
+    select_boards: 'Select Your Boards',
+    selected: 'Selected',
+    start_game: 'Start Game',
+    ready: 'Ready!',
+    switch_house: 'Switch Bet House',
+    game_in_progress: 'Game in progress',
+    // Game Page
+    current_call: 'CURRENT CALL',
+    last_5: 'LAST 5 CALLED',
+    live_caller: 'LIVE CALLER',
+    auto_bingo: 'Auto Bingo',
+    bingo_btn: 'BINGO!',
+    your_boards: 'Your Boards',
+    tap_mark_hint: 'Tap called numbers to mark. FREE is auto-marked.',
+    next_call_in: 'Next call in',
+    winner: 'Winner',
+    winning_board: 'Winning Board',
+    // Deposit & Withdraw
+    select_payment: 'Select Payment Platform',
+    recommended: 'Recommended',
+    confirm_payment: 'Confirm payment',
+    deposit_account: 'Deposit account',
+    amount_deposit: 'Amount to deposit',
+    paste_deposit_msg: 'Paste your deposit confirmation message',
+    verify_submit: 'Verify & Submit Deposit',
+    how_to_deposit: 'How to deposit',
+    verifying: 'Verifying…',
+    withdraw_funds: 'Withdraw Funds',
+    available_balance: 'Available Balance',
+    withdraw_amount: 'Withdrawal Amount',
+    your_account_num: 'Your Account Number',
+    request_withdraw: 'Request Withdrawal',
+    how_to_withdraw: 'How to withdraw',
+    confirm_withdraw: 'Confirm Withdrawal',
+    your_account: 'Your Account',
+    paste_withdraw_msg: 'Paste withdrawal confirmation message',
+    verify_withdraw: 'Verify Withdrawal',
+    // Instructions
+    how_to_play: 'How to play',
+    rule_1: 'Choose a bet house.',
+    rule_2: 'Select up to 2 boards in the lobby.',
+    rule_3: 'Press Start Game to enter the live game.',
+    rule_4: 'During calling, mark called numbers or enable auto mark.',
+    rule_5: 'Press BINGO only when a full line is complete including the last call.',
+    dep_with_title: 'Deposits & Withdrawals',
+    dep_with_desc: 'Use the Deposit button on the Welcome page.',
+    // Auto/Options
+    audio: 'Audio',
+    auto_mark_me: 'Auto mark (me)',
+    auto_algo: 'Auto algorithm mark'
   },
   am: {
     hello: 'ሰላም',
+    back: 'ተመለስ',
+    close: 'ዝጋ',
+    loading: 'በማስኬድ ላይ...',
+    ok: 'እሺ',
+    signin: 'ግባ',
+    signup: 'ተመዝገብ',
+    username: 'የተጠቃሚ ስም',
+    password: 'የይለፍ ቃል',
+    enter_username: 'የተጠቃሚ ስም ያስገቡ',
+    enter_password: 'የይለፍ ቃል ያስገቡ',
+    create_account: 'መለያ ፍጠር',
+    welcome_login_msg: 'እንኳን ደህና መጡ! እባክዎ ይግቡ ወይም መለያ ይፍጠሩ',
     deposit: '+ ገቢ አድርግ',
     withdraw: 'ወጪ አድርግ',
     logout: 'ውጣ',
@@ -58,10 +136,69 @@ const translations = {
     select_lang: 'ቋንቋ ይምረጡ',
     welcome_bonus_title: 'የእንኳን ደህና መጡ ቦነስ!',
     welcome_bonus_msg: '100 ብር ወደ ሂሳብዎ ተጨምሯል።',
-    players: 'ተጫዋቾች'
+    players_label: 'ተጫዋቾች',
+    stake: 'ውርርድ',
+    select_boards: 'ካርቶዎችን ይምረጡ',
+    selected: 'ተመርጧል',
+    start_game: 'ጨዋታ ጀምር',
+    ready: 'ዝግጁ!',
+    switch_house: 'ቤት ቀይር',
+    game_in_progress: 'ጨዋታ በመካሄድ ላይ',
+    current_call: 'የአሁኑ ቁጥር',
+    last_5: 'የመጨረሻዎቹ 5',
+    live_caller: 'ቀጥታ ጠሪ',
+    auto_bingo: 'ራስ-ሰር ቢንጎ',
+    bingo_btn: 'ቢንጎ!',
+    your_boards: 'የእርስዎ ካርቶዎች',
+    tap_mark_hint: 'ቁጥሮችን ለመለየት ይንኩ። FREE በራስ-ሰር ይሞላል።',
+    next_call_in: 'ቀጣይ ቁጥር በ',
+    winner: 'አሸናፊ',
+    winning_board: 'ያሸነፈው ካርቶ',
+    select_payment: 'የክፍያ አማራጭ ይምረጡ',
+    recommended: 'የሚመከር',
+    confirm_payment: 'ክፍያ ያረጋግጡ',
+    deposit_account: 'ገቢ የሚደረግበት መለያ',
+    amount_deposit: 'የሚገቡት መጠን',
+    paste_deposit_msg: 'የገቢ ማረጋገጫ መልእክት ይለጥፉ',
+    verify_submit: 'አረጋግጥ እና አስገባ',
+    how_to_deposit: 'እንዴት ገቢ ማድረግ እንደሚቻል',
+    verifying: 'በማረጋገጥ ላይ...',
+    withdraw_funds: 'ገንዘብ ወጪ',
+    available_balance: 'ያለ ቀሪ ሂሳብ',
+    withdraw_amount: 'የወጪ መጠን',
+    your_account_num: 'የእርስዎ ሂሳብ ቁጥር',
+    request_withdraw: 'ወጪ ጠይቅ',
+    how_to_withdraw: 'እንዴት ወጪ ማድረግ እንደሚቻል',
+    confirm_withdraw: 'ወጪ ማረጋገጫ',
+    your_account: 'የእርስዎ ሂሳብ',
+    paste_withdraw_msg: 'የወጪ ማረጋገጫ መልእክት ይለጥፉ',
+    verify_withdraw: 'ወጪ አረጋግጥ',
+    how_to_play: 'እንዴት እንደሚጫወቱ',
+    rule_1: 'የውርርድ ቤት ይምረጡ።',
+    rule_2: 'እስከ 2 ካርቶዎችን ይምረጡ።',
+    rule_3: 'ጨዋታ ጀምር የሚለውን ይጫኑ።',
+    rule_4: 'ቁጥሮች ሲጠሩ ምልክት ያድርጉ።',
+    rule_5: 'ቢንጎ የሚለውን የሚጫኑት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
+    dep_with_title: 'ገቢ እና ወጪ',
+    dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
+    audio: 'ድምፅ',
+    auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
+    auto_algo: 'ራስ-ሰር አልጎሪዝም'
   },
   ti: {
     hello: 'ሰላም',
+    back: 'ተመለስ',
+    close: 'ዕጸው',
+    loading: 'ይሰርሕ ኣሎ...',
+    ok: 'ሕራይ',
+    signin: 'እተው',
+    signup: 'ተመዝገብ',
+    username: 'ናይ ተጠቃሚ ስም',
+    password: 'ፓስዎርድ',
+    enter_username: 'ስምካ ኣእቱ',
+    enter_password: 'ፓስዎርድ ኣእቱ',
+    create_account: 'አካውንት ፍጠር',
+    welcome_login_msg: 'እንቋዕ ብደሓን መጻእኩም! በይዘኦም ይእተዉ',
     deposit: '+ ተቀመጥ',
     withdraw: 'ውሰድ',
     logout: 'ውጻእ',
@@ -80,10 +217,69 @@ const translations = {
     select_lang: 'ቋንቋ ምረጽ',
     welcome_bonus_title: 'ናይ እንቋዕ ብደሓን መጻእኩም ቦነስ!',
     welcome_bonus_msg: '100 ቅርሺ ናብ ሒሳብካ ተወሲኹ ኣሎ።',
-    players: 'ተጫወቲ'
+    players_label: 'ተጫወቲ',
+    stake: 'ውርርድ',
+    select_boards: 'ካርቶን ምረጽ',
+    selected: 'ተመሪጹ',
+    start_game: 'ጸወታ ጀምር',
+    ready: 'ድሉው!',
+    switch_house: 'ቤት ቀይር',
+    game_in_progress: 'ጸወታ ይካየድ ኣሎ',
+    current_call: 'ህሉው ጻውዒት',
+    last_5: 'ናይ መወዳእታ 5',
+    live_caller: 'ቀጥታ ጻውዒት',
+    auto_bingo: 'ኦቶ ቢንጎ',
+    bingo_btn: 'ቢንጎ!',
+    your_boards: 'ናካ ካርቶታት',
+    tap_mark_hint: 'ቁጽሪ ንምምልካት ጠውቕ። FREE ባዕሉ ይምላእ።',
+    next_call_in: 'ቀጻሊ ጻውዒት ኣብ',
+    winner: 'ተዓዋቲ',
+    winning_board: 'ዝተዓወተ ካርቶ',
+    select_payment: 'ናይ ክፍሊት መገዲ ምረጽ',
+    recommended: 'ዝተመከረ',
+    confirm_payment: 'ክፍሊት ኣረጋግጽ',
+    deposit_account: 'ገንዘብ ዝኣትወሉ ሒሳብ',
+    amount_deposit: 'ዝኣቱ መጠን',
+    paste_deposit_msg: 'ናይ ክፍሊት መልእኽቲ ለጥፍ',
+    verify_submit: 'ኣረጋግጽን ስደድን',
+    how_to_deposit: 'ከመይ ጌርካ ገንዘብ ተእቱ',
+    verifying: 'የረጋግጽ ኣሎ...',
+    withdraw_funds: 'ገንዘብ ምውጻእ',
+    available_balance: 'ዘሎ ባላንስ',
+    withdraw_amount: 'ዝወጽእ መጠን',
+    your_account_num: 'ናይ ሒሳብ ቁጽሪ',
+    request_withdraw: 'ምውጻእ ሕተት',
+    how_to_withdraw: 'ከመይ ጌርካ ገንዘብ ተውጽእ',
+    confirm_withdraw: 'ምውጻእ ኣረጋግጽ',
+    your_account: 'ናካ ሒሳብ',
+    paste_withdraw_msg: 'ናይ ምውጻእ መልእኽቲ ለጥፍ',
+    verify_withdraw: 'ምውጻእ ኣረጋግጽ',
+    how_to_play: 'ከመይ ትጻወት',
+    rule_1: 'ናይ ውርርድ ገዛ ምረጽ።',
+    rule_2: 'ክሳብ 2 ካርቶን ምረጽ።',
+    rule_3: 'ጸወታ ጀምር ጠውቕ።',
+    rule_4: 'ቁጽሪ ክጽዋዕ ከሎ ምልክት ግበር።',
+    rule_5: 'ቢንጎ እትብሎ ሙሉእ መስመር ምስ ዝመልእ ጥራይ እዩ።',
+    dep_with_title: 'ምእታውን ምውጻእን',
+    dep_with_desc: 'ኣብ መእተዊ ገጽ ዘሎ ተቀመጥ ዝብል ተጠቐም።',
+    audio: 'ድምጺ',
+    auto_mark_me: 'ኦቶ ምልክት (ኣነ)',
+    auto_algo: 'ኦቶ ኣልጎሪዝም'
   },
   or: {
     hello: 'Akkam',
+    back: 'Deebi’i',
+    close: 'Cufi',
+    loading: 'Hojjechaa jira...',
+    ok: 'Tole',
+    signin: 'Seeni',
+    signup: 'Galmaa’i',
+    username: 'Maqaa Fayyadamaa',
+    password: 'Jecha Darbi',
+    enter_username: 'Maqaa fayyadamaa galchi',
+    enter_password: 'Jecha darbi galchi',
+    create_account: 'Akkaawuntii Uumi',
+    welcome_login_msg: 'Baga nagaan dhuftan! Seenaa ykn galmaa’aa',
     deposit: '+ Galchii',
     withdraw: 'Baasii',
     logout: 'Ba’i',
@@ -102,7 +298,54 @@ const translations = {
     select_lang: 'Afaan Filadhu',
     welcome_bonus_title: 'Boonasii Baga Nagaan Dhuftanii!',
     welcome_bonus_msg: '100 Birr herrega keessan irratti dabalameera.',
-    players: 't.taa'
+    players_label: 'Taphataa',
+    stake: 'Qabsiisa',
+    select_boards: 'Kaartii Filadhu',
+    selected: 'Filatame',
+    start_game: 'Tapha Jalqabi',
+    ready: 'Qophaa’aa!',
+    switch_house: 'Mana Qabsiisaa Jijjiiri',
+    game_in_progress: 'Tapha itti fufaa jira',
+    current_call: 'LAKKOOFSA AMMAA',
+    last_5: '5 DARBAN',
+    live_caller: 'WAAMAA KALLATTII',
+    auto_bingo: 'Bingo Ofiin',
+    bingo_btn: 'BINGO!',
+    your_boards: 'Kaartii Kee',
+    tap_mark_hint: 'Lakkoofsa tuquun mallatteessi. FREE ofiin.',
+    next_call_in: 'Itti aanu',
+    winner: 'Mo’ataa',
+    winning_board: 'Kaartii Mo’ate',
+    select_payment: 'Kaffaltii Filadhu',
+    recommended: 'Kan Filatame',
+    confirm_payment: 'Kaffaltii Mirkaneessi',
+    deposit_account: 'Herrega Galchii',
+    amount_deposit: 'Hanga Galchii',
+    paste_deposit_msg: 'Ergaa mirkaneessaa galchii',
+    verify_submit: 'Mirkaneessi & Galchi',
+    how_to_deposit: 'Akkaataa galchii',
+    verifying: 'Mirkaneessaa...',
+    withdraw_funds: 'Maallaqa Baasuu',
+    available_balance: 'Haftee',
+    withdraw_amount: 'Hanga Baasii',
+    your_account_num: 'Lakkoofsa Herregaa',
+    request_withdraw: 'Baasii Gaafadhu',
+    how_to_withdraw: 'Akkaataa baasii',
+    confirm_withdraw: 'Baasii Mirkaneessi',
+    your_account: 'Herrega Kee',
+    paste_withdraw_msg: 'Ergaa mirkaneessaa baasii',
+    verify_withdraw: 'Baasii Mirkaneessi',
+    how_to_play: 'Akkaataa Taphaa',
+    rule_1: 'Mana qabsiisaa filadhu.',
+    rule_2: 'Kaartii hanga 2 filadhu.',
+    rule_3: 'Tapha Jalqabi kan jedhu tuqi.',
+    rule_4: 'Lakkoofsa waamame mallatteessi.',
+    rule_5: 'BINGO kan jedhu yeroo sararri guutu qofa tuqi.',
+    dep_with_title: 'Galchii fi Baasii',
+    dep_with_desc: 'Fuula duraa irratti button galchii fayyadami.',
+    audio: 'Sagalee',
+    auto_mark_me: 'Ofiin Mallatteessi (Ana)',
+    auto_algo: 'Algoorizimii Ofiin'
   }
 }
 
@@ -204,14 +447,10 @@ export default function App() {
     }
   }, [])
 
-  // --- NEW: Handle New User Flow (Language -> Bonus) ---
+  // --- Handle New User Flow ---
   useEffect(() => {
     if (currentPage === 'welcome' && localStorage.getItem('isNewUser') === 'true') {
-      // 1. Trigger Language Selection Modal first
       setShowLanguageModal(true)
-      
-      // We don't show bonus yet. We wait for language selection.
-      // The `isNewUser` flag is cleared AFTER language selection in handleLanguageSelect
     }
   }, [currentPage])
 
@@ -220,10 +459,8 @@ export default function App() {
     localStorage.setItem('appLanguage', lang)
     setShowLanguageModal(false)
 
-    // Check if this was part of the new user flow
     if (localStorage.getItem('isNewUser') === 'true') {
       localStorage.removeItem('isNewUser')
-      // Now show the bonus
       setShowBonusClaimed(true)
     }
   }
@@ -235,7 +472,6 @@ export default function App() {
       const savedUsername = localStorage.getItem('username')
       const savedToken = localStorage.getItem('authToken')
       if (savedUserId && savedUsername && savedToken) {
-        // Verify session with server
         fetch(`${getApiUrl()}/api/auth/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -944,16 +1180,16 @@ export default function App() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
             <div className="text-slate-300 text-xs sm:text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
             <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
-              <span>Stake: <b>{stake} Birr</b></span>
-              <span>Active: <b>{players}</b></span>
-              {waitingPlayers > 0 && <span>Waiting: <b>{waitingPlayers}</b></span>}
+              <span>{t('stake')}: <b>{stake} Birr</b></span>
+              <span>{t('active')}: <b>{players}</b></span>
+              {waitingPlayers > 0 && <span>{t('waiting')}: <b>{waitingPlayers}</b></span>}
               <span>{t('prize')}: <b>{prize} Birr</b></span>
             </div>
           </div>
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
             <div className="text-lg sm:text-2xl font-bold flex items-center flex-wrap gap-2">
-              Select Your Boards
+              {t('select_boards')}
               {isWaiting && (
                 <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded bg-yellow-500 text-black text-xs sm:text-sm font-bold">
                   {t('waiting')}...
@@ -967,14 +1203,14 @@ export default function App() {
             )}
             {isWaiting && (
               <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-xs sm:text-sm">
-                Game in progress
+                {t('game_in_progress')}
               </div>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
             <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <span className="text-slate-300">Audio:</span>
+              <span className="text-slate-300">{t('audio')}:</span>
               <select
                 className="bg-slate-700 text-slate-100 rounded px-1 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm"
                 value={audioPack}
@@ -998,7 +1234,7 @@ export default function App() {
                 onChange={(e) => setAutoMark(e.target.checked)}
                 className="w-3 h-3 sm:w-4 sm:h-4"
               />
-              <span className="text-slate-300">Auto mark (me)</span>
+              <span className="text-slate-300">{t('auto_mark_me')}</span>
             </label>
             <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <input
@@ -1007,7 +1243,7 @@ export default function App() {
                 onChange={(e) => setAutoAlgoMark(e.target.checked)}
                 className="w-3 h-3 sm:w-4 sm:h-4"
               />
-              <span className="text-slate-300">Auto algorithm mark</span>
+              <span className="text-slate-300">{t('auto_algo')}</span>
             </label>
           </div>
           
@@ -1035,7 +1271,7 @@ export default function App() {
           
           {picks.length > 0 && (
             <div className="mb-3 sm:mb-6">
-              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">Your Selected Boards ({picks.length}/2):</div>
+              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">{t('selected')} ({picks.length}/2):</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                 {picks.map((boardId, idx) => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-4">
@@ -1049,10 +1285,10 @@ export default function App() {
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <div className="text-slate-300 text-xs sm:text-sm">
-              Selected: {picks.length}/2 boards
+              {t('selected')}: {picks.length}/2 boards
               {isWaiting && picks.length > 0 && (
                 <div className="mt-1 sm:mt-2 text-yellow-400 text-xs sm:text-sm">
-                  You'll join the next game when it starts
+                  {t('game_in_progress')}
                 </div>
               )}
               {picks.length > 0 && !isWaiting && (
@@ -1068,7 +1304,7 @@ export default function App() {
                 className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm flex-1 sm:flex-none"
                 onClick={() => setCurrentPage('welcome')}
               >
-                Switch Bet House
+                {t('switch_house')}
               </button>
               <button
                 onClick={handleStartGame}
@@ -1079,7 +1315,7 @@ export default function App() {
                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                {isReady ? (isWaiting ? 'Waiting...' : 'Ready!') : 'Start Game'}
+                {isReady ? (isWaiting ? t('waiting') : t('ready')) : t('start_game')}
               </button>
             </div>
           </div>
@@ -1094,7 +1330,7 @@ export default function App() {
         <div className="bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-8 space-y-4 sm:space-y-6">
           <div className="text-center">
             <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
-            <div className="text-slate-400 text-xs sm:text-sm">Welcome! Please sign in or create an account</div>
+            <div className="text-slate-400 text-xs sm:text-sm">{t('welcome_login_msg')}</div>
           </div>
           
           <div className="flex gap-2 mb-4">
@@ -1109,7 +1345,7 @@ export default function App() {
                   : 'bg-slate-700 text-slate-300'
               }`}
             >
-              Sign In
+              {t('signin')}
             </button>
             <button
               onClick={() => {
@@ -1122,7 +1358,7 @@ export default function App() {
                   : 'bg-slate-700 text-slate-300'
               }`}
             >
-              Sign Up
+              {t('signup')}
             </button>
           </div>
 
@@ -1134,12 +1370,12 @@ export default function App() {
 
           <div className="space-y-3 sm:space-y-4">
             <div>
-              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">Username</label>
+              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('username')}</label>
               <input
                 type="text"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder={t('enter_username')}
                 className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !loginLoading) {
@@ -1150,12 +1386,12 @@ export default function App() {
               />
             </div>
             <div>
-              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">Password</label>
+              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('password')}</label>
               <input
                 type="password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder={t('enter_password')}
                 className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !loginLoading) {
@@ -1170,7 +1406,7 @@ export default function App() {
               disabled={!loginUsername.trim() || !loginPassword.trim() || loginLoading}
               className="w-full py-2 sm:py-3 rounded-lg bg-emerald-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-700"
             >
-              {loginLoading ? 'Processing...' : loginMode === 'login' ? 'Sign In' : 'Create Account'}
+              {loginLoading ? t('loading') : loginMode === 'login' ? t('signin') : t('create_account')}
             </button>
           </div>
         </div>
@@ -1418,7 +1654,7 @@ export default function App() {
                 <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
                 <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
                   <div>{t('active')}: {house.activePlayers} {t('players')}</div>
-                  {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
+                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players')}</div>}
                   <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
               <div className="mt-auto flex items-center justify-between gap-2">
@@ -1475,18 +1711,18 @@ export default function App() {
   const renderInstructionsPage = () => (
     <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-3xl bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4">
-        <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">How to play</div>
+        <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">{t('how_to_play')}</div>
         <ol className="list-decimal space-y-1 sm:space-y-2 ml-4 sm:ml-5 text-slate-200 text-xs sm:text-sm">
-          <li>Choose a bet house (10/20/50/100/200 Birr).</li>
-          <li>Select up to 2 boards in the lobby.</li>
-          <li>Press Start Game to enter the live game.</li>
-          <li>During calling, mark called numbers on your boards or enable auto mark.</li>
-          <li>Press BINGO only when a full row/column/diagonal is complete including the last call.</li>
+          <li>{t('rule_1')}</li>
+          <li>{t('rule_2')}</li>
+          <li>{t('rule_3')}</li>
+          <li>{t('rule_4')}</li>
+          <li>{t('rule_5')}</li>
         </ol>
-        <div className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6">Deposits & Withdrawals</div>
-        <p className="text-slate-200 text-xs sm:text-sm">Use the Deposit button on the Welcome page. Withdrawal flow can be added similarly.</p>
+        <div className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6">{t('dep_with_title')}</div>
+        <p className="text-slate-200 text-xs sm:text-sm">{t('dep_with_desc')}</p>
         <div className="flex justify-end">
-          <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>Back</button>
+          <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
         </div>
       </div>
     </div>
@@ -1513,8 +1749,8 @@ export default function App() {
   const renderDepositSelect = () => (
     <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-3xl">
-        <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Select Payment Platform</div>
-        <div className="bg-emerald-600/80 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm mb-2 sm:mb-3">Recommended</div>
+        <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">{t('select_payment')}</div>
+        <div className="bg-emerald-600/80 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm mb-2 sm:mb-3">{t('recommended')}</div>
         <div className="space-y-2 sm:space-y-3">
           {providers.map(p => (
             <button
@@ -1531,7 +1767,7 @@ export default function App() {
           ))}
         </div>
         <div className="mt-4 sm:mt-6">
-          <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>Back</button>
+          <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
         </div>
       </div>
     </div>
@@ -1542,9 +1778,9 @@ export default function App() {
     return (
       <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
-          <div className="text-xl sm:text-2xl font-bold">Confirm payment</div>
+          <div className="text-xl sm:text-2xl font-bold">{t('confirm_payment')}</div>
           <div>
-            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Deposit account</div>
+            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('deposit_account')}</div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
               <div className="text-sm sm:text-lg font-mono break-all">{info.account}</div>
               <div className="text-xs sm:text-sm text-slate-400 mt-1">{info.name} ({selectedProvider === 'awash' ? 'Awash Bank' : ''})</div>
@@ -1552,7 +1788,7 @@ export default function App() {
           </div>
           <div className="space-y-2 sm:space-y-3">
             <div>
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Amount to deposit</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('amount_deposit')}</div>
               <input
                 type="number"
                 value={depositAmount}
@@ -1562,7 +1798,7 @@ export default function App() {
               />
             </div>
             <div className="space-y-1 sm:space-y-2">
-              <div className="text-xs sm:text-sm text-slate-300">Paste your deposit confirmation message</div>
+              <div className="text-xs sm:text-sm text-slate-300">{t('paste_deposit_msg')}</div>
               <textarea
                 value={depositMessage}
                 onChange={(e) => setDepositMessage(e.target.value)}
@@ -1633,11 +1869,11 @@ export default function App() {
                 }
               }}
             >
-              {depositVerifying ? 'Verifying…' : 'Verify & Submit Deposit'}
+              {depositVerifying ? t('verifying') : t('verify_submit')}
             </button>
           </div>
           <div className="mt-4 sm:mt-6">
-            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">How to deposit</div>
+            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">{t('how_to_deposit')}</div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 text-slate-300 text-xs sm:text-sm space-y-1 sm:space-y-2">
               <p>1. Send the exact amount ({depositAmount || '___'} Birr) to the account above using {selectedProvider}.</p>
               <p>2. After the deposit is successful, you will receive a confirmation SMS/message.</p>
@@ -1647,7 +1883,7 @@ export default function App() {
             </div>
           </div>
           <div>
-            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('depositSelect')}>Back</button>
+            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('depositSelect')}>{t('back')}</button>
           </div>
         </div>
       </div>
@@ -1689,21 +1925,21 @@ export default function App() {
               }}
               className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
             >
-              Close
+              {t('close')}
             </button>
           </div>
   
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-orange-500 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">Stake</div>
+              <div className="text-[10px] opacity-90">{t('stake')}</div>
               <div className="text-sm sm:text-2xl font-bold">{stake} Birr</div>
             </div>
             <div className="bg-blue-600 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">Players</div>
+              <div className="text-[10px] opacity-90">{t('players_label')}</div>
               <div className="text-sm sm:text-2xl font-bold">{players}</div>
             </div>
             <div className="bg-green-600 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">Prize</div>
+              <div className="text-[10px] opacity-90">{t('prize')}</div>
               <div className="text-sm sm:text-2xl font-bold">{prize} Birr</div>
             </div>
           </div>
@@ -1712,14 +1948,14 @@ export default function App() {
             <div className="mb-3">
               <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
                 <div className="flex-1 text-[10px] sm:text-xs text-slate-200 uppercase tracking-wide">
-                  CURRENT CALL
+                  {t('current_call')}
                   <div className="mt-0.5 text-[9px] sm:text-xs text-slate-400">
                     {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
                   </div>
                   {phase === 'calling' && (
                     <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] sm:text-xs text-emerald-300 border border-emerald-500/40">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Next call in {String(callCountdown).padStart(2, '0')}s</span>
+                      <span>{t('next_call_in')} {String(callCountdown).padStart(2, '0')}s</span>
                     </div>
                   )}
                 </div>
@@ -1733,7 +1969,7 @@ export default function App() {
                 </div>
                 <div className="flex-1 flex flex-col items-end">
                   <div className="text-[9px] sm:text-xs text-slate-300 uppercase tracking-wide mb-1">
-                    LAST 5 CALLED
+                    {t('last_5')}
                   </div>
                   <div className="flex flex-wrap justify-end gap-1">
                     {previousFive.map(n => {
@@ -1750,7 +1986,7 @@ export default function App() {
                     })}
                     {previousFive.length === 0 && (
                       <div className="px-1.5 py-0.5 rounded-full bg-slate-900/40 border border-white/5 text-[9px] sm:text-xs text-slate-500">
-                        Waiting…
+                        {t('waiting')}…
                       </div>
                     )}
                   </div>
@@ -1764,7 +2000,7 @@ export default function App() {
             <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
               <div className="flex items-center justify-between mb-4 gap-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-xl font-black text-white tracking-tight">LIVE CALLER</h2>
+                  <h2 className="text-base sm:text-xl font-black text-white tracking-tight">{t('live_caller')}</h2>
                   <button
                     type="button"
                     onClick={() => setAudioOn(prev => !prev)}
@@ -1797,7 +2033,7 @@ export default function App() {
                       : 'bg-slate-700 border-slate-500 text-slate-200'
                   }`}
                 >
-                  Auto Bingo: {autoBingo ? 'ON' : 'OFF'}
+                  {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
                 </button>
                 <button
                   onClick={() => onPressBingo()}
@@ -1806,14 +2042,14 @@ export default function App() {
                     autoAlgoMark || canBingo ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400'
                   }`}
                 >
-                  BINGO!
+                  {t('bingo_btn')}
                 </button>
               </div>
             </div>
   
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-xs sm:text-sm font-semibold">Your Boards</div>
+                <div className="text-xs sm:text-sm font-semibold">{t('your_boards')}</div>
                 <div className="text-[10px] text-slate-400">{picks.length}/2</div>
               </div>
   
@@ -1827,7 +2063,7 @@ export default function App() {
               </div>
               
               <div className="mt-2 hidden sm:block text-[10px] text-slate-400 leading-tight">
-                Tap called numbers to mark. FREE is auto-marked.
+                {t('tap_mark_hint')}
               </div>
             </div>
           </div>
@@ -1841,7 +2077,7 @@ export default function App() {
                   : 'bg-slate-800 border-slate-500 text-slate-200'
               }`}
             >
-              Auto Bingo: {autoBingo ? 'ON' : 'OFF'}
+              {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
             </button>
             <button
               onClick={() => onPressBingo()}
@@ -1852,7 +2088,7 @@ export default function App() {
                   : 'bg-slate-700 text-slate-500 cursor-not-allowed'
               }`}
             >
-              BINGO!
+              {t('bingo_btn')}
             </button>
           </div>
         </div>
@@ -1865,17 +2101,17 @@ export default function App() {
       return (
         <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
-            <div className="text-xl sm:text-2xl font-bold">Confirm Withdrawal</div>
+            <div className="text-xl sm:text-2xl font-bold">{t('confirm_withdraw')}</div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Withdrawal Amount</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('withdraw_amount')}</div>
               <div className="text-xl sm:text-2xl font-bold">{withdrawalAmount} Birr</div>
             </div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Your Account</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('your_account')}</div>
               <div className="text-sm sm:text-lg font-mono break-all">{withdrawalAccount}</div>
             </div>
             <div className="space-y-1 sm:space-y-2">
-              <div className="text-xs sm:text-sm text-slate-300">Paste withdrawal confirmation message</div>
+              <div className="text-xs sm:text-sm text-slate-300">{t('paste_withdraw_msg')}</div>
               <textarea
                 value={withdrawalMessage}
                 onChange={(e) => setWithdrawalMessage(e.target.value)}
@@ -1944,10 +2180,10 @@ export default function App() {
                 }
               }}
             >
-              {withdrawalVerifying ? 'Verifying…' : 'Verify Withdrawal'}
+              {withdrawalVerifying ? t('verifying') : t('verify_withdraw')}
             </button>
             <div>
-              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentWithdrawalPage('form')}>Back</button>
+              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentWithdrawalPage('form')}>{t('back')}</button>
             </div>
           </div>
         </div>
@@ -1957,14 +2193,14 @@ export default function App() {
     return (
       <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
-          <div className="text-xl sm:text-2xl font-bold">Withdraw Funds</div>
+          <div className="text-xl sm:text-2xl font-bold">{t('withdraw_funds')}</div>
           <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Available Balance</div>
+            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('available_balance')}</div>
             <div className="text-2xl sm:text-3xl font-bold">{balance} Birr</div>
           </div>
           <div className="space-y-2 sm:space-y-3">
             <div>
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Withdrawal Amount</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('withdraw_amount')}</div>
               <input
                 type="number"
                 value={withdrawalAmount}
@@ -1974,7 +2210,7 @@ export default function App() {
               />
             </div>
             <div>
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">Your Account Number</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('your_account_num')}</div>
               <input
                 type="text"
                 value={withdrawalAccount}
@@ -2030,11 +2266,11 @@ export default function App() {
                 }
               }}
             >
-              {withdrawalVerifying ? 'Processing…' : 'Request Withdrawal'}
+              {withdrawalVerifying ? t('loading') : t('request_withdraw')}
             </button>
           </div>
           <div className="mt-4 sm:mt-6">
-            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">How to withdraw</div>
+            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">{t('how_to_withdraw')}</div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 text-slate-300 text-xs sm:text-sm space-y-1 sm:space-y-2">
               <p>1. Enter the amount you want to withdraw (must be less than or equal to your balance).</p>
               <p>2. Enter your account number where you want to receive the funds.</p>
@@ -2044,7 +2280,7 @@ export default function App() {
             </div>
           </div>
           <div>
-            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>Back</button>
+            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
           </div>
         </div>
       </div>
@@ -2073,29 +2309,29 @@ export default function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
             <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-              BINGO!
+              {t('bingo_btn')}
             </div>
             <div className="text-xs sm:text-sm text-slate-300 space-y-1">
               {winnerInfo.playerId && (
                 <div>
-                  <span className="text-slate-500">Winner:</span>{' '}
+                  <span className="text-slate-500">{t('winner')}:</span>{' '}
                   <span className="font-mono break-all">{winnerInfo.playerId}</span>
                 </div>
               )}
               {typeof winnerInfo.prize === 'number' && (
                 <div>
-                  <span className="text-slate-500">Prize:</span>{' '}
+                  <span className="text-slate-500">{t('prize')}:</span>{' '}
                   <span className="font-semibold">{winnerInfo.prize} Birr</span>
                 </div>
               )}
               {typeof winnerInfo.stake === 'number' && (
                 <div>
-                  <span className="text-slate-500">Stake:</span>{' '}
+                  <span className="text-slate-500">{t('stake')}:</span>{' '}
                   <span>{winnerInfo.stake} Birr</span>
                 </div>
               )}
               <div>
-                <span className="text-slate-500">Winning Board:</span>{' '}
+                <span className="text-slate-500">{t('winning_board')}:</span>{' '}
                 <span className="font-semibold">Board {winnerInfo.boardId}</span>
               </div>
             </div>
@@ -2107,7 +2343,7 @@ export default function App() {
                 onClick={() => setWinnerInfo(null)}
                 className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
               >
-                OK
+                {t('ok')}
               </button>
             </div>
           </div>
