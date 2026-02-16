@@ -2306,18 +2306,23 @@ export default function App() {
     <>
       {mainPage}
       {winnerInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-              {t('bingo_btn')}
-            </div>
-            <div className="text-xs sm:text-sm text-slate-300 space-y-1">
-              {winnerInfo.playerId && (
-                <div>
-                  <span className="text-slate-500">{t('winner')}:</span>{' '}
-                  <span className="font-mono break-all">{winnerInfo.playerId}</span>
-                </div>
-              )}
+      // In your winner modal, check for isSystemPlayer
+{winnerInfo && (
+  <div className="...">
+    <div className="text-lg font-bold text-emerald-300">
+      {t('bingo_btn')}
+    </div>
+    <div className="...">
+      {winnerInfo.playerId && (
+        <div>
+          <span className="text-slate-500">{t('winner')}:</span>{' '}
+          <span className={`font-mono ${winnerInfo.isSystemPlayer ? 'text-amber-400' : ''}`}>
+            {winnerInfo.playerName || winnerInfo.playerId}
+          </span>
+        </div>
+      )}
+      {/* ... rest of winner info ... */}
+    
               {typeof winnerInfo.prize === 'number' && (
                 <div>
                   <span className="text-slate-500">{t('prize')}:</span>{' '}
