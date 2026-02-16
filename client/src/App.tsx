@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { getBoard, loadBoards, type BoardGrid } from './boards'
 
-// Get API base URL - use environment variable if set, otherwise use window.location.origin in production
+// Get API base URL
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL
@@ -12,6 +12,99 @@ const getApiUrl = () => {
 
 type Phase = 'lobby' | 'countdown' | 'calling'
 type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game'
+type Language = 'en' | 'am' | 'ti' | 'or'
+
+// --- TRANSLATIONS CONFIGURATION ---
+const translations = {
+  en: {
+    hello: 'Hello',
+    deposit: '+ Deposit',
+    withdraw: 'Withdraw',
+    logout: 'Logout',
+    balance: 'BALANCE',
+    bonus: 'Bonus',
+    instructions: 'Instructions',
+    invite: 'Invite Friends',
+    play_keno: 'PLAY PRO KENO 80',
+    bet_houses: 'Bet Houses',
+    play_now: 'Play now',
+    go_lobby: 'Go to Lobby',
+    join_wait: 'Join & Wait',
+    active: 'Active',
+    waiting: 'Waiting',
+    prize: 'Prize',
+    select_lang: 'Select Language',
+    welcome_bonus_title: 'WELCOME BONUS!',
+    welcome_bonus_msg: '100 Birr has been added to your account.',
+    players: 'players'
+  },
+  am: {
+    hello: 'ሰላም',
+    deposit: '+ ገቢ አድርግ',
+    withdraw: 'ወጪ አድርግ',
+    logout: 'ውጣ',
+    balance: 'ቀሪ ሂሳብ',
+    bonus: 'ቦነስ',
+    instructions: 'መመሪያዎች',
+    invite: 'ጓደኛ ይጋብዙ',
+    play_keno: 'PRO KENO 80 ተጫወት',
+    bet_houses: 'የውርርድ ቤቶች',
+    play_now: 'አሁን ተጫወት',
+    go_lobby: 'ወደ ሎቢ',
+    join_wait: 'ተቀላቀል & ጠብቅ',
+    active: 'ተጫዋቾች',
+    waiting: 'በመጠባበቅ ላይ',
+    prize: 'ሽልማት',
+    select_lang: 'ቋንቋ ይምረጡ',
+    welcome_bonus_title: 'የእንኳን ደህና መጡ ቦነስ!',
+    welcome_bonus_msg: '100 ብር ወደ ሂሳብዎ ተጨምሯል።',
+    players: 'ተጫዋቾች'
+  },
+  ti: {
+    hello: 'ሰላም',
+    deposit: '+ ተቀመጥ',
+    withdraw: 'ውሰድ',
+    logout: 'ውጻእ',
+    balance: 'ባላንስ',
+    bonus: 'ቦነስ',
+    instructions: 'መምርሒ',
+    invite: 'ዓርኪ ዓድም',
+    play_keno: 'PRO KENO 80 ተጫወት',
+    bet_houses: 'ናይ ውርርድ ቤቶች',
+    play_now: 'ሕጂ ተጫወት',
+    go_lobby: 'ናብ ሎቢ',
+    join_wait: 'ተሓወስ & ተጸበ',
+    active: 'ተጫወቲ',
+    waiting: 'ዝጽበዩ',
+    prize: 'ሽልማት',
+    select_lang: 'ቋንቋ ምረጽ',
+    welcome_bonus_title: 'ናይ እንቋዕ ብደሓን መጻእኩም ቦነስ!',
+    welcome_bonus_msg: '100 ቅርሺ ናብ ሒሳብካ ተወሲኹ ኣሎ።',
+    players: 'ተጫወቲ'
+  },
+  or: {
+    hello: 'Akkam',
+    deposit: '+ Galchii',
+    withdraw: 'Baasii',
+    logout: 'Ba’i',
+    balance: 'Haftee',
+    bonus: 'Boonasii',
+    instructions: 'Qajeelfama',
+    invite: 'Michuu Afferi',
+    play_keno: 'PRO KENO 80 Taphadhu',
+    bet_houses: 'Manni Qabsiisaa',
+    play_now: 'Amma Taphadhu',
+    go_lobby: 'Gara Lobby',
+    join_wait: 'Seeni & Eegi',
+    active: 'Taphataa',
+    waiting: 'Eegaa jira',
+    prize: 'Badhaasa',
+    select_lang: 'Afaan Filadhu',
+    welcome_bonus_title: 'Boonasii Baga Nagaan Dhuftanii!',
+    welcome_bonus_msg: '100 Birr herrega keessan irratti dabalameera.',
+    players: 't.taa'
+  }
+}
 
 export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null)
@@ -19,11 +112,19 @@ export default function App() {
   const [userId, setUserId] = useState<string>('')
   const [username, setUsername] = useState<string>('')
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  
+  // Auth state
   const [loginMode, setLoginMode] = useState<'login' | 'signup'>('login')
   const [loginUsername, setLoginUsername] = useState<string>('')
   const [loginPassword, setLoginPassword] = useState<string>('')
   const [loginError, setLoginError] = useState<string>('')
   const [loginLoading, setLoginLoading] = useState<boolean>(false)
+
+  // App Settings
+  const [language, setLanguage] = useState<Language>('en')
+  const [showLanguageModal, setShowLanguageModal] = useState<boolean>(false)
+
+  // Game Data
   const [stake, setStake] = useState<number>(10)
   const [phase, setPhase] = useState<Phase>('lobby')
   const [seconds, setSeconds] = useState<number>(60)
@@ -36,6 +137,8 @@ export default function App() {
   const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
   const [balance, setBalance] = useState<number>(0)
   const [bonus, setBonus] = useState<number>(0)
+  
+  // Game Play State
   const [called, setCalled] = useState<number[]>([])
   const [picks, setPicks] = useState<number[]>([])
   const [activeGameBoardId, setActiveGameBoardId] = useState<number | null>(null)
@@ -45,6 +148,8 @@ export default function App() {
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set())
   const [callCountdown, setCallCountdown] = useState<number>(0)
   const [lastCalled, setLastCalled] = useState<number | null>(null)
+  
+  // Options / Automation
   const [autoMark, setAutoMark] = useState<boolean>(false)
   const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
   const [autoBingo, setAutoBingo] = useState<boolean>(false)
@@ -55,9 +160,12 @@ export default function App() {
     prize?: number
     stake?: number
   } | null>(null)
-  const [audioPack, setAudioPack] = useState<string>('amharic') // 'amharic' | 'modern-amharic'
+  
+  const [audioPack, setAudioPack] = useState<string>('amharic') 
   const [audioOn, setAudioOn] = useState<boolean>(true)
   const callTimerRef = useRef<number | null>(null)
+  
+  // Deposit / Withdraw State
   const [selectedProvider, setSelectedProvider] = useState<string>('')
   const [depositAmount, setDepositAmount] = useState<string>('')
   const [depositMessage, setDepositMessage] = useState<string>('')
@@ -69,10 +177,10 @@ export default function App() {
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
   const autoBingoSentRef = useRef<boolean>(false)
 
-  // --- NEW: Welcome bonus banner ---
+  // Welcome bonus banner
   const [showBonusClaimed, setShowBonusClaimed] = useState<boolean>(false)
 
-  // ---- FIX: refs to avoid stale state inside socket listeners ----
+  // Refs to avoid stale state inside socket listeners
   const playerIdRef = useRef<string>(playerId)
   const calledRef = useRef<number[]>(called)
   const lastCalledRef = useRef<number | null>(lastCalled)
@@ -83,13 +191,42 @@ export default function App() {
   useEffect(() => { lastCalledRef.current = lastCalled }, [lastCalled])
   useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHouse])
 
-  // --- NEW: Show welcome bonus only once ---
+  // --- Helper: Get Translation ---
+  const t = (key: keyof typeof translations['en']) => {
+    return translations[language][key] || translations['en'][key]
+  }
+
+  // --- Initialize Language from LocalStorage ---
+  useEffect(() => {
+    const savedLang = localStorage.getItem('appLanguage') as Language
+    if (savedLang && ['en', 'am', 'ti', 'or'].includes(savedLang)) {
+      setLanguage(savedLang)
+    }
+  }, [])
+
+  // --- NEW: Handle New User Flow (Language -> Bonus) ---
   useEffect(() => {
     if (currentPage === 'welcome' && localStorage.getItem('isNewUser') === 'true') {
-      setShowBonusClaimed(true)
-      localStorage.removeItem('isNewUser')
+      // 1. Trigger Language Selection Modal first
+      setShowLanguageModal(true)
+      
+      // We don't show bonus yet. We wait for language selection.
+      // The `isNewUser` flag is cleared AFTER language selection in handleLanguageSelect
     }
   }, [currentPage])
+
+  const handleLanguageSelect = (lang: Language) => {
+    setLanguage(lang)
+    localStorage.setItem('appLanguage', lang)
+    setShowLanguageModal(false)
+
+    // Check if this was part of the new user flow
+    if (localStorage.getItem('isNewUser') === 'true') {
+      localStorage.removeItem('isNewUser')
+      // Now show the bonus
+      setShowBonusClaimed(true)
+    }
+  }
 
   // Check for existing session on mount
   useEffect(() => {
@@ -130,12 +267,8 @@ export default function App() {
     if (!isAuthenticated) return
     
     const s = io(getApiUrl(), { 
-      // Allow both websocket and polling so poor networks can still receive calls reliably
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
       auth: { userId, username }
     })
     setSocket(s)
@@ -150,7 +283,6 @@ export default function App() {
       setIsWaiting(d.isWaiting || false)
       setCurrentBetHouse(d.stake)
     
-      // ---- FIX: keep refs synced immediately ----
       playerIdRef.current = d.playerId
       calledRef.current = d.called
       currentBetHouseRef.current = d.stake
@@ -169,11 +301,9 @@ export default function App() {
     
     s.on('phase', (d: any) => {
       setPhase(d.phase)
-      // If game starts and we're in lobby and not waiting, redirect to game
       if (d.phase === 'calling' && currentPage === 'lobby' && !isWaiting) {
         setCurrentPage('game')
       }
-      // Whenever phase switches back to lobby, reset local selection state
       if (d.phase === 'lobby') {
         setPicks([])
         setMarkedNumbers(new Set())
@@ -190,29 +320,20 @@ export default function App() {
     })
     
     s.on('bet_houses_status', (d: any) => {
-      if (d.betHouses) {
-        setBetHouses(d.betHouses)
-      }
+      if (d.betHouses) setBetHouses(d.betHouses)
     })
 
-    // Boards reserved in this room
     s.on('boards_taken', (d: any) => {
-      if (d.takenBoards) {
-        setTakenBoards(d.takenBoards as number[])
-      }
+      if (d.takenBoards) setTakenBoards(d.takenBoards as number[])
     })
 
-    // Number calls for the current room (socket is only in one room)
     s.on('call', (d: any) => {
-      // sync refs first (no stale reads)
       calledRef.current = d.called
       lastCalledRef.current = d.number
-    
       setCalled(d.called)
       setLastCalled(d.number)
       setCallCountdown(5)
     
-      // optional local marking visuals
       if (autoMark || autoAlgoMark) {
         setMarkedNumbers(prev => {
           const next = new Set(prev)
@@ -221,11 +342,9 @@ export default function App() {
         })
       }
     
-      // Auto Bingo: use authoritative called[] and require a line that includes the last call.
       if (autoBingoRef.current && !autoBingoSentRef.current) {
         const marks = new Set<number>(d.called)
         const win = findBingoWinIncludingLast(marks, d.number, picksRef.current)
-
         const stakeToUse = currentBetHouseRef.current
         if (win && stakeToUse) {
           autoBingoSentRef.current = true
@@ -246,7 +365,6 @@ export default function App() {
       let boardId: number | undefined = typeof d.boardId === 'number' ? d.boardId : undefined
       let lineIndices: number[] | undefined = Array.isArray(d.lineIndices) ? d.lineIndices : undefined
     
-      // Fallback only if YOU are the winner and server didn't provide board info
       if ((!boardId || !lineIndices) && d.playerId === playerIdRef.current) {
         const marks = new Set<number>(calledRef.current)
         const win =
@@ -259,7 +377,6 @@ export default function App() {
         }
       }
     
-      // Only show modal if we actually have a board to show
       if (boardId && lineIndices && lineIndices.length > 0) {
         setWinnerInfo({
           boardId,
@@ -272,7 +389,6 @@ export default function App() {
         setWinnerInfo(null)
       }
     
-      // cleanup
       setPicks([])
       setMarkedNumbers(new Set())
       setCurrentPage('lobby')
@@ -282,16 +398,13 @@ export default function App() {
     })
     
     s.on('game_start', () => {
-      if (!isWaiting) {
-        setCurrentPage('game')
-      }
+      if (!isWaiting) setCurrentPage('game')
       autoBingoSentRef.current = false
     })
     
     s.on('start_game_confirm', (d: any) => {
       if (d.isWaiting) {
         setIsWaiting(true)
-        // Stay on lobby/board selection page if waiting
       } else {
         setCurrentPage('game')
         setIsWaiting(false)
@@ -302,15 +415,11 @@ export default function App() {
       setBalance(d.balance || 0)
     })
     
-    // Request bet houses status on connection
     s.emit('get_bet_houses_status')
     
     return () => { s.disconnect() }
   }, [isAuthenticated, userId, username])
   
-  // Don't auto-join - let user select bet house from welcome page
-
-  // Keep a valid active board selection on the game page (mobile uses this for tab switching)
   useEffect(() => {
     if (currentPage !== 'game') return
     setActiveGameBoardId(prev => {
@@ -319,7 +428,6 @@ export default function App() {
     })
   }, [currentPage, picks])
 
-  // Restore picks from localStorage and persist changes
   useEffect(() => {
     try {
       const saved = localStorage.getItem('picks')
@@ -336,7 +444,6 @@ export default function App() {
     } catch {}
   }, [picks])
 
-  // Load boards HTML
   useEffect(() => {
     fetch('/boards.html')
       .then((r) => r.text())
@@ -353,8 +460,6 @@ export default function App() {
     }
   }, [socket, picks, currentBetHouse])
 
-
-  // Manage 5s per-call countdown lifecycle
   useEffect(() => {
     if (phase !== 'calling') {
       setCallCountdown(0)
@@ -370,9 +475,7 @@ export default function App() {
   const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
 
   const togglePick = (n: number) => {
-    // Allow picking boards even during live games (if waiting)
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
-    // Prevent selecting boards that are already taken by other players
     const isTaken = takenBoards.includes(n)
     const isAlreadyPicked = picks.includes(n)
     if (isTaken && !isAlreadyPicked) return
@@ -391,8 +494,6 @@ export default function App() {
     setIsReady(false)
     setIsWaiting(false)
     socket.emit('join_bet_house', stakeAmount)
-    // Only go to lobby if user explicitly joined (not on initial connection)
-    // If already on welcome page, stay there until they click "Play now"
     if (currentPage !== 'welcome') {
       setCurrentPage('lobby')
     }
@@ -409,7 +510,6 @@ export default function App() {
     }
     setIsReady(true)
     socket?.emit('start_game', { stake: currentBetHouse })
-    // If not waiting, redirect immediately; otherwise stay on lobby
     if (!isWaiting) {
       setCurrentPage('game')
     }
@@ -417,7 +517,7 @@ export default function App() {
 
   const toggleMark = (number: number) => {
     if (phase !== 'calling') return
-    if (autoAlgoMark) return // disable manual marking when auto algorithm is enabled
+    if (autoAlgoMark) return 
     setMarkedNumbers(prev => {
       const newSet = new Set(prev)
       if (newSet.has(number)) {
@@ -430,7 +530,6 @@ export default function App() {
   }
 
   const checkBingo = (board: BoardGrid): boolean => {
-    // Check rows
     for (let row = 0; row < 5; row++) {
       let count = 0
       for (let col = 0; col < 5; col++) {
@@ -440,8 +539,6 @@ export default function App() {
       }
       if (count === 5) return true
     }
-    
-    // Check columns
     for (let col = 0; col < 5; col++) {
       let count = 0
       for (let row = 0; row < 5; row++) {
@@ -451,8 +548,6 @@ export default function App() {
       }
       if (count === 5) return true
     }
-    
-    // Check diagonals
     let count1 = 0, count2 = 0
     for (let i = 0; i < 5; i++) {
       const num1 = board[i * 5 + i]
@@ -468,7 +563,6 @@ export default function App() {
     return board ? checkBingo(board) : false
   })
 
-  // Core bingo checker given an explicit set of marked numbers and a last-called value.
   const hasBingoWithMarksAndLast = (
     marks: Set<number>,
     last: number | null,
@@ -479,17 +573,9 @@ export default function App() {
     for (const boardId of boardsToCheck) {
       const grid = getBoard(boardId)
       if (!grid) continue
-      // map grid indices to numbers for quick checks
       const lines: number[][] = []
-      // rows
-      for (let r = 0; r < 5; r++) {
-        lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
-      }
-      // cols
-      for (let c = 0; c < 5; c++) {
-        lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
-      }
-      // diagonals
+      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
+      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
       lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
       lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
 
@@ -503,7 +589,6 @@ export default function App() {
     return false
   }
 
-  // Generic bingo finder that ignores "last called" and returns the first winning line, if any.
   const findAnyBingoWin = (
     marks: Set<number>,
     boardIdsOverride?: number[]
@@ -513,12 +598,8 @@ export default function App() {
       const grid = getBoard(boardId)
       if (!grid) continue
       const lines: number[][] = []
-      for (let r = 0; r < 5; r++) {
-        lines.push([0,1,2,3,4].map(c => r * 5 + c))
-      }
-      for (let c = 0; c < 5; c++) {
-        lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      }
+      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
+      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
       lines.push([0,1,2,3,4].map(i => i * 5 + i))
       lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
 
@@ -535,7 +616,6 @@ export default function App() {
     return null
   }
 
-  // ---- FIX: find the actual winning line that includes the last called number ----
   const findBingoWinIncludingLast = (
     marks: Set<number>,
     last: number | null,
@@ -549,11 +629,8 @@ export default function App() {
       if (!grid) continue
 
       const lines: number[][] = []
-      // rows
       for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
-      // cols
       for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      // diagonals
       lines.push([0,1,2,3,4].map(i => i * 5 + i))
       lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
 
@@ -573,15 +650,12 @@ export default function App() {
     return null
   }
 
-  // Ensure a win line exists that includes the most recent called number.
-  // Optional overrides let us validate immediately on a fresh server call payload.
   const hasBingoIncludingLastCalled = (
     overrideCalled?: number[],
     overrideLastCalled?: number | null
   ): boolean => {
     const effectiveLastCalled = overrideLastCalled ?? lastCalled
     if (!effectiveLastCalled) return false
-    // Effective marked set: when auto algorithm is on, use called numbers as marks
     const effectiveCalled = overrideCalled ?? called
     const marks = new Set<number>(
       autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
@@ -591,7 +665,6 @@ export default function App() {
 
   const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
     if (phase !== 'calling' || isWaiting) return
-    // Validate locally before notifying server
     if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
       alert('No valid BINGO found that includes the last called number. Keep marking!')
       return
@@ -611,7 +684,6 @@ export default function App() {
     autoBingoSentRef.current = true
   }
 
-  // Render 75-number caller grid with B I N G O columns
   const renderCallerGrid = (currentNumber?: number) => {
     const columns: number[][] = [
       Array.from({ length: 15 }, (_, i) => i + 1),
@@ -628,7 +700,6 @@ export default function App() {
   
     return (
       <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
-        {/* Headers */}
         <div className="grid grid-cols-5 gap-1.5 mb-2">
           {headers.map((h, i) => (
             <div
@@ -640,7 +711,6 @@ export default function App() {
           ))}
         </div>
   
-        {/* 5 columns of numbers - flex-1 makes this stretch to fill height */}
         <div className="grid grid-cols-5 gap-1.5 flex-1">
           {columns.map((col, colIndex) => (
             <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
@@ -670,35 +740,11 @@ export default function App() {
     );
   };
 
-  // Audio: try to play a sound for each call using selected pack
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
 
-  // Helper: convert number to its spoken word for display (1–75)
   const numberToWord = (n: number): string => {
-    const ones = [
-      '',
-      'ONE',
-      'TWO',
-      'THREE',
-      'FOUR',
-      'FIVE',
-      'SIX',
-      'SEVEN',
-      'EIGHT',
-      'NINE',
-      'TEN',
-      'ELEVEN',
-      'TWELVE',
-      'THIRTEEN',
-      'FOURTEEN',
-      'FIFTEEN',
-      'SIXTEEN',
-      'SEVENTEEN',
-      'EIGHTEEN',
-      'NINETEEN',
-    ]
+    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN']
     const tens = ['', 'TEN', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY']
-
     if (n === 0) return 'ZERO'
     if (n < 20) return ones[n]
     const t = Math.floor(n / 10)
@@ -707,7 +753,6 @@ export default function App() {
     return `${tens[t]}-${ones[o]}`
   }
 
-  // Cache audio elements and latest flags so calls play instantly and only for active players
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   const audioOnRef = useRef<boolean>(audioOn)
   const isWaitingRef = useRef<boolean>(isWaiting)
@@ -723,9 +768,7 @@ export default function App() {
   useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
   useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
 
-  // Parse amount from deposit/withdrawal message
   const parseAmount = (message: string): number | null => {
-    // Look for patterns like: "100.00", "100 Birr", "ETB 100", "100 ETB", etc.
     const patterns = [
       /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
       /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
@@ -739,10 +782,8 @@ export default function App() {
         if (!isNaN(amount) && amount > 0) return amount
       }
     }
-    // Fallback: find standalone numbers that could be amounts
     const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
     if (numbers && numbers.length > 0) {
-      // Prefer numbers that look like currency amounts (2+ digits, possibly with decimals)
       const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
       if (amounts.length > 0) return Math.max(...amounts)
     }
@@ -750,7 +791,6 @@ export default function App() {
   }
 
   const parseTransactionId = (text: string): string | null => {
-    // Look for common tags: Txn, Trans, Ref, Reference, ID
     const patterns = [
       /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
       /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i,
@@ -759,7 +799,6 @@ export default function App() {
       const match = text.match(pattern)
       if (match) return match[1].trim().toUpperCase()
     }
-    // Fallback: longest alphanumeric token 8-20 chars
     const tokens = text.match(/[A-Z0-9]{8,20}/gi)
     if (tokens) {
       const sorted = tokens.sort((a,b)=>b.length-a.length)
@@ -768,7 +807,6 @@ export default function App() {
     return null
   }
 
-  // Verify deposit message
   const verifyDepositMessage = async (
     message: string,
     expectedAmount: number,
@@ -779,23 +817,15 @@ export default function App() {
     const msgNoSpaces = message.replace(/\s+/g, '')
     const accountNoSpaces = expectedAccount.replace(/\s+/g, '')
     
-    // Check account number (REQUIRED)
     if (!msgNoSpaces.includes(accountNoSpaces)) {
       return { valid: false, reason: 'Account number not found in the message. Please ensure you deposited to the correct account.' }
     }
     
-    // Check account holder name (OPTIONAL - if present, good; if not, that's fine as long as account number matches)
-    const nameParts = expectedName.toLowerCase().split(' ')
-    const nameFound = nameParts.some(part => part.length > 2 && msgLower.includes(part))
-    // Note: We don't fail if name is not found - account number is the primary verification
-    
-    // Extract and verify amount
     const detectedAmount = parseAmount(message)
     if (!detectedAmount) {
       return { valid: false, reason: 'Could not detect amount from the message. Please include the amount in your message.' }
     }
     
-    // Allow small tolerance (0.01) for rounding
     if (Math.abs(detectedAmount - expectedAmount) > 0.01) {
       return { 
         valid: false, 
@@ -804,7 +834,6 @@ export default function App() {
       }
     }
     
-    // Extract transaction ID
     const transactionId = parseTransactionId(message)
     if (!transactionId) {
       return { valid: false, reason: 'Transaction ID not found in the message. Please include the transaction reference.' }
@@ -815,7 +844,6 @@ export default function App() {
 
   const playCallSound = async (n: number) => {
     const letter = numberToLetter(n)
-    // Always fetch audio from the server to avoid client-origin path issues
     const base = `${getApiUrl()}/audio/${audioPack}`
     const candidates = [
       `${base}/${letter}-${n}.mp3`,
@@ -830,7 +858,6 @@ export default function App() {
         if (!audio) {
           audio = new Audio(src)
           audioCacheRef.current.set(src, audio)
-          // Wait for the first load only
           await new Promise<void>((resolve, reject) => {
             audio!.oncanplaythrough = () => resolve()
             audio!.onerror = reject
@@ -860,7 +887,6 @@ export default function App() {
   
     return (
       <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
-        {/* Modern BINGO Header */}
         <div className="grid grid-cols-5 gap-1.5 mb-3">
           {headers.map((h, idx) => (
             <div
@@ -900,8 +926,6 @@ export default function App() {
                 ) : (
                   <span className="text-xs sm:text-base">{val}</span>
                 )}
-                
-                {/* If Bingo is possible, show a small glowing star indicator */}
                 {isGamePage && boardCanBingo && finalState && !isFree && (
                   <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
                 )}
@@ -923,7 +947,7 @@ export default function App() {
               <span>Stake: <b>{stake} Birr</b></span>
               <span>Active: <b>{players}</b></span>
               {waitingPlayers > 0 && <span>Waiting: <b>{waitingPlayers}</b></span>}
-              <span>Prize: <b>{prize} Birr</b></span>
+              <span>{t('prize')}: <b>{prize} Birr</b></span>
             </div>
           </div>
           
@@ -932,7 +956,7 @@ export default function App() {
               Select Your Boards
               {isWaiting && (
                 <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded bg-yellow-500 text-black text-xs sm:text-sm font-bold">
-                  Waiting...
+                  {t('waiting')}...
                 </span>
               )}
             </div>
@@ -948,7 +972,6 @@ export default function App() {
             )}
           </div>
 
-          {/* Audio and Auto Mark toggles visible before countdown */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
             <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <span className="text-slate-300">Audio:</span>
@@ -1010,7 +1033,6 @@ export default function App() {
             })}
           </div>
           
-          {/* Selected Boards Preview */}
           {picks.length > 0 && (
             <div className="mb-3 sm:mb-6">
               <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">Your Selected Boards ({picks.length}/2):</div>
@@ -1201,7 +1223,6 @@ export default function App() {
     }
   }
 
-  // --- UPDATED: welcome bonus on signup ---
   const handleSignup = async () => {
     if (!loginUsername.trim() || !loginPassword.trim()) {
       setLoginError('Please enter username and password')
@@ -1240,7 +1261,6 @@ export default function App() {
         return
       }
       
-      // Save session
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
@@ -1274,42 +1294,56 @@ export default function App() {
     }
   }
 
-  // Welcome page with balance, deposit, instructions, invite, and bet houses
   const renderWelcomePage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
         <div className="flex items-center justify-between py-1 sm:py-2">
-          <div className="text-lg sm:text-2xl font-bold truncate pr-2">Hello, {username}!</div>
+          <div className="text-lg sm:text-2xl font-bold truncate pr-2">{t('hello')}, {username}!</div>
           <div className="flex gap-1 sm:gap-2 flex-shrink-0">
             <button
               className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-amber-500 text-black font-semibold text-xs sm:text-sm"
               onClick={() => setCurrentPage('depositSelect')}
             >
-              + Deposit
+              {t('deposit')}
             </button>
             <button
               className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-blue-500 text-white font-semibold text-xs sm:text-sm"
               onClick={() => setCurrentPage('withdrawal')}
             >
-              Withdraw
+              {t('withdraw')}
             </button>
             <button
               className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 text-white font-semibold text-xs sm:text-sm"
               onClick={handleLogout}
             >
-              Logout
+              {t('logout')}
             </button>
           </div>
         </div>
 
+        {/* --- Language Selection Modal --- */}
+        {showLanguageModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
+              <h2 className="text-2xl font-bold text-center mb-6 text-white">{t('select_lang')}</h2>
+              <div className="grid grid-cols-1 gap-3">
+                <button onClick={() => handleLanguageSelect('en')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">English</button>
+                <button onClick={() => handleLanguageSelect('am')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">አማርኛ</button>
+                <button onClick={() => handleLanguageSelect('ti')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">ትግርኛ</button>
+                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">Oromigna</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* --- Welcome Bonus Notification --- */}
-        {showBonusClaimed && (
+        {showBonusClaimed && !showLanguageModal && (
           <div className="bg-emerald-500 text-black p-4 rounded-xl flex items-center justify-between animate-bounce shadow-[0_0_15px_rgba(16,185,129,0.5)]">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🎁</span>
               <div>
-                <div className="font-black text-sm">WELCOME BONUS!</div>
-                <div className="text-xs font-bold">100 Birr has been added to your account.</div>
+                <div className="font-black text-sm">{t('welcome_bonus_title')}</div>
+                <div className="text-xs font-bold">{t('welcome_bonus_msg')}</div>
               </div>
             </div>
             <button 
@@ -1324,9 +1358,9 @@ export default function App() {
         {/* Balance card */}
         <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex items-center justify-between">
           <div>
-            <div className="uppercase text-[10px] sm:text-xs">Balance</div>
+            <div className="uppercase text-[10px] sm:text-xs">{t('balance')}</div>
             <div className="text-xl sm:text-3xl font-extrabold">{balance} Birr</div>
-            <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs opacity-90">Bonus</div>
+            <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs opacity-90">{t('bonus')}</div>
             <div className="text-sm sm:text-lg font-bold">{bonus} Birr</div>
           </div>
           <div className="text-4xl sm:text-6xl font-black opacity-60">ETB</div>
@@ -1337,31 +1371,28 @@ export default function App() {
             className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
             onClick={() => setCurrentPage('instructions')}
           >
-            Instructions
+            {t('instructions')}
           </button>
           <button
             className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
             onClick={() => navigator.clipboard.writeText(`${window.location.origin}/?ref=${playerId}`)}
           >
-            Invite Friends
+            {t('invite')}
           </button>
         </div>
 
-        {/* --- NEW PRO KENO GAME BUTTON --- */}
+        {/* PRO KENO GAME BUTTON */}
         <div className="py-2">
           <a href="/prokeno.html" className="block w-full">
             <button className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-lg sm:text-xl py-4 rounded-xl shadow-[0_0_20px_rgba(192,38,211,0.5)] transform transition hover:scale-[1.02] border border-white/10 flex items-center justify-center gap-3 relative overflow-hidden group">
               <span className="text-2xl animate-bounce">🎰</span>
-              <span>PLAY PRO KENO 80</span>
+              <span>{t('play_keno')}</span>
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
             </button>
           </a>
         </div>
-        {/* -------------------------------- */}
         
-        {/* ... rest of your file unchanged ... */}
-        
-        <div className="text-base sm:text-xl font-semibold">Bet Houses</div>
+        <div className="text-base sm:text-xl font-semibold">{t('bet_houses')}</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
           {betHouses.length > 0 ? betHouses.map((house: any) => {
             const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
@@ -1386,9 +1417,9 @@ export default function App() {
                 </div>
                 <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
                 <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
-                  <div>Active: {house.activePlayers} players</div>
+                  <div>{t('active')}: {house.activePlayers} {t('players')}</div>
                   {house.waitingPlayers > 0 && <div>Waiting: {house.waitingPlayers} players</div>}
-                  <div>Prize: {house.prize} Birr</div>
+                  <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
               <div className="mt-auto flex items-center justify-between gap-2">
                 <button
@@ -1398,14 +1429,13 @@ export default function App() {
                     setCurrentPage('lobby')
                   }}
                 >
-                    {isSelected ? 'Go to Lobby' : isLive ? 'Join & Wait' : 'Play now'}
+                    {isSelected ? t('go_lobby') : isLive ? t('join_wait') : t('play_now')}
                 </button>
                   <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
               </div>
             </div>
             )
           }) : (
-            // Fallback if bet houses not loaded yet
             [10, 20, 50, 100, 200].map(amount => {
               const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
                 10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
@@ -1427,7 +1457,7 @@ export default function App() {
                   setCurrentPage('lobby')
                 }}
               >
-                Play now
+                {t('play_now')}
               </button>
                     <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
             </div>
@@ -1557,7 +1587,6 @@ export default function App() {
                 
                 setDepositVerifying(true)
                 try {
-                  // Client-side verification
                   const verification = await verifyDepositMessage(
                     depositMessage,
                     amountNum,
@@ -1571,7 +1600,6 @@ export default function App() {
                     return
                   }
                   
-                  // Send to server for final verification and processing
                   const response = await fetch(`${getApiUrl()}/api/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1594,7 +1622,6 @@ export default function App() {
                     return
                   }
                   
-                  // Success: balance will be updated via balance_update event from server
                   setDepositAmount('')
                   setDepositMessage('')
                   setCurrentPage('welcome')
@@ -1640,11 +1667,9 @@ export default function App() {
     }
     
     return (
-      // We use h-screen and flex-col to lock the height to exactly the phone screen
       <div className="h-screen bg-slate-900 text-white flex flex-col p-2 sm:p-4 overflow-hidden">
         <div className="w-full max-w-7xl mx-auto h-full flex flex-col">
           
-          {/* 1. TOP BAR */}
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
@@ -1668,7 +1693,6 @@ export default function App() {
             </button>
           </div>
   
-          {/* 2. STATS BOXES */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-orange-500 rounded-lg p-2 sm:p-4">
               <div className="text-[10px] opacity-90">Stake</div>
@@ -1684,7 +1708,6 @@ export default function App() {
             </div>
           </div>
   
-          {/* CURRENT CALL STRIP */}
           {lastCalled && (
             <div className="mb-3">
               <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
@@ -1736,11 +1759,8 @@ export default function App() {
             </div>
           )}
 
-          {/* 3. MAIN GAME AREA (Caller & Boards) */}
-          {/* flex-1 and min-h-0 are key to keeping the Bingo button at the bottom */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
             
-            {/* LEFT: Caller Board */}
             <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
               <div className="flex items-center justify-between mb-4 gap-3">
                 <div className="flex items-center gap-2">
@@ -1768,7 +1788,6 @@ export default function App() {
                 {renderCallerGrid(lastCalled ?? undefined)}
               </div>
   
-              {/* Desktop Bingo Controls */}
               <div className="hidden lg:flex items-center gap-3 mt-4">
                 <button
                   onClick={() => setAutoBingo(prev => !prev)}
@@ -1792,14 +1811,12 @@ export default function App() {
               </div>
             </div>
   
-            {/* RIGHT: Player Boards (Stacked & Scrollable) */}
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs sm:text-sm font-semibold">Your Boards</div>
                 <div className="text-[10px] text-slate-400">{picks.length}/2</div>
               </div>
   
-              {/* This div allows boards to scroll if they are too long */}
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                 {picks.map((boardId) => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2">
@@ -1815,7 +1832,6 @@ export default function App() {
             </div>
           </div>
   
-          {/* 4. MOBILE BINGO BUTTONS (Fixed at very bottom) */}
           <div className="lg:hidden pb-1 space-y-2">
             <button
               onClick={() => setAutoBingo(prev => !prev)}
@@ -1881,7 +1897,6 @@ export default function App() {
                 try {
                   const amountNum = Number(withdrawalAmount)
                   
-                  // Verify the message contains the withdrawal amount
                   const detectedAmount = parseAmount(withdrawalMessage)
                   if (!detectedAmount || Math.abs(detectedAmount - amountNum) > 0.01) {
                     alert('Amount in confirmation message does not match withdrawal amount')
@@ -1889,7 +1904,6 @@ export default function App() {
                     return
                   }
                   
-                  // Extract transaction ID
                   const transactionId = parseTransactionId(withdrawalMessage)
                   if (!transactionId) {
                     alert('Transaction ID not found in confirmation message')
@@ -1897,7 +1911,6 @@ export default function App() {
                     return
                   }
                   
-                  // Send to server for verification
                   const response = await fetch(`${getApiUrl()}/api/withdrawal/verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2008,8 +2021,6 @@ export default function App() {
                     return
                   }
                   
-                  // Balance will be updated via balance_update event from server
-                  // Move to confirmation page
                   setCurrentWithdrawalPage('confirm')
                   alert('Withdrawal request submitted! Please check your account and paste the confirmation message.')
                 } catch (e: any) {
@@ -2089,7 +2100,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* IMPORTANT: render as isGamePage = false so it uses called[] (not markedNumbers) */}
             {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
 
             <div className="flex justify-end">
