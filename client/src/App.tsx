@@ -2305,7 +2305,7 @@ export default function App() {
   return (
     <>
       {mainPage}
-      {winnerInfo && (
+      {winnerInfo}
       // In your winner modal, check for isSystemPlayer
 {winnerInfo && (
   <div className="...">
