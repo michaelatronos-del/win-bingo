@@ -149,17 +149,17 @@ const translations = {
     live_caller: 'ቀጥታ ጠሪ',
     auto_bingo: 'ራስ-ሰር ቢንጎ',
     bingo_btn: 'ቢንጎ!',
-    your_boards: 'የእርስዎ ካርቴላ',
+    your_boards: 'የእርስዎ ካርቶዎች',
     tap_mark_hint: 'ቁጥሮችን ለመለየት ይንኩ። FREE በራስ-ሰር ይሞላል።',
     next_call_in: 'ቀጣይ ቁጥር በ',
     winner: 'አሸናፊ',
-    winning_board: 'አሸናፊ ካርቴላ',
+    winning_board: 'ያሸነፈው ካርቶ',
     select_payment: 'የክፍያ አማራጭ ይምረጡ',
     recommended: 'የሚመከር',
     confirm_payment: 'ክፍያ ያረጋግጡ',
     deposit_account: 'ገቢ የሚደረግበት መለያ',
     amount_deposit: 'የሚገቡት መጠን',
-    paste_deposit_msg: 'የገቢ ማረጋገጫ መልእክት ያስገቡ',
+    paste_deposit_msg: 'የገቢ ማረጋገጫ መልእክት ይለጥፉ',
     verify_submit: 'አረጋግጥ እና አስገባ',
     how_to_deposit: 'እንዴት ገቢ ማድረግ እንደሚቻል',
     verifying: 'በማረጋገጥ ላይ...',
@@ -168,21 +168,21 @@ const translations = {
     withdraw_amount: 'የወጪ መጠን',
     your_account_num: 'የእርስዎ ሂሳብ ቁጥር',
     request_withdraw: 'ወጪ ጠይቅ',
-    how_to_withdraw: 'እንዴት ወጪ ማድረግ ይችላሉ?',
+    how_to_withdraw: 'እንዴት ወጪ ማድረግ እንደሚቻል',
     confirm_withdraw: 'ወጪ ማረጋገጫ',
     your_account: 'የእርስዎ ሂሳብ',
-    paste_withdraw_msg: 'የወጪ ማረጋገጫ መልእክት ያስገቡ',
+    paste_withdraw_msg: 'የወጪ ማረጋገጫ መልእክት ይለጥፉ',
     verify_withdraw: 'ወጪ አረጋግጥ',
     how_to_play: 'እንዴት እንደሚጫወቱ',
     rule_1: 'የውርርድ ቤት ይምረጡ።',
-    rule_2: 'እስከ 2 ካርቴላዎች ይችላሉ።',
+    rule_2: 'እስከ 2 ካርቶዎችን ይምረጡ።',
     rule_3: 'ጨዋታ ጀምር የሚለውን ይጫኑ።',
     rule_4: 'ቁጥሮች ሲጠሩ ምልክት ያድርጉ።',
     rule_5: 'ቢንጎ የሚለውን የሚጫኑት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
     dep_with_title: 'ገቢ እና ወጪ',
     dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
     audio: 'ድምፅ',
-    auto_mark_me: 'ራስህ አጥቁርልኝ',
+    auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
     auto_algo: 'ራስ-ሰር አልጎሪዝም'
   },
   ti: {
@@ -2306,25 +2306,18 @@ export default function App() {
     <>
       {mainPage}
       {winnerInfo && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-    <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-      <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-        {t('bingo_btn')}
-      </div>
-      <div className="text-xs sm:text-sm text-slate-300 space-y-1">
-        {winnerInfo.playerId && (
-          <div>
-            <span className="text-slate-500">{t('winner')}:</span>{' '}
-            <span className={`font-mono break-all ${winnerInfo.isHousePlayer ? 'text-amber-400' : ''}`}>
-              {winnerInfo.isHousePlayer ? '🏠 HousePlayer' : winnerInfo.playerName || winnerInfo.playerId}
-            </span>
-            {winnerInfo.isHousePlayer && (
-              <span className="ml-2 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
-                House
-              </span>
-            )}
-          </div>
-        )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+              {t('bingo_btn')}
+            </div>
+            <div className="text-xs sm:text-sm text-slate-300 space-y-1">
+              {winnerInfo.playerId && (
+                <div>
+                  <span className="text-slate-500">{t('winner')}:</span>{' '}
+                  <span className="font-mono break-all">{winnerInfo.playerId}</span>
+                </div>
+              )}
               {typeof winnerInfo.prize === 'number' && (
                 <div>
                   <span className="text-slate-500">{t('prize')}:</span>{' '}
