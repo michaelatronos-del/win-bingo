@@ -24,19 +24,150 @@ app.use('/audio', express.static(audioDir));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// --- CONFIGURATION ---
 const BOARD_SIZE = 75;
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
 const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];
 
-// --- ADMIN BOT CONFIG ---
+// ============ ADMIN BOT CONFIGURATION ============
 const ADMIN_BOT_ID = 'ADMIN_BOT_SYSTEM';
-const ADMIN_BOT_USERNAME = 'HousePlayer'; // Name shown to users
+const ADMIN_BOT_USERNAME = 'HousePlayer';
 const ADMIN_BOT_SOCKET_ID = 'admin-bot-virtual-socket';
-const REAL_PLAYER_THRESHOLD_MIN = 2; // Min real boards to activate bot
-const REAL_PLAYER_THRESHOLD_MAX = 50; // Max real boards (if >50, bot leaves)
+const ADMIN_BOT_BOARD_COUNT = 10;
+const REAL_PLAYER_THRESHOLD_MIN = 2;
+const REAL_PLAYER_THRESHOLD_MAX = 50;
 
+// ============ BOARD GENERATION ============
+// Generate a deterministic board based on boardId
+// This MUST match the frontend board generation!
+function generateBoardGrid(boardId) {
+  // Use a seeded random number generator for consistency
+  let seed = boardId * 9973;
+  const seededRandom = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+
+  const grid = [];
+  const ranges = [
+    { min: 1, max: 15 },   // B column
+    { min: 16, max: 30 },  // I column
+    { min: 31, max: 45 },  // N column
+    { min: 46, max: 60 },  // G column
+    { min: 61, max: 75 }   // O column
+  ];
+
+  // Generate each column
+  const columns = [];
+  for (let c = 0; c < 5; c++) {
+    const colNums = new Set();
+    while (colNums.size < 5) {
+      const num = Math.floor(seededRandom() * (ranges[c].max - ranges[c].min + 1)) + ranges[c].min;
+      colNums.add(num);
+    }
+    columns.push(Array.from(colNums));
+  }
+
+  // Convert to row-major order (indices 0-24)
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      if (r === 2 && c === 2) {
+        grid.push(-1); // FREE space
+      } else {
+        grid.push(columns[c][r]);
+      }
+    }
+  }
+
+  return grid;
+}
+
+// Get all possible winning lines with their grid indices and numbers
+function getBoardLines(boardId) {
+  const grid = generateBoardGrid(boardId);
+  const lines = [];
+
+  // Rows (5 lines)
+  for (let r = 0; r < 5; r++) {
+    const indices = [r * 5, r * 5 + 1, r * 5 + 2, r * 5 + 3, r * 5 + 4];
+    const numbers = indices.map(i => grid[i]);
+    lines.push({ indices, numbers });
+  }
+
+  // Columns (5 lines)
+  for (let c = 0; c < 5; c++) {
+    const indices = [c, c + 5, c + 10, c + 15, c + 20];
+    const numbers = indices.map(i => grid[i]);
+    lines.push({ indices, numbers });
+  }
+
+  // Diagonals (2 lines)
+  const diag1 = [0, 6, 12, 18, 24];
+  const diag2 = [4, 8, 12, 16, 20];
+  lines.push({ indices: diag1, numbers: diag1.map(i => grid[i]) });
+  lines.push({ indices: diag2, numbers: diag2.map(i => grid[i]) });
+
+  return lines;
+}
+
+// Check if a board has a winning line given called numbers
+function checkBoardForWin(boardId, calledNumbers) {
+  const calledSet = new Set(calledNumbers);
+  const lines = getBoardLines(boardId);
+
+  for (const line of lines) {
+    const isComplete = line.numbers.every(num => num === -1 || calledSet.has(num));
+    if (isComplete) {
+      return {
+        hasWin: true,
+        lineIndices: line.indices,
+        lineNumbers: line.numbers
+      };
+    }
+  }
+
+  return { hasWin: false, lineIndices: null, lineNumbers: null };
+}
+
+// Check all admin bot boards for a win
+function checkAdminBotForWin(adminState, calledNumbers) {
+  for (const boardId of adminState.picks) {
+    const result = checkBoardForWin(boardId, calledNumbers);
+    if (result.hasWin) {
+      return {
+        hasWin: true,
+        boardId: boardId,
+        lineIndices: result.lineIndices,
+        lineNumbers: result.lineNumbers
+      };
+    }
+  }
+  return { hasWin: false };
+}
+
+// ============ ADMIN BOT STATE ============
+const adminBotStates = new Map();
+
+function initAdminBotState(stake) {
+  return {
+    isActive: false,
+    picks: [],
+    shouldWin: false
+  };
+}
+
+AVAILABLE_STAKES.forEach(stake => {
+  adminBotStates.set(stake, initAdminBotState(stake));
+});
+
+function getAdminBotState(stake) {
+  if (!adminBotStates.has(stake)) {
+    adminBotStates.set(stake, initAdminBotState(stake));
+  }
+  return adminBotStates.get(stake);
+}
+
+// ============ GAME STATE ============
 const gameStates = new Map();
 
 function createEmptyGameState(stake, roomIdOverride) {
@@ -52,9 +183,6 @@ function createEmptyGameState(stake, roomIdOverride) {
     called: [],
     timer: null,
     caller: null,
-    // Bot state
-    riggedNumbers: null, // The fixed sequence of calls if bot is active
-    botTargetWin: null   // { boardId, lineIndices, winNumbers }
   };
 }
 
@@ -75,46 +203,7 @@ function getGameState(stake) {
   return gameStates.get(stake);
 }
 
-// --- HELPER: GENERATE BOARD (Deterministic) ---
-// This MUST match the client-side generator so server knows the numbers
-function generateBoard(boardId) {
-    let seed = boardId;
-    const random = () => {
-        var x = Math.sin(seed++) * 10000;
-        return x - Math.floor(x);
-    };
-
-    const grid = [];
-    const ranges = [
-        { min: 1, max: 15 },
-        { min: 16, max: 30 },
-        { min: 31, max: 45 },
-        { min: 46, max: 60 },
-        { min: 61, max: 75 }
-    ];
-
-    const columns = [];
-    for (let c = 0; c < 5; c++) {
-        const colNums = new Set();
-        while (colNums.size < 5) {
-            const num = Math.floor(random() * (ranges[c].max - ranges[c].min + 1)) + ranges[c].min;
-            colNums.add(num);
-        }
-        columns.push(Array.from(colNums));
-    }
-
-    for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
-            if (r === 2 && c === 2) {
-                grid.push(-1); // Free space
-            } else {
-                grid.push(columns[c][r]);
-            }
-        }
-    }
-    return grid;
-}
-
+// ============ USER DATA ============
 const users = new Map();
 const userSessions = new Map();
 const userIdToUsername = new Map();
@@ -122,38 +211,40 @@ const userBalances = new Map();
 const transactionIds = new Set();
 const withdrawalRequests = new Map();
 
-/* ========= KENO STATS & TRACKING ========= */
-const kenoPickStats = new Map(); 
-const kenoOnlinePlayers = new Set(); 
+// ============ KENO ============
+const kenoPickStats = new Map();
+const kenoOnlinePlayers = new Set();
 
 function recordKenoPicks(picks) {
-    const now = Date.now();
-    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
-    
-    picks.forEach(num => {
-        if (!kenoPickStats.has(num)) {
-            kenoPickStats.set(num, []);
-        }
-        let timestamps = kenoPickStats.get(num);
-        timestamps.push(now);
-        timestamps = timestamps.filter(t => t > twentyFourHoursAgo);
-        kenoPickStats.set(num, timestamps);
-    });
+  const now = Date.now();
+  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+  
+  picks.forEach(num => {
+    if (!kenoPickStats.has(num)) {
+      kenoPickStats.set(num, []);
+    }
+    let timestamps = kenoPickStats.get(num);
+    timestamps.push(now);
+    timestamps = timestamps.filter(t => t > twentyFourHoursAgo);
+    kenoPickStats.set(num, timestamps);
+  });
 }
 
 function getHotNumbers() {
-    const now = Date.now();
-    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
-    const counts = [];
-    for (let i = 1; i <= 80; i++) {
-        const timestamps = kenoPickStats.get(i) || [];
-        const recentCount = timestamps.filter(t => t > twentyFourHoursAgo).length;
-        counts.push({ number: i, count: recentCount });
-    }
-    counts.sort((a, b) => b.count - a.count);
-    return counts;
+  const now = Date.now();
+  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+  
+  const counts = [];
+  for (let i = 1; i <= 80; i++) {
+    const timestamps = kenoPickStats.get(i) || [];
+    const recentCount = timestamps.filter(t => t > twentyFourHoursAgo).length;
+    counts.push({ number: i, count: recentCount });
+  }
+  counts.sort((a, b) => b.count - a.count);
+  return counts;
 }
 
+// ============ AUTH HELPERS ============
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
@@ -172,18 +263,32 @@ function getBearerToken(req) {
 function requireAuth(req, res, next) {
   const token = getBearerToken(req);
   if (!token) return res.status(401).json({ success: false, error: 'Missing token' });
+
   const session = userSessions.get(token);
   if (!session) return res.status(401).json({ success: false, error: 'Invalid token' });
+
   if (session.expiresAt < Date.now()) {
     userSessions.delete(token);
     return res.status(401).json({ success: false, error: 'Session expired' });
   }
+
   req.session = session;
   next();
 }
 
+// ============ GAME HELPERS ============
 function getOnlinePlayers(state) {
   return Array.from(state.players.values());
+}
+
+function getRealPlayerBoardCount(state) {
+  let totalBoards = 0;
+  state.players.forEach((player, socketId) => {
+    if (socketId !== ADMIN_BOT_SOCKET_ID && Array.isArray(player.picks)) {
+      totalBoards += player.picks.length;
+    }
+  });
+  return totalBoards;
 }
 
 function getTotalSelectedBoards(state) {
@@ -196,123 +301,213 @@ function getTotalSelectedBoards(state) {
   return totalBoards;
 }
 
-function getRealPlayerBoardCount(state) {
-    let totalBoards = 0;
-    state.players.forEach((player, socketId) => {
-        if (socketId !== ADMIN_BOT_SOCKET_ID && Array.isArray(player.picks)) {
-            totalBoards += player.picks.length;
-        }
-    });
-    return totalBoards;
-}
-
 function computePrizePool(state) {
   const totalBetAmount = getTotalSelectedBoards(state) * state.stake;
   return Math.floor(totalBetAmount * 0.8);
 }
 
-// ============ ADMIN BOT LOGIC ============
-
-function manageAdminBot(state) {
-    const realBoards = getRealPlayerBoardCount(state);
-    
-    // Reset bot state initially
-    state.riggedNumbers = null;
-    state.botTargetWin = null;
-
-    // 1. Remove Bot if too many real players
-    if (realBoards > REAL_PLAYER_THRESHOLD_MAX) {
-        if (state.players.has(ADMIN_BOT_SOCKET_ID)) {
-            const bot = state.players.get(ADMIN_BOT_SOCKET_ID);
-            bot.picks.forEach(b => state.takenBoards.delete(b));
-            state.players.delete(ADMIN_BOT_SOCKET_ID);
-            console.log(`[BOT] Removed from ${state.stake} (High Traffic: ${realBoards})`);
-        }
-        return;
+function getAvailableBoards(state) {
+  const available = [];
+  for (let i = 1; i <= 100; i++) {
+    if (!state.takenBoards.has(i)) {
+      available.push(i);
     }
+  }
+  return available;
+}
 
-    // 2. Add Bot if conditions met (2 <= real <= 50)
-    if (realBoards >= REAL_PLAYER_THRESHOLD_MIN && realBoards <= REAL_PLAYER_THRESHOLD_MAX) {
-        
-        // A. Pick 10 random boards for bot
-        const botPicks = [];
-        let attempts = 0;
-        while (botPicks.length < 10 && attempts < 500) {
-            const r = Math.floor(Math.random() * 200) + 1; // Pick from 1-200
-            if (!state.takenBoards.has(r) && !botPicks.includes(r)) {
-                botPicks.push(r);
-            }
-            attempts++;
-        }
+function selectRandomBoards(available, count) {
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
 
-        // B. Add Bot Player
-        const botPlayer = {
-            id: ADMIN_BOT_SOCKET_ID,
-            userId: ADMIN_BOT_ID,
-            name: ADMIN_BOT_USERNAME,
-            stake: state.stake,
-            picks: botPicks,
-            ready: true,
-            isAdminBot: true
-        };
+// ============ ADMIN BOT FUNCTIONS ============
+function addAdminBotToGame(stake) {
+  const state = getGameState(stake);
+  const adminState = getAdminBotState(stake);
+  
+  const realPlayerBoards = getRealPlayerBoardCount(state);
+  
+  if (realPlayerBoards < REAL_PLAYER_THRESHOLD_MIN) {
+    removeAdminBotFromGame(stake);
+    return;
+  }
+  
+  if (realPlayerBoards > REAL_PLAYER_THRESHOLD_MAX) {
+    removeAdminBotFromGame(stake);
+    return;
+  }
+  
+  const availableBoards = getAvailableBoards(state);
+  
+  if (availableBoards.length < ADMIN_BOT_BOARD_COUNT) {
+    removeAdminBotFromGame(stake);
+    return;
+  }
+  
+  const selectedBoards = selectRandomBoards(availableBoards, ADMIN_BOT_BOARD_COUNT);
+  
+  const adminPlayer = {
+    id: ADMIN_BOT_SOCKET_ID,
+    oderId: ADMIN_BOT_ID,
+    name: ADMIN_BOT_USERNAME,
+    stake: stake,
+    picks: selectedBoards,
+    ready: true,
+    isAdminBot: true
+  };
+  
+  state.players.set(ADMIN_BOT_SOCKET_ID, adminPlayer);
+  selectedBoards.forEach(boardId => state.takenBoards.add(boardId));
+  
+  adminState.isActive = true;
+  adminState.picks = selectedBoards;
+  adminState.shouldWin = true;
+  
+  console.log(`[ADMIN BOT] Joined ${stake} Birr room with boards: ${selectedBoards.join(', ')}`);
+  
+  // Log board details for debugging
+  selectedBoards.forEach(boardId => {
+    const grid = generateBoardGrid(boardId);
+    console.log(`[ADMIN BOT] Board ${boardId} grid: ${grid.join(',')}`);
+  });
+  
+  const roomId = state.roomId;
+  io.to(roomId).emit('boards_taken', {
+    stake,
+    takenBoards: Array.from(state.takenBoards),
+  });
+  
+  io.to(roomId).emit('players', {
+    count: getTotalSelectedBoards(state),
+    waitingCount: state.waitingPlayers.size,
+    stake: stake
+  });
+}
 
-        // Clear old bot if exists to refresh picks
-        if (state.players.has(ADMIN_BOT_SOCKET_ID)) {
-            state.players.get(ADMIN_BOT_SOCKET_ID).picks.forEach(b => state.takenBoards.delete(b));
-        }
-        state.players.set(ADMIN_BOT_SOCKET_ID, botPlayer);
-        botPicks.forEach(b => state.takenBoards.add(b));
+function removeAdminBotFromGame(stake) {
+  const state = getGameState(stake);
+  const adminState = getAdminBotState(stake);
+  
+  if (!adminState.isActive) return;
+  
+  const adminPlayer = state.players.get(ADMIN_BOT_SOCKET_ID);
+  
+  if (adminPlayer && Array.isArray(adminPlayer.picks)) {
+    adminPlayer.picks.forEach(boardId => state.takenBoards.delete(boardId));
+  }
+  
+  state.players.delete(ADMIN_BOT_SOCKET_ID);
+  
+  adminState.isActive = false;
+  adminState.picks = [];
+  adminState.shouldWin = false;
+  
+  console.log(`[ADMIN BOT] Removed from ${stake} Birr room`);
+  
+  const roomId = state.roomId;
+  io.to(roomId).emit('boards_taken', {
+    stake,
+    takenBoards: Array.from(state.takenBoards),
+  });
+  
+  io.to(roomId).emit('players', {
+    count: getTotalSelectedBoards(state),
+    waitingCount: state.waitingPlayers.size,
+    stake: stake
+  });
+}
 
-        // C. PREPARE THE RIGGED DECK
-        // 1. Pick a winning board (first one)
-        const winningBoardId = botPicks[0];
-        const grid = generateBoard(winningBoardId);
-        
-        // 2. Pick a winning line (Row 1: indices 0,1,2,3,4)
-        // Note: Check for Free Space (-1)
-        const winningLineIndices = [0, 1, 2, 3, 4];
-        const winningNumbers = winningLineIndices
-            .map(idx => grid[idx])
-            .filter(n => n !== -1); // Exclude free space if present
-
-        // 3. Create the Call Sequence
-        let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
-        
-        // Remove winning numbers from general pool
-        allNumbers = allNumbers.filter(n => !winningNumbers.includes(n));
-        
-        // Shuffle the remaining pool
-        for (let i = allNumbers.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allNumbers[i], allNumbers[j]] = [allNumbers[j], allNumbers[i]];
-        }
-
-        // 4. Construct Rigged Start
-        // We want the bot to win roughly between call #10 and #20
-        const fillerCount = 10; 
-        const filler = allNumbers.splice(0, fillerCount);
-        
-        // Combine winning numbers + filler
-        const startSequence = [...winningNumbers, ...filler];
-        
-        // Shuffle the start sequence so winning numbers aren't strictly first
-        for (let i = startSequence.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [startSequence[i], startSequence[j]] = [startSequence[j], startSequence[i]];
-        }
-
-        // 5. Final Deck: StartSequence + Remaining
-        state.riggedNumbers = [...startSequence, ...allNumbers];
-        
-        // Store target for win checking
-        state.botTargetWin = {
-            boardId: winningBoardId,
-            lineIndices: winningLineIndices,
-            winNumbers: new Set(winningNumbers)
-        };
-
-        console.log(`[BOT] Added to ${state.stake}. Target Board: ${winningBoardId}. Winning Numbers: ${winningNumbers.join(',')}`);
+function checkAndUpdateAdminBot(stake) {
+  const state = getGameState(stake);
+  const adminState = getAdminBotState(stake);
+  const realPlayerBoards = getRealPlayerBoardCount(state);
+  
+  console.log(`[ADMIN BOT CHECK] Stake: ${stake}, Real boards: ${realPlayerBoards}, Admin active: ${adminState.isActive}`);
+  
+  if (realPlayerBoards >= REAL_PLAYER_THRESHOLD_MIN && realPlayerBoards <= REAL_PLAYER_THRESHOLD_MAX) {
+    if (!adminState.isActive) {
+      addAdminBotToGame(stake);
     }
+  } else {
+    if (adminState.isActive) {
+      removeAdminBotFromGame(stake);
+    }
+  }
+}
+
+function triggerAdminBotWin(stake, boardId, lineIndices, lineNumbers) {
+  const state = getGameState(stake);
+  const adminState = getAdminBotState(stake);
+  const roomId = state.roomId;
+  
+  if (!adminState.isActive) {
+    console.log('[ADMIN BOT] Cannot trigger win - not active');
+    return;
+  }
+  
+  const prize = computePrizePool(state);
+  
+  console.log(`[ADMIN BOT] Won in ${stake} Birr room!`);
+  console.log(`[ADMIN BOT] Board: ${boardId}, Line indices: ${lineIndices.join(',')}`);
+  console.log(`[ADMIN BOT] Line numbers: ${lineNumbers.join(',')}`);
+  console.log(`[ADMIN BOT] Called numbers: ${state.called.join(',')}`);
+  console.log(`[ADMIN BOT] Prize: ${prize}`);
+  
+  io.to(roomId).emit('winner', { 
+    playerId: ADMIN_BOT_SOCKET_ID, 
+    playerName: ADMIN_BOT_USERNAME,
+    isSystemPlayer: true,
+    prize, 
+    stake, 
+    boardId, 
+    lineIndices 
+  });
+
+  clearInterval(state.caller);
+  clearInterval(state.timer);
+
+  state.players.clear();
+  state.waitingPlayers.forEach((waitingPlayer, socketId) => {
+    waitingPlayer.picks = [];
+    waitingPlayer.ready = false;
+    state.players.set(socketId, waitingPlayer);
+  });
+  state.waitingPlayers.clear();
+  state.takenBoards = new Set();
+
+  adminState.isActive = false;
+  adminState.picks = [];
+  adminState.shouldWin = false;
+
+  state.phase = 'lobby';
+  io.to(roomId).emit('phase', { phase: state.phase, stake });
+  io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+
+  setTimeout(() => {
+    startCountdown(stake);
+  }, 3000);
+}
+
+// ============ GAME FLOW ============
+function getAllBetHousesStatus() {
+  const statuses = [];
+  AVAILABLE_STAKES.forEach(stake => {
+    const state = getGameState(stake);
+    const activePlayers = getTotalSelectedBoards(state);
+    const waitingPlayers = state.waitingPlayers.size;
+    statuses.push({
+      stake,
+      phase: state.phase,
+      activePlayers,
+      waitingPlayers,
+      totalPlayers: activePlayers + waitingPlayers,
+      prize: computePrizePool(state),
+      countdown: state.countdown,
+      called: state.called.length
+    });
+  });
+  return statuses;
 }
 
 function startCountdown(stake) {
@@ -320,6 +515,8 @@ function startCountdown(stake) {
   const roomId = state.roomId;
 
   clearInterval(state.timer);
+  clearInterval(state.caller);
+  
   state.phase = 'countdown';
   state.countdown = COUNTDOWN_SECONDS;
   state.called = [];
@@ -346,6 +543,28 @@ function startCountdown(stake) {
 
   state.timer = setInterval(() => {
     state.countdown -= 1;
+    
+    if (state.countdown % 10 === 0 && state.countdown > 5) {
+      checkAndUpdateAdminBot(stake);
+    }
+    
+    if (state.countdown === 5) {
+      const realPlayerBoards = getRealPlayerBoardCount(state);
+      const adminState = getAdminBotState(stake);
+      
+      if (realPlayerBoards > REAL_PLAYER_THRESHOLD_MAX && adminState.isActive) {
+        console.log(`[ADMIN BOT] Removing - Real players (${realPlayerBoards}) exceed threshold`);
+        removeAdminBotFromGame(stake);
+      } else if (realPlayerBoards < REAL_PLAYER_THRESHOLD_MIN && adminState.isActive) {
+        console.log(`[ADMIN BOT] Removing - Not enough real players (${realPlayerBoards})`);
+        removeAdminBotFromGame(stake);
+      } else if (realPlayerBoards >= REAL_PLAYER_THRESHOLD_MIN && 
+                 realPlayerBoards <= REAL_PLAYER_THRESHOLD_MAX && 
+                 !adminState.isActive) {
+        addAdminBotToGame(stake);
+      }
+    }
+    
     io.to(roomId).emit('tick', {
       seconds: state.countdown,
       players: getTotalSelectedBoards(state),
@@ -355,25 +574,17 @@ function startCountdown(stake) {
 
     if (state.countdown <= 0) {
       clearInterval(state.timer);
-      
-      // --- TRIGGER BOT LOGIC HERE ---
-      manageAdminBot(state); 
-      
-      // Update players count to include bot
-      io.to(roomId).emit('players', {
-          count: getTotalSelectedBoards(state),
-          waitingCount: state.waitingPlayers.size,
-          stake: state.stake
-      });
-
       const playersWithBoards = getOnlinePlayers(state).filter(
         p => Array.isArray(p.picks) && p.picks.length > 0
       );
-
       if (playersWithBoards.length > 0) {
-        // Pass the rigged numbers if they exist
-        startCalling(stake, state.riggedNumbers);
+        startCalling(stake);
       } else {
+        const adminState = getAdminBotState(stake);
+        if (adminState.isActive) {
+          removeAdminBotFromGame(stake);
+        }
+        
         state.phase = 'lobby';
         io.to(roomId).emit('phase', { phase: state.phase, stake });
         startCountdown(stake);
@@ -382,72 +593,43 @@ function startCountdown(stake) {
   }, 1000);
 }
 
-function startCalling(stake, riggedDeck = null) {
+function startCalling(stake) {
   const state = getGameState(stake);
   const roomId = state.roomId;
+  const adminState = getAdminBotState(stake);
 
   state.phase = 'calling';
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('game_start', { stake });
 
-  let numbers = [];
-  if (riggedDeck && Array.isArray(riggedDeck) && riggedDeck.length > 0) {
-      console.log(`[GAME] ${stake} Birr game starting with RIGGED DECK`);
-      numbers = riggedDeck;
-  } else {
-      console.log(`[GAME] ${stake} Birr game starting with RANDOM DECK`);
-      for (let i = 1; i <= 75; i++) numbers.push(i);
-      for (let i = numbers.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
-      }
+  // Generate shuffled numbers
+  const numbers = [];
+  for (let i = 1; i <= 75; i++) numbers.push(i);
+  for (let i = numbers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
   }
 
   let idx = 0;
+  let gameEnded = false;
+  
   clearInterval(state.caller);
   state.caller = setInterval(() => {
+    if (gameEnded) return;
     
-    // 1. Check for Bot Win Condition (Autoplay for Bot)
-    if (state.botTargetWin) {
-        const calledSet = new Set(state.called);
-        const needed = Array.from(state.botTargetWin.winNumbers);
-        // Check if all needed numbers are in called set
-        const hasWon = needed.every(n => calledSet.has(n));
-
-        if (hasWon) {
-            console.log(`[BOT WIN] Bot won on board ${state.botTargetWin.boardId}`);
-            const prize = computePrizePool(state);
-            io.to(roomId).emit('winner', { 
-                playerId: ADMIN_BOT_SOCKET_ID, 
-                playerName: ADMIN_BOT_USERNAME,
-                isSystemPlayer: true,
-                prize, 
-                stake, 
-                boardId: state.botTargetWin.boardId, 
-                lineIndices: state.botTargetWin.lineIndices 
-            });
-            
-            // End game immediately
-            clearInterval(state.caller);
-            state.players.clear();
-            state.waitingPlayers.forEach((p, sId) => {
-                state.players.set(sId, p);
-                state.waitingPlayers.delete(sId);
-            });
-            state.waitingPlayers.clear();
-            state.takenBoards = new Set();
-            state.riggedNumbers = null;
-            state.botTargetWin = null;
-
-            state.phase = 'lobby';
-            io.to(roomId).emit('phase', { phase: state.phase, stake });
-            startCountdown(stake);
-            return;
-        }
-    }
-
     if (idx >= numbers.length) {
       clearInterval(state.caller);
+      gameEnded = true;
+      
+      // Game ended without winner - check if admin bot has a win
+      if (adminState.isActive && adminState.shouldWin) {
+        const winResult = checkAdminBotForWin(adminState, state.called);
+        if (winResult.hasWin) {
+          triggerAdminBotWin(stake, winResult.boardId, winResult.lineIndices, winResult.lineNumbers);
+          return;
+        }
+      }
+      
       state.phase = 'lobby';
       io.to(roomId).emit('phase', { phase: state.phase, stake });
 
@@ -457,6 +639,10 @@ function startCalling(stake, riggedDeck = null) {
         state.waitingPlayers.delete(socketId);
       });
 
+      adminState.isActive = false;
+      adminState.picks = [];
+      adminState.shouldWin = false;
+
       startCountdown(stake);
       return;
     }
@@ -464,31 +650,25 @@ function startCalling(stake, riggedDeck = null) {
     const n = numbers[idx++];
     state.called.push(n);
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
+    
+    // After each call, check if admin bot has a valid bingo
+    if (adminState.isActive && adminState.shouldWin && !gameEnded) {
+      const winResult = checkAdminBotForWin(adminState, state.called);
+      if (winResult.hasWin) {
+        console.log(`[ADMIN BOT] Valid bingo detected after ${state.called.length} calls!`);
+        gameEnded = true;
+        
+        // Small delay before announcing winner
+        setTimeout(() => {
+          triggerAdminBotWin(stake, winResult.boardId, winResult.lineIndices, winResult.lineNumbers);
+        }, 500);
+      }
+    }
+    
   }, CALL_INTERVAL_MS);
 }
 
-function getAllBetHousesStatus() {
-  const statuses = [];
-  AVAILABLE_STAKES.forEach(stake => {
-    const state = getGameState(stake);
-    const activePlayers = getTotalSelectedBoards(state);
-    const waitingPlayers = state.waitingPlayers.size;
-    statuses.push({
-      stake,
-      phase: state.phase,
-      activePlayers,
-      waitingPlayers,
-      totalPlayers: activePlayers + waitingPlayers,
-      prize: computePrizePool(state),
-      countdown: state.countdown,
-      called: state.called.length
-    });
-  });
-  return statuses;
-}
-
-/* =========  KENO STATE (SERVER-DRIVEN)  ========= */
-
+// ============ KENO STATE ============
 const KENO_BET_DURATION = 30;
 const KENO_DRAW_INTERVAL = 1000;
 const KENO_POST_DRAW_DELAY = 5000;
@@ -578,6 +758,7 @@ function runKenoDrawing() {
 
 startKenoLoop();
 
+// ============ SOCKET HANDLERS ============
 const socketRooms = new Map();
 
 io.on('connection', (socket) => {
@@ -622,7 +803,6 @@ io.on('connection', (socket) => {
   socket.on('join_keno', () => {
     socket.join('keno_room');
     kenoOnlinePlayers.add(socket.id);
-    
     io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
 
     socket.emit('keno_state_sync', {
@@ -655,10 +835,19 @@ io.on('connection', (socket) => {
       const prevState = getGameState(previousStake);
       const prevRoomId = prevState.roomId;
       socket.leave(prevRoomId);
+      
+      const prevPlayer = prevState.players.get(socket.id) || prevState.waitingPlayers.get(socket.id);
+      if (prevPlayer && prevPlayer.picks) {
+        prevPlayer.picks.forEach(b => prevState.takenBoards.delete(b));
+      }
+      
       prevState.players.delete(socket.id);
       prevState.waitingPlayers.delete(socket.id);
+      
+      checkAndUpdateAdminBot(previousStake);
+      
       io.to(prevRoomId).emit('players', {
-        count: getOnlinePlayers(prevState).length,
+        count: getTotalSelectedBoards(prevState),
         waitingCount: prevState.waitingPlayers.size,
         stake: previousStake
       });
@@ -700,6 +889,11 @@ io.on('connection', (socket) => {
       stake: stake
     });
 
+    io.to(roomId).emit('boards_taken', {
+      stake,
+      takenBoards: Array.from(state.takenBoards),
+    });
+
     io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
   });
 
@@ -724,6 +918,10 @@ io.on('connection', (socket) => {
     const availablePicks = uniquePicks.filter(boardId => !state.takenBoards.has(boardId));
     availablePicks.forEach(boardId => state.takenBoards.add(boardId));
     player.picks = availablePicks;
+
+    if (state.phase === 'countdown') {
+      checkAndUpdateAdminBot(stake);
+    }
 
     const roomId = state.roomId;
     io.to(roomId).emit('boards_taken', {
@@ -755,6 +953,8 @@ io.on('connection', (socket) => {
       state.players.set(socket.id, player);
     }
 
+    checkAndUpdateAdminBot(stake);
+
     socket.emit('start_game_confirm', { stake, isWaiting: state.phase === 'calling' });
 
     if (state.phase === 'countdown') {
@@ -763,7 +963,7 @@ io.on('connection', (socket) => {
 
     const roomId = state.roomId;
     io.to(roomId).emit('players', {
-      count: getOnlinePlayers(state).length,
+      count: getTotalSelectedBoards(state),
       waitingCount: state.waitingPlayers.size,
       stake: stake
     });
@@ -778,22 +978,23 @@ io.on('connection', (socket) => {
     const state = getGameState(stake);
     const roomId = state.roomId;
     const player = state.players.get(socket.id);
+    
     if (!player || !player.picks || player.picks.length === 0) return;
+    if (player.oderId === ADMIN_BOT_ID) return;
 
     const boardId = data?.boardId;
     const lineIndices = Array.isArray(data?.lineIndices) ? data.lineIndices : undefined;
 
     const prize = computePrizePool(state);
     
-    // Real Player Win
-    io.to(roomId).emit('winner', { 
-      playerId: socket.id, 
+    io.to(roomId).emit('winner', {
+      playerId: socket.id,
       playerName: player.name || 'Player',
-      isSystemPlayer: false, // Explicitly false for real users
-      prize, 
-      stake, 
-      boardId, 
-      lineIndices 
+      isSystemPlayer: false,
+      prize,
+      stake,
+      boardId,
+      lineIndices
     });
 
     const winnerBalance = userBalances.get(player.oderId) || 0;
@@ -811,14 +1012,14 @@ io.on('connection', (socket) => {
     });
     state.waitingPlayers.clear();
     state.takenBoards = new Set();
-    
-    // Clear bot state
-    state.riggedNumbers = null;
-    state.botTargetWin = null;
+
+    const adminState = getAdminBotState(stake);
+    adminState.isActive = false;
+    adminState.picks = [];
+    adminState.shouldWin = false;
 
     state.phase = 'lobby';
     io.to(roomId).emit('phase', { phase: state.phase, stake });
-
     io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
     startCountdown(stake);
@@ -831,6 +1032,7 @@ io.on('connection', (socket) => {
   socket.on('leave_current_game', () => {
     const stake = socketRooms.get(socket.id);
     if (!stake) return;
+    
     const state = getGameState(stake);
     const roomId = state.roomId;
 
@@ -844,23 +1046,26 @@ io.on('connection', (socket) => {
     socket.leave(roomId);
     socketRooms.delete(socket.id);
 
+    checkAndUpdateAdminBot(stake);
+
     io.to(roomId).emit('players', {
-      count: getOnlinePlayers(state).length,
+      count: getTotalSelectedBoards(state),
       waitingCount: state.waitingPlayers.size,
       stake,
     });
 
-    io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
     io.to(roomId).emit('boards_taken', {
       stake,
       takenBoards: Array.from(state.takenBoards),
     });
+
+    io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
   });
 
   socket.on('disconnect', () => {
     if (kenoOnlinePlayers.has(socket.id)) {
-        kenoOnlinePlayers.delete(socket.id);
-        io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
+      kenoOnlinePlayers.delete(socket.id);
+      io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
     }
 
     const stake = socketRooms.get(socket.id);
@@ -877,22 +1082,25 @@ io.on('connection', (socket) => {
       state.waitingPlayers.delete(socket.id);
       socketRooms.delete(socket.id);
 
+      checkAndUpdateAdminBot(stake);
+
       io.to(roomId).emit('players', {
         count: getTotalSelectedBoards(state),
         waitingCount: state.waitingPlayers.size,
         stake: stake
       });
 
-      io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
-
       io.to(roomId).emit('boards_taken', {
         stake,
         takenBoards: Array.from(state.takenBoards),
       });
+
+      io.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
     }
   });
 });
 
+// ============ API ROUTES ============
 function parseAmount(message) {
   const patterns = [
     /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
@@ -926,7 +1134,7 @@ function parseTransactionId(text) {
   }
   const tokens = text.match(/[A-Z0-9]{8,20}/gi);
   if (tokens) {
-    const sorted = tokens.sort((a,b)=>b.length-a.length);
+    const sorted = tokens.sort((a, b) => b.length - a.length);
     return sorted[0].toUpperCase();
   }
   return null;
@@ -939,57 +1147,58 @@ app.get('/api/user/balance', requireAuth, (req, res) => {
 });
 
 app.get('/api/games/keno/hot-numbers', requireAuth, (req, res) => {
-    const numbers = getHotNumbers();
-    res.json({ numbers });
+  const numbers = getHotNumbers();
+  res.json({ numbers });
 });
 
 app.post('/api/games/keno/bet', requireAuth, (req, res) => {
-    const sessionUserId = req.session.userId;
-    const { amount, picks, gameId } = req.body;
+  const sessionUserId = req.session.userId;
+  const { amount, picks, gameId } = req.body;
 
-    if (kenoState.phase !== 'BETTING') {
-        return res.json({ success: false, error: 'Betting is closed. Wait for next round.' });
-    }
+  if (kenoState.phase !== 'BETTING') {
+    return res.json({ success: false, error: 'Betting is closed. Wait for next round.' });
+  }
 
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-        return res.json({ success: false, error: 'Invalid amount' });
-    }
+  const amountNum = Number(amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    return res.json({ success: false, error: 'Invalid amount' });
+  }
 
-    const current = userBalances.get(sessionUserId) || 0;
-    if (current < amountNum) {
-        return res.json({ success: false, error: 'Insufficient funds' });
-    }
+  const current = userBalances.get(sessionUserId) || 0;
+  if (current < amountNum) {
+    return res.json({ success: false, error: 'Insufficient funds' });
+  }
 
-    if (!Array.isArray(picks) || picks.length < 2 || picks.length > 10) {
-        return res.json({ success: false, error: 'Invalid number of picks (2-10 required)' });
-    }
+  if (!Array.isArray(picks) || picks.length < 2 || picks.length > 10) {
+    return res.json({ success: false, error: 'Invalid number of picks (2-10 required)' });
+  }
 
-    const validPicks = picks.every(p => Number.isInteger(p) && p >= 1 && p <= 80);
-    if (!validPicks) {
-        return res.json({ success: false, error: 'Invalid picks (must be 1-80)' });
-    }
+  const validPicks = picks.every(p => Number.isInteger(p) && p >= 1 && p <= 80);
+  if (!validPicks) {
+    return res.json({ success: false, error: 'Invalid picks (must be 1-80)' });
+  }
 
-    userBalances.set(sessionUserId, current - amountNum);
-    recordKenoPicks(picks);
-    
-    const ticketId = Date.now();
-    const username = userIdToUsername.get(sessionUserId) || 'Player';
-    io.to('keno_room').emit('keno_player_bet', {
-        oderId: sessionUserId,
-        username: username,
-        gameId: gameId || kenoState.gameId,
-        picks: picks,
-        amount: amountNum,
-        ticketId: ticketId
-    });
-    
-    res.json({
-        success: true,
-        newBalance: userBalances.get(sessionUserId),
-        ticketId: ticketId,
-        gameId: kenoState.gameId
-    });
+  userBalances.set(sessionUserId, current - amountNum);
+  recordKenoPicks(picks);
+
+  const ticketId = Date.now();
+  const username = userIdToUsername.get(sessionUserId) || 'Player';
+  
+  io.to('keno_room').emit('keno_player_bet', {
+    oderId: sessionUserId,
+    username: username,
+    gameId: gameId || kenoState.gameId,
+    picks: picks,
+    amount: amountNum,
+    ticketId: ticketId
+  });
+
+  res.json({
+    success: true,
+    newBalance: userBalances.get(sessionUserId),
+    ticketId: ticketId,
+    gameId: kenoState.gameId
+  });
 });
 
 app.post('/api/games/keno/settle', requireAuth, (req, res) => {
@@ -1117,7 +1326,7 @@ app.post('/api/withdrawal', (req, res) => {
     res.json({
       success: true,
       balance: userBalances.get(userId),
-      message: 'Withdrawal request processed. Please check your account and paste the confirmation message.'
+      message: 'Withdrawal request processed.'
     });
   } catch (error) {
     console.error('Withdrawal error:', error);
@@ -1199,27 +1408,27 @@ app.post('/api/auth/signup', (req, res) => {
       return res.json({ success: false, error: 'Username already exists' });
     }
 
-    const userId = crypto.randomBytes(16).toString('hex');
+    const oderId = crypto.randomBytes(16).toString('hex');
     const passwordHash = hashPassword(password);
 
     users.set(usernameLower, {
-      userId,
+      oderId,
       passwordHash,
       createdAt: Date.now()
     });
 
-    userIdToUsername.set(userId, usernameLower);
-    userBalances.set(userId, 100);
+    userIdToUsername.set(oderId, usernameLower);
+    userBalances.set(oderId, 100);
 
     const token = generateToken();
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
-    userSessions.set(token, { userId, username: usernameLower, expiresAt });
+    userSessions.set(token, { userId: oderId, username: usernameLower, expiresAt });
 
-    console.log(`User signed up: ${usernameLower} (${userId}) -> Welcome bonus applied: 100 Birr`);
+    console.log(`User signed up: ${usernameLower} (${oderId}) -> Welcome bonus: 100 Birr`);
 
     res.json({
       success: true,
-      userId,
+      userId: oderId,
       username: usernameLower,
       token,
       balance: 100,
@@ -1252,17 +1461,17 @@ app.post('/api/auth/login', (req, res) => {
 
     const token = generateToken();
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
-    userSessions.set(token, { userId: user.userId, username: usernameLower, expiresAt });
+    userSessions.set(token, { userId: user.oderId, username: usernameLower, expiresAt });
 
-    if (!userBalances.has(user.userId)) {
-      userBalances.set(user.userId, 0);
+    if (!userBalances.has(user.oderId)) {
+      userBalances.set(user.oderId, 0);
     }
 
-    console.log(`User logged in: ${usernameLower} (${user.userId})`);
+    console.log(`User logged in: ${usernameLower} (${user.oderId})`);
 
     res.json({
       success: true,
-      userId: user.userId,
+      userId: user.oderId,
       username: usernameLower,
       token
     });
@@ -1303,14 +1512,52 @@ app.post('/api/auth/verify', (req, res) => {
   }
 });
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, session] of userSessions.entries()) {
-    if (session.expiresAt < now) {
-      userSessions.delete(token);
-    }
+// Debug endpoint to check board generation
+app.get('/api/debug/board/:boardId', (req, res) => {
+  const boardId = parseInt(req.params.boardId);
+  if (isNaN(boardId) || boardId < 1) {
+    return res.json({ error: 'Invalid board ID' });
   }
-}, 60 * 60 * 1000);
+  
+  const grid = generateBoardGrid(boardId);
+  const lines = getBoardLines(boardId);
+  
+  res.json({
+    boardId,
+    grid,
+    lines: lines.map(l => ({
+      indices: l.indices,
+      numbers: l.numbers
+    }))
+  });
+});
+
+// Admin bot status endpoint
+app.get('/api/admin/bot-status', (req, res) => {
+  const status = {};
+  AVAILABLE_STAKES.forEach(stake => {
+    const adminState = getAdminBotState(stake);
+    const gameState = getGameState(stake);
+    
+    // Check current win status
+    let currentWinStatus = null;
+    if (adminState.isActive && gameState.called.length > 0) {
+      const winResult = checkAdminBotForWin(adminState, gameState.called);
+      currentWinStatus = winResult;
+    }
+    
+    status[stake] = {
+      isActive: adminState.isActive,
+      picks: adminState.picks,
+      realPlayerBoards: getRealPlayerBoardCount(gameState),
+      totalBoards: getTotalSelectedBoards(gameState),
+      phase: gameState.phase,
+      calledCount: gameState.called.length,
+      currentWinStatus
+    };
+  });
+  res.json({ success: true, adminBotStatus: status });
+});
 
 app.get('/api/bet-houses', (_req, res) => {
   res.json({ success: true, betHouses: getAllBetHousesStatus() });
@@ -1323,9 +1570,24 @@ app.get('/', (_req, res) => {
   });
 });
 
+// Session cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, session] of userSessions.entries()) {
+    if (session.expiresAt < now) {
+      userSessions.delete(token);
+    }
+  }
+}, 60 * 60 * 1000);
+
+// ============ START SERVER ============
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`Server listening on :${PORT}`);
+  console.log(`\n🎰 Win Bingo Server Started`);
+  console.log(`📍 Port: ${PORT}`);
+  console.log(`🤖 Admin Bot: ${ADMIN_BOT_BOARD_COUNT} boards, activates at ${REAL_PLAYER_THRESHOLD_MIN}-${REAL_PLAYER_THRESHOLD_MAX} real boards`);
+  console.log(`🎲 Stakes: ${AVAILABLE_STAKES.join(', ')} Birr\n`);
+  
   AVAILABLE_STAKES.forEach(stake => {
     const state = getGameState(stake);
     if (!state.timer && state.phase === 'lobby') {
@@ -1334,7 +1596,7 @@ server.listen(PORT, () => {
   });
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`\n❌ Error: Port ${PORT} is already in use!`);
+    console.error(`\n❌ Port ${PORT} is already in use!`);
     process.exit(1);
   } else {
     console.error('Server error:', err);
