@@ -1778,8 +1778,8 @@ export default function App() {
               }}
                if (!Number.isFinite(amountNum) || amountNum = 0) {
                   alert('Enter a valid amount')
-                  return
-                }
+                  return}
+                
                 if (!depositMessage.trim()) {
                   alert('Please paste your deposit confirmation message')
                   return
@@ -1826,7 +1826,7 @@ export default function App() {
                   setDepositMessage('')
                   setCurrentPage('welcome')
                   alert('Deposit verified and processed successfully!')
-                } catch (e: any) {
+                  catch (e: any) {
                   alert(e?.message || 'Failed to verify deposit. Please try again.')
                 } finally {
                   setDepositVerifying(false)
