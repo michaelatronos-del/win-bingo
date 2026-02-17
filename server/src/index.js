@@ -129,6 +129,31 @@ function checkBoardForWin(boardId, calledNumbers) {
   return { hasWin: false, lineIndices: null, lineNumbers: null };
 }
 
+// Check if a board has a winning line that includes the last called number
+function checkBoardForWinIncludingLast(boardId, calledNumbers, lastCalled) {
+  if (lastCalled == null) {
+    return { hasWin: false, lineIndices: null, lineNumbers: null };
+  }
+
+  const calledSet = new Set(calledNumbers);
+  const lines = getBoardLines(boardId);
+
+  for (const line of lines) {
+    if (!line.numbers.includes(lastCalled)) continue;
+
+    const isComplete = line.numbers.every(num => num === -1 || calledSet.has(num));
+    if (isComplete) {
+      return {
+        hasWin: true,
+        lineIndices: line.indices,
+        lineNumbers: line.numbers
+      };
+    }
+  }
+
+  return { hasWin: false, lineIndices: null, lineNumbers: null };
+}
+
 // Check all admin bot boards for a win
 function checkAdminBotForWin(adminState, calledNumbers) {
   for (const boardId of adminState.picks) {
@@ -143,6 +168,42 @@ function checkAdminBotForWin(adminState, calledNumbers) {
     }
   }
   return { hasWin: false };
+}
+
+// Validate a player's bingo: must have a full line on one of their boards
+// and that line MUST include the last called number.
+function validatePlayerBingo(state, player, claimedBoardId) {
+  const calledNumbers = state.called;
+  const lastCalled = calledNumbers[calledNumbers.length - 1];
+  if (!lastCalled) return null;
+
+  const picks = Array.isArray(player.picks) ? player.picks : [];
+  if (picks.length === 0) return null;
+
+  const orderedBoards = [];
+
+  if (typeof claimedBoardId === 'number' && picks.includes(claimedBoardId)) {
+    orderedBoards.push(claimedBoardId);
+  }
+
+  for (const bId of picks) {
+    if (!orderedBoards.includes(bId)) {
+      orderedBoards.push(bId);
+    }
+  }
+
+  for (const boardId of orderedBoards) {
+    const result = checkBoardForWinIncludingLast(boardId, calledNumbers, lastCalled);
+    if (result.hasWin) {
+      return {
+        boardId,
+        lineIndices: result.lineIndices,
+        lineNumbers: result.lineNumbers
+      };
+    }
+  }
+
+  return null;
 }
 
 // ============ ADMIN BOT STATE ============
@@ -976,14 +1037,28 @@ io.on('connection', (socket) => {
     }
 
     const state = getGameState(stake);
+    if (state.phase !== 'calling') {
+      // Ignore bingo presses outside calling phase
+      return;
+    }
+
     const roomId = state.roomId;
     const player = state.players.get(socket.id);
     
     if (!player || !player.picks || player.picks.length === 0) return;
     if (player.oderId === ADMIN_BOT_ID) return;
 
-    const boardId = data?.boardId;
-    const lineIndices = Array.isArray(data?.lineIndices) ? data.lineIndices : undefined;
+    const claimedBoardId = typeof data?.boardId === 'number' ? data.boardId : null;
+
+    const bingoResult = validatePlayerBingo(state, player, claimedBoardId);
+
+    if (!bingoResult) {
+      console.log(`[BINGO INVALID] Player ${player.name || socket.id} attempted invalid bingo in ${stake} room`);
+      socket.emit('invalid_bingo', {
+        reason: 'No valid BINGO found that includes the last called number on any of your boards.'
+      });
+      return;
+    }
 
     const prize = computePrizePool(state);
     
@@ -993,8 +1068,8 @@ io.on('connection', (socket) => {
       isSystemPlayer: false,
       prize,
       stake,
-      boardId,
-      lineIndices
+      boardId: bingoResult.boardId,
+      lineIndices: bingoResult.lineIndices
     });
 
     const winnerBalance = userBalances.get(player.oderId) || 0;
