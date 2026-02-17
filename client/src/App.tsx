@@ -1775,7 +1775,7 @@ export default function App() {
                onClick={async () => {
                 const amountNum = Number(depositAmount 
                 )
-              }
+              }}
                if (!Number.isFinite(amountNum) || amountNum <= 0) {
                   alert('Enter a valid amount')
                   return
