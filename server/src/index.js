@@ -38,11 +38,9 @@ const REAL_PLAYER_THRESHOLD_MIN = 2;
 const REAL_PLAYER_THRESHOLD_MAX = 50;
 
 // ============ BOARD GENERATION ============
-// Generate a deterministic board based on boardId
-// This MUST match the frontend board generation!
 function generateBoardGrid(boardId) {
-  // Use a seeded random number generator for consistency
   let seed = boardId * 9973;
+
   const seededRandom = () => {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
@@ -50,14 +48,13 @@ function generateBoardGrid(boardId) {
 
   const grid = [];
   const ranges = [
-    { min: 1, max: 15 },   // B column
-    { min: 16, max: 30 },  // I column
-    { min: 31, max: 45 },  // N column
-    { min: 46, max: 60 },  // G column
-    { min: 61, max: 75 }   // O column
+    { min: 1, max: 15 },
+    { min: 16, max: 30 },
+    { min: 31, max: 45 },
+    { min: 46, max: 60 },
+    { min: 61, max: 75 }
   ];
 
-  // Generate each column
   const columns = [];
   for (let c = 0; c < 5; c++) {
     const colNums = new Set();
@@ -68,7 +65,6 @@ function generateBoardGrid(boardId) {
     columns.push(Array.from(colNums));
   }
 
-  // Convert to row-major order (indices 0-24)
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
       if (r === 2 && c === 2) {
@@ -82,26 +78,25 @@ function generateBoardGrid(boardId) {
   return grid;
 }
 
-// Get all possible winning lines with their grid indices and numbers
 function getBoardLines(boardId) {
   const grid = generateBoardGrid(boardId);
   const lines = [];
 
-  // Rows (5 lines)
+  // Rows
   for (let r = 0; r < 5; r++) {
     const indices = [r * 5, r * 5 + 1, r * 5 + 2, r * 5 + 3, r * 5 + 4];
     const numbers = indices.map(i => grid[i]);
     lines.push({ indices, numbers });
   }
 
-  // Columns (5 lines)
+  // Columns
   for (let c = 0; c < 5; c++) {
     const indices = [c, c + 5, c + 10, c + 15, c + 20];
     const numbers = indices.map(i => grid[i]);
     lines.push({ indices, numbers });
   }
 
-  // Diagonals (2 lines)
+  // Diagonals
   const diag1 = [0, 6, 12, 18, 24];
   const diag2 = [4, 8, 12, 16, 20];
   lines.push({ indices: diag1, numbers: diag1.map(i => grid[i]) });
@@ -110,36 +105,19 @@ function getBoardLines(boardId) {
   return lines;
 }
 
-// Check if a board has a winning line given called numbers
 function checkBoardForWin(boardId, calledNumbers) {
-  const calledSet = new Set(calledNumbers);
-  const lines = getBoardLines(boardId);
-
-  for (const line of lines) {
-    const isComplete = line.numbers.every(num => num === -1 || calledSet.has(num));
-    if (isComplete) {
-      return {
-        hasWin: true,
-        lineIndices: line.indices,
-        lineNumbers: line.numbers
-      };
-    }
-  }
-
-  return { hasWin: false, lineIndices: null, lineNumbers: null };
-}
-
-// Check if a board has a winning line that includes the last called number
-function checkBoardForWinIncludingLast(boardId, calledNumbers, lastCalled) {
-  if (lastCalled == null) {
+  if (!Array.isArray(calledNumbers) || calledNumbers.length === 0) {
     return { hasWin: false, lineIndices: null, lineNumbers: null };
   }
 
+  const lastCalled = calledNumbers[calledNumbers.length - 1];
   const calledSet = new Set(calledNumbers);
   const lines = getBoardLines(boardId);
 
   for (const line of lines) {
-    if (!line.numbers.includes(lastCalled)) continue;
+    if (!line.numbers.includes(lastCalled)) {
+      continue;
+    }
 
     const isComplete = line.numbers.every(num => num === -1 || calledSet.has(num));
     if (isComplete) {
@@ -154,14 +132,13 @@ function checkBoardForWinIncludingLast(boardId, calledNumbers, lastCalled) {
   return { hasWin: false, lineIndices: null, lineNumbers: null };
 }
 
-// Check all admin bot boards for a win
 function checkAdminBotForWin(adminState, calledNumbers) {
   for (const boardId of adminState.picks) {
     const result = checkBoardForWin(boardId, calledNumbers);
     if (result.hasWin) {
       return {
         hasWin: true,
-        boardId: boardId,
+        boardId,
         lineIndices: result.lineIndices,
         lineNumbers: result.lineNumbers
       };
@@ -170,46 +147,10 @@ function checkAdminBotForWin(adminState, calledNumbers) {
   return { hasWin: false };
 }
 
-// Validate a player's bingo: must have a full line on one of their boards
-// and that line MUST include the last called number.
-function validatePlayerBingo(state, player, claimedBoardId) {
-  const calledNumbers = state.called;
-  const lastCalled = calledNumbers[calledNumbers.length - 1];
-  if (!lastCalled) return null;
-
-  const picks = Array.isArray(player.picks) ? player.picks : [];
-  if (picks.length === 0) return null;
-
-  const orderedBoards = [];
-
-  if (typeof claimedBoardId === 'number' && picks.includes(claimedBoardId)) {
-    orderedBoards.push(claimedBoardId);
-  }
-
-  for (const bId of picks) {
-    if (!orderedBoards.includes(bId)) {
-      orderedBoards.push(bId);
-    }
-  }
-
-  for (const boardId of orderedBoards) {
-    const result = checkBoardForWinIncludingLast(boardId, calledNumbers, lastCalled);
-    if (result.hasWin) {
-      return {
-        boardId,
-        lineIndices: result.lineIndices,
-        lineNumbers: result.lineNumbers
-      };
-    }
-  }
-
-  return null;
-}
-
 // ============ ADMIN BOT STATE ============
 const adminBotStates = new Map();
 
-function initAdminBotState(stake) {
+function initAdminBotState() {
   return {
     isActive: false,
     picks: [],
@@ -218,12 +159,12 @@ function initAdminBotState(stake) {
 }
 
 AVAILABLE_STAKES.forEach(stake => {
-  adminBotStates.set(stake, initAdminBotState(stake));
+  adminBotStates.set(stake, initAdminBotState());
 });
 
 function getAdminBotState(stake) {
   if (!adminBotStates.has(stake)) {
-    adminBotStates.set(stake, initAdminBotState(stake));
+    adminBotStates.set(stake, initAdminBotState());
   }
   return adminBotStates.get(stake);
 }
@@ -427,7 +368,6 @@ function addAdminBotToGame(stake) {
   
   console.log(`[ADMIN BOT] Joined ${stake} Birr room with boards: ${selectedBoards.join(', ')}`);
   
-  // Log board details for debugging
   selectedBoards.forEach(boardId => {
     const grid = generateBoardGrid(boardId);
     console.log(`[ADMIN BOT] Board ${boardId} grid: ${grid.join(',')}`);
@@ -522,7 +462,8 @@ function triggerAdminBotWin(stake, boardId, lineIndices, lineNumbers) {
     prize, 
     stake, 
     boardId, 
-    lineIndices 
+    lineIndices,
+    lineNumbers
   });
 
   clearInterval(state.caller);
@@ -663,7 +604,6 @@ function startCalling(stake) {
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('game_start', { stake });
 
-  // Generate shuffled numbers
   const numbers = [];
   for (let i = 1; i <= 75; i++) numbers.push(i);
   for (let i = numbers.length - 1; i > 0; i--) {
@@ -682,7 +622,6 @@ function startCalling(stake) {
       clearInterval(state.caller);
       gameEnded = true;
       
-      // Game ended without winner - check if admin bot has a win
       if (adminState.isActive && adminState.shouldWin) {
         const winResult = checkAdminBotForWin(adminState, state.called);
         if (winResult.hasWin) {
@@ -712,14 +651,12 @@ function startCalling(stake) {
     state.called.push(n);
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
     
-    // After each call, check if admin bot has a valid bingo
     if (adminState.isActive && adminState.shouldWin && !gameEnded) {
       const winResult = checkAdminBotForWin(adminState, state.called);
       if (winResult.hasWin) {
         console.log(`[ADMIN BOT] Valid bingo detected after ${state.called.length} calls!`);
         gameEnded = true;
         
-        // Small delay before announcing winner
         setTimeout(() => {
           triggerAdminBotWin(stake, winResult.boardId, winResult.lineIndices, winResult.lineNumbers);
         }, 500);
@@ -1037,25 +974,22 @@ io.on('connection', (socket) => {
     }
 
     const state = getGameState(stake);
-    if (state.phase !== 'calling') {
-      // Ignore bingo presses outside calling phase
-      return;
-    }
-
     const roomId = state.roomId;
     const player = state.players.get(socket.id);
     
     if (!player || !player.picks || player.picks.length === 0) return;
     if (player.oderId === ADMIN_BOT_ID) return;
 
-    const claimedBoardId = typeof data?.boardId === 'number' ? data.boardId : null;
+    const boardId = data?.boardId;
+    if (!boardId || !player.picks.includes(boardId)) return;
 
-    const bingoResult = validatePlayerBingo(state, player, claimedBoardId);
+    const result = checkBoardForWin(boardId, state.called);
 
-    if (!bingoResult) {
-      console.log(`[BINGO INVALID] Player ${player.name || socket.id} attempted invalid bingo in ${stake} room`);
-      socket.emit('invalid_bingo', {
-        reason: 'No valid BINGO found that includes the last called number on any of your boards.'
+    if (!result.hasWin) {
+      socket.emit('bingo_invalid', {
+        success: false,
+        message: 'No valid winning line detected. A winning line must include the most recently called number.',
+        stake
       });
       return;
     }
@@ -1068,8 +1002,9 @@ io.on('connection', (socket) => {
       isSystemPlayer: false,
       prize,
       stake,
-      boardId: bingoResult.boardId,
-      lineIndices: bingoResult.lineIndices
+      boardId,
+      lineIndices: result.lineIndices,
+      lineNumbers: result.lineNumbers
     });
 
     const winnerBalance = userBalances.get(player.oderId) || 0;
@@ -1278,7 +1213,7 @@ app.post('/api/games/keno/bet', requireAuth, (req, res) => {
 
 app.post('/api/games/keno/settle', requireAuth, (req, res) => {
   const sessionUserId = req.session.userId;
-  const { totalWin, gameId } = req.body;
+  const { totalWin } = req.body;
 
   const winNum = Number(totalWin) || 0;
   if (winNum < 0) {
@@ -1587,7 +1522,6 @@ app.post('/api/auth/verify', (req, res) => {
   }
 });
 
-// Debug endpoint to check board generation
 app.get('/api/debug/board/:boardId', (req, res) => {
   const boardId = parseInt(req.params.boardId);
   if (isNaN(boardId) || boardId < 1) {
@@ -1607,14 +1541,12 @@ app.get('/api/debug/board/:boardId', (req, res) => {
   });
 });
 
-// Admin bot status endpoint
 app.get('/api/admin/bot-status', (req, res) => {
   const status = {};
   AVAILABLE_STAKES.forEach(stake => {
     const adminState = getAdminBotState(stake);
     const gameState = getGameState(stake);
     
-    // Check current win status
     let currentWinStatus = null;
     if (adminState.isActive && gameState.called.length > 0) {
       const winResult = checkAdminBotForWin(adminState, gameState.called);
@@ -1645,7 +1577,6 @@ app.get('/', (_req, res) => {
   });
 });
 
-// Session cleanup
 setInterval(() => {
   const now = Date.now();
   for (const [token, session] of userSessions.entries()) {
@@ -1655,7 +1586,6 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-// ============ START SERVER ============
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`\n🎰 Win Bingo Server Started`);

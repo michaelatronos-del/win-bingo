@@ -176,9 +176,9 @@ const translations = {
     how_to_play: 'እንዴት እንደሚጫወቱ',
     rule_1: 'የውርርድ ቤት ይምረጡ።',
     rule_2: 'እስከ 2 ካርቶዎችን ይምረጡ።',
-    rule_3: 'ጨዋታ ጀምር የሚለውን ይጫኑ።',
+    rule_3: 'ጨዋታ ጀምር የሚለውን ናብሩ።',
     rule_4: 'ቁጥሮች ሲጠሩ ምልክት ያድርጉ።',
-    rule_5: 'ቢንጎ የሚለውን የሚጫኑት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
+    rule_5: 'ቢንጎ የሚለውን ለማርከት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
     dep_with_title: 'ገቢ እና ወጪ',
     dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
     audio: 'ድምፅ',
@@ -349,6 +349,17 @@ const translations = {
   }
 }
 
+type WinnerInfo = {
+  boardId: number
+  lineIndices: number[]
+  lineNumbers: number[]
+  playerId?: string
+  playerName?: string
+  prize?: number
+  stake?: number
+  isSystemPlayer?: boolean
+} | null
+
 export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [playerId, setPlayerId] = useState<string>('')
@@ -396,13 +407,7 @@ export default function App() {
   const [autoMark, setAutoMark] = useState<boolean>(false)
   const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
   const [autoBingo, setAutoBingo] = useState<boolean>(false)
-  const [winnerInfo, setWinnerInfo] = useState<{
-    boardId: number
-    lineIndices: number[]
-    playerId?: string
-    prize?: number
-    stake?: number
-  } | null>(null)
+  const [winnerInfo, setWinnerInfo] = useState<WinnerInfo>(null)
   
   const [audioPack, setAudioPack] = useState<string>('amharic') 
   const [audioOn, setAudioOn] = useState<boolean>(true)
@@ -428,11 +433,23 @@ export default function App() {
   const calledRef = useRef<number[]>(called)
   const lastCalledRef = useRef<number | null>(lastCalled)
   const currentBetHouseRef = useRef<number | null>(currentBetHouse)
+  const audioOnRef = useRef<boolean>(audioOn)
+  const isWaitingRef = useRef<boolean>(isWaiting)
+  const phaseRef = useRef<Phase>(phase)
+  const picksRef = useRef<number[]>(picks)
+  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
+  const autoBingoRef = useRef<boolean>(autoBingo)
 
   useEffect(() => { playerIdRef.current = playerId }, [playerId])
   useEffect(() => { calledRef.current = called }, [called])
   useEffect(() => { lastCalledRef.current = lastCalled }, [lastCalled])
   useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHouse])
+  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
+  useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { picksRef.current = picks }, [picks])
+  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
+  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
 
   // --- Helper: Get Translation ---
   const t = (key: keyof typeof translations['en']) => {
@@ -600,6 +617,7 @@ export default function App() {
     s.on('winner', (d: any) => {
       let boardId: number | undefined = typeof d.boardId === 'number' ? d.boardId : undefined
       let lineIndices: number[] | undefined = Array.isArray(d.lineIndices) ? d.lineIndices : undefined
+      let lineNumbers: number[] | undefined = Array.isArray(d.lineNumbers) ? d.lineNumbers : undefined
     
       if ((!boardId || !lineIndices) && d.playerId === playerIdRef.current) {
         const marks = new Set<number>(calledRef.current)
@@ -610,6 +628,10 @@ export default function App() {
         if (win) {
           boardId = win.boardId
           lineIndices = win.line
+          lineNumbers = win.line.map(idx => {
+            const grid = getBoard(win.boardId)
+            return grid ? grid[idx] : -1
+          })
         }
       }
     
@@ -617,9 +639,12 @@ export default function App() {
         setWinnerInfo({
           boardId,
           lineIndices,
+          lineNumbers: lineNumbers || [],
           playerId: d.playerId,
+          playerName: d.playerName,
           prize: d.prize,
           stake: d.stake,
+          isSystemPlayer: !!d.isSystemPlayer
         })
       } else {
         setWinnerInfo(null)
@@ -630,6 +655,11 @@ export default function App() {
       setCurrentPage('lobby')
       setIsReady(false)
       setIsWaiting(false)
+      autoBingoSentRef.current = false
+    })
+
+    s.on('bingo_invalid', (payload: any) => {
+      alert(payload?.message || 'Bingo rejected. Make sure the winning line includes the most recent call!')
       autoBingoSentRef.current = false
     })
     
@@ -691,7 +721,7 @@ export default function App() {
   }, [])
 
   useEffect(() => { 
-    if (socket && currentBetHouse) {
+    if (socket && currentBetHouse !== null) {
       socket.emit('select_numbers', { picks, stake: currentBetHouse }) 
     }
   }, [socket, picks, currentBetHouse])
@@ -708,7 +738,7 @@ export default function App() {
     return () => window.clearInterval(id)
   }, [phase, callCountdown])
 
-  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
+  const allBoards = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
 
   const togglePick = (n: number) => {
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
@@ -765,64 +795,15 @@ export default function App() {
     })
   }
 
-  const checkBingo = (board: BoardGrid): boolean => {
-    for (let row = 0; row < 5; row++) {
-      let count = 0
-      for (let col = 0; col < 5; col++) {
-        const idx = row * 5 + col
-        const num = board[idx]
-        if (num === -1 || markedNumbers.has(num)) count++
-      }
-      if (count === 5) return true
+  const getActiveMarks = () => {
+    if (autoAlgoMark) {
+      return new Set(called)
     }
-    for (let col = 0; col < 5; col++) {
-      let count = 0
-      for (let row = 0; row < 5; row++) {
-        const idx = row * 5 + col
-        const num = board[idx]
-        if (num === -1 || markedNumbers.has(num)) count++
-      }
-      if (count === 5) return true
+    const manual = new Set(markedNumbers)
+    if (lastCalled != null && called.includes(lastCalled)) {
+      manual.add(lastCalled)
     }
-    let count1 = 0, count2 = 0
-    for (let i = 0; i < 5; i++) {
-      const num1 = board[i * 5 + i]
-      const num2 = board[i * 5 + (4 - i)]
-      if (num1 === -1 || markedNumbers.has(num1)) count1++
-      if (num2 === -1 || markedNumbers.has(num2)) count2++
-    }
-    return count1 === 5 || count2 === 5
-  }
-
-  const canBingo = picks.some(boardId => {
-    const board = getBoard(boardId)
-    return board ? checkBingo(board) : false
-  })
-
-  const hasBingoWithMarksAndLast = (
-    marks: Set<number>,
-    last: number | null,
-    boardIdsOverride?: number[]
-  ): boolean => {
-    if (!last) return false
-    const boardsToCheck = boardIdsOverride ?? picks
-    for (const boardId of boardsToCheck) {
-      const grid = getBoard(boardId)
-      if (!grid) continue
-      const lines: number[][] = []
-      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
-      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
-      lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
-      lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
-
-      for (const line of lines) {
-        const containsLast = line.includes(last)
-        if (!containsLast) continue
-        const complete = line.every(n => n === -1 || marks.has(n))
-        if (complete) return true
-      }
-    }
-    return false
+    return manual
   }
 
   const findAnyBingoWin = (
@@ -836,8 +817,8 @@ export default function App() {
       const lines: number[][] = []
       for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
       for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      lines.push([0,1,2,3,4].map(i => i * 5 + i))
-      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+      lines.push([0,6,12,18,24])
+      lines.push([4,8,12,16,20])
 
       for (const idxLine of lines) {
         const complete = idxLine.every(idx => {
@@ -867,12 +848,12 @@ export default function App() {
       const lines: number[][] = []
       for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
       for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      lines.push([0,1,2,3,4].map(i => i * 5 + i))
-      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+      lines.push([0,6,12,18,24])
+      lines.push([4,8,12,16,20])
 
       for (const idxLine of lines) {
-        const nums = idxLine.map(idx => grid[idx])
-        if (!nums.includes(last)) continue
+        const numbers = idxLine.map(idx => grid[idx])
+        if (!numbers.includes(last)) continue
 
         const complete = idxLine.every(idx => {
           const num = grid[idx]
@@ -886,36 +867,29 @@ export default function App() {
     return null
   }
 
-  const hasBingoIncludingLastCalled = (
-    overrideCalled?: number[],
-    overrideLastCalled?: number | null
-  ): boolean => {
-    const effectiveLastCalled = overrideLastCalled ?? lastCalled
-    if (!effectiveLastCalled) return false
-    const effectiveCalled = overrideCalled ?? called
-    const marks = new Set<number>(
-      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
-    )
-    return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
+  const canPressBingo = () => {
+    if (!lastCalled) return false
+    const marks = getActiveMarks()
+    return !!findBingoWinIncludingLast(marks, lastCalled, picks)
   }
 
-  const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
+  const onPressBingo = () => {
     if (phase !== 'calling' || isWaiting) return
-    if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
-      alert('No valid BINGO found that includes the last called number. Keep marking!')
+    if (!lastCalled) {
+      alert('Wait for a call before pressing BINGO!')
+      return
+    }
+    const marks = getActiveMarks()
+    const win = findBingoWinIncludingLast(marks, lastCalled, picks)
+    if (!win) {
+      alert('No valid BINGO found that includes the most recent number. Keep marking!')
       return
     }
     if (!currentBetHouse) return
-    const effectiveLastCalled = overrideLastCalled ?? lastCalled
-    const effectiveCalled = overrideCalled ?? called
-    const marks = new Set<number>(
-      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
-    )
-    const win = findBingoWinIncludingLast(marks, effectiveLastCalled, picks)
     socket?.emit('bingo', {
       stake: currentBetHouse,
-      boardId: win?.boardId,
-      lineIndices: win?.line,
+      boardId: win.boardId,
+      lineIndices: win.line,
     })
     autoBingoSentRef.current = true
   }
@@ -951,7 +925,7 @@ export default function App() {
           {columns.map((col, colIndex) => (
             <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
               {col.map((num) => {
-                const isCalled = called.includes(num);
+                const isCalledLocal = called.includes(num);
                 const isCurrent = currentNumber === num;
                 return (
                   <div
@@ -960,7 +934,7 @@ export default function App() {
                       'w-full flex items-center justify-center text-[10px] sm:text-xs font-bold rounded-md transition-all duration-300 border',
                       isCurrent
                         ? 'bg-amber-400 text-black border-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.9)] scale-110 z-20 animate-pulse'
-                        : isCalled
+                        : isCalledLocal
                         ? 'bg-emerald-500 text-black border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)] scale-105 z-10'
                         : 'bg-slate-800/80 text-slate-400 border-white/5'
                     ].join(' ')}
@@ -990,19 +964,6 @@ export default function App() {
   }
 
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const audioOnRef = useRef<boolean>(audioOn)
-  const isWaitingRef = useRef<boolean>(isWaiting)
-  const phaseRef = useRef<Phase>(phase)
-  const picksRef = useRef<number[]>(picks)
-  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
-  const autoBingoRef = useRef<boolean>(autoBingo)
-
-  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
-  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
-  useEffect(() => { phaseRef.current = phase }, [phase])
-  useEffect(() => { picksRef.current = picks }, [picks])
-  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
-  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
 
   const parseAmount = (message: string): number | null => {
     const patterns = [
@@ -1035,7 +996,7 @@ export default function App() {
       const match = text.match(pattern)
       if (match) return match[1].trim().toUpperCase()
     }
-    const tokens = text.match(/[A-Z0-9]{8,20}/gi)
+  const tokens = text.match(/[A-Z0-9]{8,20}/gi)
     if (tokens) {
       const sorted = tokens.sort((a,b)=>b.length-a.length)
       return sorted[0].toUpperCase()
@@ -1111,16 +1072,20 @@ export default function App() {
   const renderCard = (
     boardId: number | null,
     isGamePage: boolean = false,
-    highlightLineIndices: number[] = []
+    highlightOverride: number[] = []
   ) => {
     if (!boardId) return null;
     const grid: BoardGrid | null = getBoard(boardId);
     if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
-  
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
+
+    const marks = getActiveMarks()
+    const winningLine = highlightOverride.length > 0
+      ? highlightOverride
+      : (isGamePage ? (findBingoWinIncludingLast(marks, lastCalled, [boardId])?.line ?? []) : [])
+
     const headers = ['B', 'I', 'N', 'G', 'O'];
     const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
-  
+
     return (
       <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
         <div className="grid grid-cols-5 gap-1.5 mb-3">
@@ -1137,15 +1102,15 @@ export default function App() {
         <div className="grid grid-cols-5 gap-1.5">
           {grid.map((val, idx) => {
             const isFree = val === -1;
-            const isCalled = called.includes(val);
-            const isMarked = isFree || markedNumbers.has(val);
-            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
-            const isHighlight = highlightLineIndices.includes(idx);
+            const isCalledLocal = called.includes(val);
+            const isMarked = isFree || marks.has(val);
+            const finalState = isGamePage ? (autoAlgoMark ? isCalledLocal || isFree : isMarked) : isCalledLocal;
+            const isHighlight = winningLine.includes(idx);
   
             return (
               <div
                 key={idx}
-                onClick={() => isGamePage && !isFree && isCalled && toggleMark(val)}
+                onClick={() => isGamePage && !isFree && isCalledLocal && toggleMark(val)}
                 className={[
                   'aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-black cursor-pointer relative transition-all duration-200 border-2',
                   isFree
@@ -1161,9 +1126,6 @@ export default function App() {
                   <span className="text-[9px] sm:text-[11px] leading-tight">FREE</span>
                 ) : (
                   <span className="text-xs sm:text-base">{val}</span>
-                )}
-                {isGamePage && boardCanBingo && finalState && !isFree && (
-                  <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
                 )}
               </div>
             );
@@ -1248,7 +1210,7 @@ export default function App() {
           </div>
           
           <div className="grid grid-cols-10 gap-1 sm:gap-2 mb-3 sm:mb-6">
-            {board.map(n => {
+            {allBoards.map(n => {
               const isPicked = picks.includes(n)
               const isTaken = takenBoards.includes(n)
               const disabled = (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) || (isTaken && !isPicked)
@@ -1566,7 +1528,7 @@ export default function App() {
                 <button onClick={() => handleLanguageSelect('en')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">English</button>
                 <button onClick={() => handleLanguageSelect('am')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">አማርኛ</button>
                 <button onClick={() => handleLanguageSelect('ti')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">ትግርኛ</button>
-                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">Oromigna</button>
+                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border.white/5">Oromigna</button>
               </div>
             </div>
           </div>
@@ -1599,7 +1561,7 @@ export default function App() {
             <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs opacity-90">{t('bonus')}</div>
             <div className="text-sm sm:text-lg font-bold">{bonus} Birr</div>
           </div>
-          <div className="text-4xl sm:text-6xl font-black opacity-60">ETB</div>
+          <div className="text-4xl sm:text-6xl font.black opacity-60">ETB</div>
         </div>
 
         <div className="flex items-center justify-between gap-2">
@@ -1620,10 +1582,10 @@ export default function App() {
         {/* PRO KENO GAME BUTTON */}
         <div className="py-2">
           <a href="/prokeno.html" className="block w-full">
-            <button className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-lg sm:text-xl py-4 rounded-xl shadow-[0_0_20px_rgba(192,38,211,0.5)] transform transition hover:scale-[1.02] border border-white/10 flex items-center justify-center gap-3 relative overflow-hidden group">
+            <button className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-lg sm:text-xl py-4 rounded-xl shadow-[0_0_20px_rgba(192,38,211,0.5)] transform transition hover:scale-[1.02] border border.white/10 flex items-center justify-center gap-3 relative overflow-hidden group">
               <span className="text-2xl animate-bounce">🎰</span>
               <span>{t('play_keno')}</span>
-              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+              <div className="absolute inset-0 bg.white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
             </button>
           </a>
         </div>
@@ -1652,14 +1614,14 @@ export default function App() {
                   {isCountdown && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-500 text-[10px] sm:text-xs font-bold">Starting</span>}
                 </div>
                 <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
-                <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
+                <div className="text-xs sm:text-sm.opacity-90 space-y-0.5">
                   <div>{t('active')}: {house.activePlayers} {t('players')}</div>
                   {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players')}</div>}
                   <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
-              <div className="mt-auto flex items-center justify-between gap-2">
+              <div className="mt-auto.flex items-center justify-between gap-2">
                 <button
-                    className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
+                    className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg.black/40 font-semibold text-xs sm:text-sm flex-1"
                   onClick={() => {
                       handleJoinBetHouse(house.stake)
                     setCurrentPage('lobby')
@@ -1667,7 +1629,7 @@ export default function App() {
                 >
                     {isSelected ? t('go_lobby') : isLive ? t('join_wait') : t('play_now')}
                 </button>
-                  <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+                  <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20.flex items-center justify-center text-sm sm:text-xl font.black flex-shrink-0">{config.tag}</div>
               </div>
             </div>
             )
@@ -1682,12 +1644,12 @@ export default function App() {
               }
               const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
               return (
-                <div key={amount} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4`}>
-                  <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
-                  <div className="text-xl sm:text-3xl font-extrabold">{amount} Birr</div>
+                <div key={amount} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col.gap-2 sm:gap-4`}>
+                  <div className="text-xs sm:text.sm opacity-90">{config.label}</div>
+                  <div className="text-xl sm:text-3xl font.extrabold">{amount} Birr</div>
             <div className="mt-auto flex items-center justify-between gap-2">
               <button
-                className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
+                className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg.black/30 hover:bg.black/40 text-xs.sm:text-sm flex-1"
                 onClick={() => {
                         handleJoinBetHouse(amount)
                   setCurrentPage('lobby')
@@ -1695,7 +1657,7 @@ export default function App() {
               >
                 {t('play_now')}
               </button>
-                    <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+                    <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg.black/20.flex items-center justify-center text-sm sm:text-xl font.black flex-shrink-0">{config.tag}</div>
             </div>
           </div>
               )
@@ -1709,7 +1671,7 @@ export default function App() {
   )
 
   const renderInstructionsPage = () => (
-    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="h-screen bg-slate-900 text.white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-3xl bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4">
         <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">{t('how_to_play')}</div>
         <ol className="list-decimal space-y-1 sm:space-y-2 ml-4 sm:ml-5 text-slate-200 text-xs sm:text-sm">
@@ -1747,7 +1709,7 @@ export default function App() {
   }
 
   const renderDepositSelect = () => (
-    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="h-screen bg-slate-900 text.white flex items.center justify.center p-3 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-3xl">
         <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">{t('select_payment')}</div>
         <div className="bg-emerald-600/80 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm mb-2 sm:mb-3">{t('recommended')}</div>
@@ -1776,7 +1738,7 @@ export default function App() {
   const renderDepositConfirm = () => {
     const info = providerToAccount[selectedProvider] || { account: '—', name: '—' }
     return (
-      <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="h-screen bg-slate-900 text.white flex items.center justify.center p-3 sm:p-4 overflow-y-auto">
         <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
           <div className="text-xl sm:text-2xl font-bold">{t('confirm_payment')}</div>
           <div>
@@ -1809,7 +1771,7 @@ export default function App() {
             </div>
             <button
               className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-emerald-600 text-black font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={!depositAmount || !depositMessage.trim() || depositVerifying}
+              disabled(!depositAmount || !depositMessage.trim() || depositVerifying}
               onClick={async () => {
                 const amountNum = Number(depositAmount)
                 if (!Number.isFinite(amountNum) || amountNum <= 0) {
@@ -1890,7 +1852,6 @@ export default function App() {
     )
   }
 
-
   const renderGamePage = () => {
     const recentlyCalled = called.slice(-6).reverse()
     const previousFive = recentlyCalled.filter(n => n !== lastCalled).slice(0, 5)
@@ -1901,9 +1862,10 @@ export default function App() {
       G: 'bg-green-600',
       O: 'bg-orange-500',
     }
+    const bingoReady = autoAlgoMark || canPressBingo()
     
     return (
-      <div className="h-screen bg-slate-900 text-white flex flex-col p-2 sm:p-4 overflow-hidden">
+      <div className="h-screen bg-slate-900 text-white.flex flex-col p-2 sm:p-4 overflow-hidden">
         <div className="w-full max-w-7xl mx-auto h-full flex flex-col">
           
           <div className="flex items-center justify-between mb-2">
@@ -1930,13 +1892,13 @@ export default function App() {
           </div>
   
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-orange-500 rounded-lg p-2 sm:p-4">
+            <div className="bg-orange-500.rounded-lg p-2 sm:p-4">
               <div className="text-[10px] opacity-90">{t('stake')}</div>
               <div className="text-sm sm:text-2xl font-bold">{stake} Birr</div>
             </div>
             <div className="bg-blue-600 rounded-lg p-2 sm:p-4">
               <div className="text-[10px] opacity-90">{t('players_label')}</div>
-              <div className="text-sm sm:text-2xl font-bold">{players}</div>
+              <div className="text-sm sm:text-2xl.font-bold">{players}</div>
             </div>
             <div className="bg-green-600 rounded-lg p-2 sm:p-4">
               <div className="text-[10px] opacity-90">{t('prize')}</div>
@@ -1946,7 +1908,7 @@ export default function App() {
   
           {lastCalled && (
             <div className="mb-3">
-              <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
+              <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border.white/10 flex items.center justify-between gap-3 sm:gap-6">
                 <div className="flex-1 text-[10px] sm:text-xs text-slate-200 uppercase tracking-wide">
                   {t('current_call')}
                   <div className="mt-0.5 text-[9px] sm:text-xs text-slate-400">
@@ -1960,7 +1922,7 @@ export default function App() {
                   )}
                 </div>
                 <div className="flex items-center justify-center">
-                  <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
+                  <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black.flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
                     <div className="text-[10px] sm:text-xs tracking-wide">
                       {numberToLetter(lastCalled)}
                     </div>
@@ -1995,8 +1957,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
-            
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">           
             <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
               <div className="flex items-center justify-between mb-4 gap-3">
                 <div className="flex items-center gap-2">
@@ -2004,7 +1965,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setAudioOn(prev => !prev)}
-                    className="h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm"
+                    className="h-7 w-7 sm:h-8 sm:w-8 flex items.center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm"
                     aria-label={audioOn ? 'Turn sound off' : 'Turn sound on'}
                   >
                     {audioOn ? '🔊' : '🔈'}
@@ -2036,10 +1997,10 @@ export default function App() {
                   {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
                 </button>
                 <button
-                  onClick={() => onPressBingo()}
-                  disabled={autoAlgoMark ? false : !canBingo}
+                  onClick={onPressBingo}
+                  disabled={!bingoReady}
                   className={`flex-1 py-3 rounded text-lg font-bold ${
-                    autoAlgoMark || canBingo ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400'
+                    bingoReady ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   }`}
                 >
                   {t('bingo_btn')}
@@ -2048,7 +2009,7 @@ export default function App() {
             </div>
   
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex.items-center justify-between mb-2">
                 <div className="text-xs sm:text-sm font-semibold">{t('your_boards')}</div>
                 <div className="text-[10px] text-slate-400">{picks.length}/2</div>
               </div>
@@ -2068,7 +2029,7 @@ export default function App() {
             </div>
           </div>
   
-          <div className="lg:hidden pb-1 space-y-2">
+          <div className="lg:hidden.pb-1 space-y-2">
             <button
               onClick={() => setAutoBingo(prev => !prev)}
               className={`w-full py-2 rounded-lg text-sm font-semibold border ${
@@ -2080,10 +2041,10 @@ export default function App() {
               {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
             </button>
             <button
-              onClick={() => onPressBingo()}
-              disabled={autoAlgoMark ? false : !canBingo}
+              onClick={onPressBingo}
+              disabled={!bingoReady}
               className={`w-full py-4 rounded-xl text-lg font-black shadow-2xl transition-transform active:scale-95 ${
-                autoAlgoMark || canBingo
+                bingoReady
                   ? 'bg-fuchsia-500 text-black animate-pulse'
                   : 'bg-slate-700 text-slate-500 cursor-not-allowed'
               }`}
@@ -2099,7 +2060,7 @@ export default function App() {
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
       return (
-        <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="h-screen bg-slate-900 text.white flex items.center justify.center p-3 sm:p-4 overflow-y-auto">
           <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
             <div className="text-xl sm:text-2xl font-bold">{t('confirm_withdraw')}</div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
@@ -2107,7 +2068,7 @@ export default function App() {
               <div className="text-xl sm:text-2xl font-bold">{withdrawalAmount} Birr</div>
             </div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('your_account')}</div>
+              <div className="text-slate-300 text-xs.sm:text-sm mb-1 sm:mb-2">{t('your_account')}</div>
               <div className="text-sm sm:text-lg font-mono break-all">{withdrawalAccount}</div>
             </div>
             <div className="space-y-1 sm:space-y-2">
@@ -2117,7 +2078,7 @@ export default function App() {
                 onChange={(e) => setWithdrawalMessage(e.target.value)}
                 placeholder="After we process your withdrawal, you will receive a confirmation message. Paste it here to verify the withdrawal was successful."
                 rows={4}
-                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none resize-none text-xs sm:text-sm"
+                className="w-full bg-slate-800 rounded-lg.sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none resize-none text-xs sm:text-sm"
               />
             </div>
             <button
@@ -2191,7 +2152,7 @@ export default function App() {
     }
     
     return (
-      <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="h-screen bg-slate-900 text.white flex items.center justify.center p-3 sm:p-4 overflow-y-auto">
         <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
           <div className="text-xl sm:text-2xl font-bold">{t('withdraw_funds')}</div>
           <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
@@ -2220,7 +2181,7 @@ export default function App() {
               />
             </div>
             <button
-              className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-blue-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-blue-600 text-white font-bold text-sm sm:text-base.disabled:opacity-60.disabled:cursor-not-allowed"
               disabled={!withdrawalAmount || !withdrawalAccount.trim() || withdrawalVerifying}
               onClick={async () => {
                 const amountNum = Number(withdrawalAmount)
@@ -2304,62 +2265,77 @@ export default function App() {
 
   return (
     <>
-  {mainPage}
-  {winnerInfo && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-        <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-          {t('bingo_btn')}
-        </div>
-        <div className="text-xs sm:text-sm text-slate-300 space-y-1">
-          {winnerInfo.playerId && (
-            <div>
-              <span className="text-slate-500">{t('winner')}:</span>{' '}
-              <span className={`font-mono break-all ${winnerInfo.isSystemPlayer ? 'text-amber-400' : ''}`}>
-                {winnerInfo.isSystemPlayer ? (
-                  <>
-                    🎰 {winnerInfo.playerName || 'LuckyPlayer'}
-                    <span className="ml-2 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
-                      House
-                    </span>
-                  </>
-                ) : (
-                  winnerInfo.playerName || winnerInfo.playerId
-                )}
-              </span>
+      {mainPage}
+            {winnerInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+              {t('bingo_btn')}
             </div>
-          )}
-          {typeof winnerInfo.prize === 'number' && (
-            <div>
-              <span className="text-slate-500">{t('prize')}:</span>{' '}
-              <span className="font-semibold">{winnerInfo.prize} Birr</span>
+
+            <div className="text-xs sm:text-sm text-slate-300 space-y-1">
+              {winnerInfo.playerId && (
+                <div>
+                  <span className="text-slate-500">{t('winner')}:</span>{' '}
+                  <span className={`font-mono break-all ${winnerInfo.isSystemPlayer ? 'text-amber-400' : ''}`}>
+                    {winnerInfo.isSystemPlayer ? (
+                      <>
+                        🎰 {winnerInfo.playerName || 'HousePlayer'}
+                        <span className="ml-2 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
+                          House
+                        </span>
+                      </>
+                    ) : (
+                      winnerInfo.playerName || winnerInfo.playerId
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {typeof winnerInfo.prize === 'number' && (
+                <div>
+                  <span className="text-slate-500">{t('prize')}:</span>{' '}
+                  <span className="font-semibold">{winnerInfo.prize} Birr</span>
+                </div>
+              )}
+
+              {typeof winnerInfo.stake === 'number' && (
+                <div>
+                  <span className="text-slate-500">{t('stake')}:</span>{' '}
+                  <span>{winnerInfo.stake} Birr</span>
+                </div>
+              )}
+
+              <div>
+                <span className="text-slate-500">{t('winning_board')}:</span>{' '}
+                <span className="font-semibold">Board {winnerInfo.boardId}</span>
+              </div>
+
+              {winnerInfo.lineNumbers.length > 0 && (
+                <div>
+                  <span className="text-slate-500">Line:</span>{' '}
+                  <span className="font-medium">
+                    {winnerInfo.lineNumbers.filter(n => n !== -1).join(', ')}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-          {typeof winnerInfo.stake === 'number' && (
-            <div>
-              <span className="text-slate-500">{t('stake')}:</span>{' '}
-              <span>{winnerInfo.stake} Birr</span>
+
+            {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setWinnerInfo(null)}
+                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+              >
+                {t('ok')}
+              </button>
             </div>
-          )}
-          <div>
-            <span className="text-slate-500">{t('winning_board')}:</span>{' '}
-            <span className="font-semibold">Board {winnerInfo.boardId}</span>
           </div>
         </div>
-
-        {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
-
-        <div className="flex justify-end">
-          <button
-            onClick={() => setWinnerInfo(null)}
-            className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
-          >
-            {t('ok')}
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
+      )}
     </>
   )
 }
+
+export default App
