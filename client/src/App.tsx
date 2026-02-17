@@ -1779,12 +1779,12 @@ export default function App() {
                if (!Number.isFinite(amountNum) || amountNum = 0) {
                   alert('Enter a valid amount')
                   return
-    
+               }
                 if (!depositMessage.trim()) {
                   alert('Please paste your deposit confirmation message')
                   return
                 }
-              }
+              
                 setDepositVerifying(true)
                 try {
                   const verification = await verifyDepositMessage(
