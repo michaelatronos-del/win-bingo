@@ -1771,11 +1771,12 @@ export default function App() {
             </div>
             <button
               className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-emerald-600 text-black font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled(!depositAmount || !depositMessage.trim() || depositVerifying}
-              onClick={async () => {
-                const amountNum = Number(depositAmount)
+              disabled>!depositAmount || !depositMessage.trim() || depositVerifying
+               onClick={async () => {
+                const amountNum = Number(depositAmount)}
                 if (!Number.isFinite(amountNum) || amountNum <= 0) {
                   alert('Enter a valid amount')
+                }
                   return
                 }
                 if (!depositMessage.trim()) {
@@ -1791,7 +1792,7 @@ export default function App() {
                     info.account,
                     info.name
                   )
-                  
+                }
                   if (!verification.valid) {
                     alert(verification.reason || 'Verification failed')
                     setDepositVerifying(false)
@@ -1829,8 +1830,6 @@ export default function App() {
                 } finally {
                   setDepositVerifying(false)
                 }
-              }}
-            >
               {depositVerifying ? t('verifying') : t('verify_submit')}
             </button>
           </div>
