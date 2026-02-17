@@ -2304,56 +2304,62 @@ export default function App() {
 
   return (
     <>
-      {mainPage}
-      {winnerInfo}
-      // In your winner modal, check for isSystemPlayer
-{winnerInfo && (
-  <div className="...">
-    <div className="text-lg font-bold text-emerald-300">
-      {t('bingo_btn')}
-    </div>
-    <div className="...">
-      {winnerInfo.playerId && (
-        <div>
-          <span className="text-slate-500">{t('winner')}:</span>{' '}
-          <span className={`font-mono ${winnerInfo.isSystemPlayer ? 'text-amber-400' : ''}`}>
-            {winnerInfo.playerName || winnerInfo.playerId}
-          </span>
+  {mainPage}
+  {winnerInfo && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+        <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+          {t('bingo_btn')}
         </div>
-      )}
-      {/* ... rest of winner info ... */}
-    
-              {typeof winnerInfo.prize === 'number' && (
-                <div>
-                  <span className="text-slate-500">{t('prize')}:</span>{' '}
-                  <span className="font-semibold">{winnerInfo.prize} Birr</span>
-                </div>
-              )}
-              {typeof winnerInfo.stake === 'number' && (
-                <div>
-                  <span className="text-slate-500">{t('stake')}:</span>{' '}
-                  <span>{winnerInfo.stake} Birr</span>
-                </div>
-              )}
-              <div>
-                <span className="text-slate-500">{t('winning_board')}:</span>{' '}
-                <span className="font-semibold">Board {winnerInfo.boardId}</span>
-              </div>
+        <div className="text-xs sm:text-sm text-slate-300 space-y-1">
+          {winnerInfo.playerId && (
+            <div>
+              <span className="text-slate-500">{t('winner')}:</span>{' '}
+              <span className={`font-mono break-all ${winnerInfo.isSystemPlayer ? 'text-amber-400' : ''}`}>
+                {winnerInfo.isSystemPlayer ? (
+                  <>
+                    🎰 {winnerInfo.playerName || 'LuckyPlayer'}
+                    <span className="ml-2 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
+                      House
+                    </span>
+                  </>
+                ) : (
+                  winnerInfo.playerName || winnerInfo.playerId
+                )}
+              </span>
             </div>
-
-            {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setWinnerInfo(null)}
-                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
-              >
-                {t('ok')}
-              </button>
+          )}
+          {typeof winnerInfo.prize === 'number' && (
+            <div>
+              <span className="text-slate-500">{t('prize')}:</span>{' '}
+              <span className="font-semibold">{winnerInfo.prize} Birr</span>
             </div>
+          )}
+          {typeof winnerInfo.stake === 'number' && (
+            <div>
+              <span className="text-slate-500">{t('stake')}:</span>{' '}
+              <span>{winnerInfo.stake} Birr</span>
+            </div>
+          )}
+          <div>
+            <span className="text-slate-500">{t('winning_board')}:</span>{' '}
+            <span className="font-semibold">Board {winnerInfo.boardId}</span>
           </div>
         </div>
-      )}
+
+        {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setWinnerInfo(null)}
+            className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+          >
+            {t('ok')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
     </>
   )
 }
