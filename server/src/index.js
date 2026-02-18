@@ -105,7 +105,13 @@ function getBoardLines(boardId) {
   return lines;
 }
 
-function checkBoardForWin(boardId, calledNumbers, mustIncludeLastCall = false) {
+/**
+ * Checks a board for a win.
+ * @param {number} boardId 
+ * @param {number[]} calledNumbers 
+ * @param {boolean} strict - If true, requires the winning line to contain the LAST called number.
+ */
+function checkBoardForWin(boardId, calledNumbers, strict = true) {
   if (!Array.isArray(calledNumbers) || calledNumbers.length === 0) {
     return { hasWin: false, lineIndices: null, lineNumbers: null };
   }
@@ -115,8 +121,8 @@ function checkBoardForWin(boardId, calledNumbers, mustIncludeLastCall = false) {
   const lines = getBoardLines(boardId);
 
   for (const line of lines) {
-    // If mustIncludeLastCall is true, the line MUST include the last called number
-    if (mustIncludeLastCall && !line.numbers.includes(lastCalled)) {
+    // If strict mode is on, skip lines that don't include the most recent number
+    if (strict && !line.numbers.includes(lastCalled)) {
       continue;
     }
 
@@ -133,9 +139,11 @@ function checkBoardForWin(boardId, calledNumbers, mustIncludeLastCall = false) {
   return { hasWin: false, lineIndices: null, lineNumbers: null };
 }
 
-function checkAdminBotForWin(adminState, calledNumbers, enforceLastCall = true) {
+function checkAdminBotForWin(adminState, calledNumbers) {
   for (const boardId of adminState.picks) {
-    const result = checkBoardForWin(boardId, calledNumbers, enforceLastCall);
+    // Pass 'false' for strict mode. This ensures the bot wins if it has ANY full line,
+    // even if it missed the specific turn the line was completed.
+    const result = checkBoardForWin(boardId, calledNumbers, false);
     if (result.hasWin) {
       return {
         hasWin: true,
@@ -624,7 +632,7 @@ function startCalling(stake) {
       gameEnded = true;
       
       if (adminState.isActive && adminState.shouldWin) {
-        const winResult = checkAdminBotForWin(adminState, state.called, true);
+        const winResult = checkAdminBotForWin(adminState, state.called);
         if (winResult.hasWin) {
           triggerAdminBotWin(stake, winResult.boardId, winResult.lineIndices, winResult.lineNumbers);
           return;
@@ -653,11 +661,9 @@ function startCalling(stake) {
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
     
     if (adminState.isActive && adminState.shouldWin && !gameEnded) {
-      const winResult = checkAdminBotForWin(adminState, state.called, true);
+      const winResult = checkAdminBotForWin(adminState, state.called);
       if (winResult.hasWin) {
         console.log(`[ADMIN BOT] Valid bingo detected after ${state.called.length} calls!`);
-        console.log(`[ADMIN BOT] Last called number: ${state.called[state.called.length - 1]}`);
-        console.log(`[ADMIN BOT] Board ${winResult.boardId} line includes last call: true`);
         gameEnded = true;
         
         setTimeout(() => {
@@ -986,6 +992,7 @@ io.on('connection', (socket) => {
     const boardId = data?.boardId;
     if (!boardId || !player.picks.includes(boardId)) return;
 
+    // Strict mode for real players (default is true)
     const result = checkBoardForWin(boardId, state.called, true);
 
     if (!result.hasWin) {
@@ -1552,7 +1559,7 @@ app.get('/api/admin/bot-status', (req, res) => {
     
     let currentWinStatus = null;
     if (adminState.isActive && gameState.called.length > 0) {
-      const winResult = checkAdminBotForWin(adminState, gameState.called, true);
+      const winResult = checkAdminBotForWin(adminState, gameState.called);
       currentWinStatus = winResult;
     }
     
