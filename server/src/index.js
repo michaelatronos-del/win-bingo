@@ -1112,6 +1112,11 @@ server.listen(PORT, () => {
       startCountdown(stake);
     }
   });
+  if (picks === 2) {
+    return 10;  
+  } else {
+    return (picks - 2) * 25;  
+  }
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`\n❌ Error: Port ${PORT} is already in use!`);
@@ -1121,8 +1126,4 @@ server.listen(PORT, () => {
     process.exit(1);
   }
 });
-if (picks === 2) {
-  return 10;  // 10x multiplier
-} else {
-  return (picks - 2) * 25;  // 25x per additional pick
-}
+
