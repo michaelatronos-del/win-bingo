@@ -330,7 +330,7 @@
             cursor: not-allowed;
         }
 
-        /* Removed .action-btns styles as the element is removed */
+        /* Removed action-btns styles since buttons are removed */
 
         .ticket-tabs {
             display: flex;
@@ -749,13 +749,13 @@
 
                 <div class="bet-stepper">
                     <button class="step-btn" id="minusBtn">-</button>
-                    <input type="number" id="betInput" class="bet-input" value="2.00" min="2" step="2" readonly>
+                    <input type="number" id="betInput" class="bet-input" value="2.00" min="2" step="1" readonly>
                     <button class="step-btn" id="plusBtn">+</button>
                 </div>
 
                 <button class="bet-btn" id="betBtn">PLACE BET</button>
             </div>
-            <!-- Removed action-btns (AUTO PICK and CLEAR buttons) -->
+            <!-- AUTO PICK and CLEAR buttons removed -->
         </div>
 
         <div>
@@ -796,7 +796,7 @@
     let socket = null;
     let userBalance = 0.00;
     const MAX_PICK = 10;
-    // AUTO_PICK_COUNT no longer needed as button is removed
+    const MIN_BET = 2; // Changed from 10 to 2
 
     let gameState = 'BETTING';
     let currentGameId = 0;
@@ -814,25 +814,23 @@
     let hotNumbers = [];
     let onlinePlayersCount = 0;
 
-    // Updated getMultiplier function based on new rules
+    // --- UPDATED PAYOUT FORMULA ---
+    // Universal formula based on your specifications:
+    // 2 picks = 10x, 3 picks = 25x, 4+ picks = (picks - 2) * 25
     const getMultiplier = (picks, hits) => {
-        if (hits === 0) return 0; // No prize for 0 hits
-
-        if (picks === hits) { // Only exact matches get a prize for now
-            switch (picks) {
-                case 2: return 10;
-                case 3: return 25;
-                case 4: return 50;
-                case 5: return 75;
-                case 6: return 100;
-                case 7: return 125;
-                case 8: return 150;
-                case 9: return 175;
-                case 10: return 200;
-                default: return 0; // Should not happen with MAX_PICK=10
-            }
+        // Must hit ALL picked numbers to win
+        if (hits !== picks) return 0;
+        
+        if (picks < 2 || picks > 10) return 0;
+        
+        // Universal formula:
+        // 2 picks = 10x
+        // 3+ picks = (picks - 2) * 25
+        if (picks === 2) {
+            return 10;
+        } else {
+            return (picks - 2) * 25;
         }
-        return 0; // No prize for partial matches (hits < picks) based on current request
     };
 
     const boardEl = document.getElementById('board');
@@ -1090,7 +1088,7 @@
                 indicator.title = `#${index + 1} Hot - Picked ${item.count} times`;
                 cells[item.number].appendChild(indicator);
             }
-        } );
+        });
     }
 
     function showWaitingOverlay(show) {
@@ -1207,25 +1205,19 @@
         pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
     }
 
-    // Removed event listener for clearBtn
-
-    // Removed event listener for autoBtn
+    // AUTO PICK and CLEAR button handlers removed
 
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val + 2 <= userBalance) { // Ensure bet doesn't exceed balance with new step
-            betInput.value = (val + 2).toFixed(2);
-        } else {
-            betInput.value = userBalance.toFixed(2); // Set to max available if balance is less than current bet + step
+        if (val < userBalance) {
+            betInput.value = (val + 1).toFixed(2);
         }
     };
 
     document.getElementById('minusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val - 2 >= 2) { // Ensure bet doesn't go below minimum of 2
-            betInput.value = (val - 2).toFixed(2);
-        } else {
-            betInput.value = (2).toFixed(2); // Set to minimum bet if trying to go below
+        if (val > MIN_BET) {
+            betInput.value = (val - 1).toFixed(2);
         }
     };
 
@@ -1256,12 +1248,12 @@
         
         const betVal = parseFloat(betInput.value);
         
+        if (betVal < MIN_BET) {
+            return alert(`Minimum bet is ${MIN_BET} Birr!`);
+        }
+        
         if (betVal > userBalance) {
             return alert("Insufficient Balance!");
-        }
-        // Ensure minimum bet is 2
-        if (betVal < 2) {
-            return alert("Minimum bet amount is 2 Birr!");
         }
 
         try {
@@ -1304,11 +1296,9 @@
                 status: 'WAITING'
             };
             liveTickets.push(ticket);
-            // Since clear button is removed, we don't automatically clear selections.
-            // selectedNumbers.clear();
-            // Object.values(cells).forEach(c => c.classList.remove('selected'));
-            // pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
-
+            selectedNumbers.clear();
+            Object.values(cells).forEach(c => c.classList.remove('selected'));
+            pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
             if (currentTab === 'LIVE') renderContent();
             
         } catch (error) {
@@ -1576,7 +1566,7 @@
     renderContent();
     fetchHotNumbers();
     setInterval(fetchUserBalance, 30000);
-    setInterval(fetchHotNumbers, 60000); // Refresh hot numbers every minute
+    setInterval(fetchHotNumbers, 60000);
     </script>
 </body>
 
