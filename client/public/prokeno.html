@@ -330,7 +330,7 @@
             cursor: not-allowed;
         }
 
-        /* Removed action-btns styles since buttons are removed */
+        /* Removed .action-btns styles as the element is removed */
 
         .ticket-tabs {
             display: flex;
@@ -815,22 +815,50 @@
     let onlinePlayersCount = 0;
 
     // --- UPDATED PAYOUT FORMULA ---
-    // Universal formula based on your specifications:
-    // 2 picks = 10x, 3 picks = 25x, 4+ picks = (picks - 2) * 25
     const getMultiplier = (picks, hits) => {
-        // Must hit ALL picked numbers to win
-        if (hits !== picks) return 0;
-        
-        if (picks < 2 || picks > 10) return 0;
-        
-        // Universal formula:
-        // 2 picks = 10x
-        // 3+ picks = (picks - 2) * 25
-        if (picks === 2) {
-            return 10;
-        } else {
-            return (picks - 2) * 25;
+        if (hits === 0) return 0; // No prize for 0 hits.
+
+        // Calculate the base multiplier if 'hits' were 'picks' (universal formula)
+        let multiplierForExactHits = 0;
+        switch (hits) {
+            case 2: multiplierForExactHits = 10; break;
+            case 3: multiplierForExactHits = 25; break;
+            case 4: multiplierForExactHits = 50; break;
+            case 5: multiplierForExactHits = 75; break;
+            case 6: multiplierForExactHits = 100; break;
+            case 7: multiplierForExactHits = 125; break;
+            case 8: multiplierForExactHits = 150; break;
+            case 9: multiplierForExactHits = 175; break;
+            case 10: multiplierForExactHits = 200; break;
+            default: multiplierForExactHits = 0; // For 1 hit, or >10 hits
         }
+
+        // Case 1: Player hit all picked numbers (full win)
+        if (hits === picks) {
+            return multiplierForExactHits;
+        }
+
+        // Case 2: Partial wins (hits < picks)
+        if (hits < picks) {
+            const threshold = Math.ceil(picks / 3);
+
+            // Sub-case 2a: Hit exactly 1/3 of the picked numbers
+            if (hits === threshold && threshold > 0) {
+                return 1; // 1x multiplier (bet amount back)
+            }
+            // Sub-case 2b: Hit more than 1/3 of the picked numbers
+            else if (hits > threshold) {
+                // Reward based on the number of actual hits (using the "universal formula")
+                // If multiplierForExactHits is 0 (e.g., for 1 hit), ensure at least 1x if it's over threshold
+                return multiplierForExactHits > 0 ? multiplierForExactHits : 1; 
+            }
+            // Sub-case 2c: Hit less than 1/3 of the picked numbers
+            else {
+                return 0; // No prize
+            }
+        }
+        
+        return 0; // Default no prize (should not be reached if logic is complete)
     };
 
     const boardEl = document.getElementById('board');
@@ -1088,7 +1116,7 @@
                 indicator.title = `#${index + 1} Hot - Picked ${item.count} times`;
                 cells[item.number].appendChild(indicator);
             }
-        });
+        } );
     }
 
     function showWaitingOverlay(show) {
@@ -1209,15 +1237,23 @@
 
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val < userBalance) {
-            betInput.value = (val + 1).toFixed(2);
+        let newBet = val + 1; // Increment by 1 Birr
+        // Ensure new bet doesn't exceed balance
+        if (newBet <= userBalance) { 
+            betInput.value = newBet.toFixed(2);
+        } else {
+            betInput.value = userBalance.toFixed(2); // Set to max available if balance is less
         }
     };
 
     document.getElementById('minusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
-        if (val > MIN_BET) {
-            betInput.value = (val - 1).toFixed(2);
+        let newBet = val - 1; // Decrement by 1 Birr
+        // Ensure bet doesn't go below minimum of 2
+        if (newBet >= MIN_BET) { 
+            betInput.value = newBet.toFixed(2);
+        } else {
+            betInput.value = MIN_BET.toFixed(2); // Set to minimum bet if trying to go below
         }
     };
 
@@ -1277,7 +1313,7 @@
             
             if (!result.success) {
                 alert(result.error || "Bet Failed");
-                fetchUserBalance();
+                fetchUserBalance(); // Refresh balance in case of server-side issue
                 return;
             }
             
@@ -1296,9 +1332,13 @@
                 status: 'WAITING'
             };
             liveTickets.push(ticket);
-            selectedNumbers.clear();
-            Object.values(cells).forEach(c => c.classList.remove('selected'));
-            pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
+            
+            // Optionally clear selections after placing a bet.
+            // Uncomment the lines below if you want to clear selections automatically:
+            // selectedNumbers.clear();
+            // Object.values(cells).forEach(c => c.classList.remove('selected'));
+            // pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
+
             if (currentTab === 'LIVE') renderContent();
             
         } catch (error) {
@@ -1552,9 +1592,11 @@
                 if (result.success) {
                     userBalance = result.newBalance;
                     updateBalanceDisplay();
+                } else {
+                    console.error("Server settlement failed:", result.error);
                 }
             } catch (e) { 
-                console.error("Settlement failed", e); 
+                console.error("Settlement network error:", e); 
             }
         }
 
@@ -1566,7 +1608,7 @@
     renderContent();
     fetchHotNumbers();
     setInterval(fetchUserBalance, 30000);
-    setInterval(fetchHotNumbers, 60000);
+    setInterval(fetchHotNumbers, 60000); // Refresh hot numbers every minute
     </script>
 </body>
 
