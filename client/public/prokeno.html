@@ -1333,11 +1333,11 @@
             };
             liveTickets.push(ticket);
             
-            // Optionally clear selections after placing a bet.
-            // Uncomment the lines below if you want to clear selections automatically:
-            // selectedNumbers.clear();
-            // Object.values(cells).forEach(c => c.classList.remove('selected'));
-            // pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
+            // --- MODIFICATION: Clear selections after successful bet ---
+            selectedNumbers.clear();
+            Object.values(cells).forEach(c => c.classList.remove('selected'));
+            pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
+            // --- END MODIFICATION ---
 
             if (currentTab === 'LIVE') renderContent();
             
