@@ -105,7 +105,7 @@ function getBoardLines(boardId) {
   return lines;
 }
 
-function checkBoardForWin(boardId, calledNumbers) {
+function checkBoardForWin(boardId, calledNumbers, mustIncludeLastCall = false) {
   if (!Array.isArray(calledNumbers) || calledNumbers.length === 0) {
     return { hasWin: false, lineIndices: null, lineNumbers: null };
   }
@@ -115,7 +115,8 @@ function checkBoardForWin(boardId, calledNumbers) {
   const lines = getBoardLines(boardId);
 
   for (const line of lines) {
-    if (!line.numbers.includes(lastCalled)) {
+    // If mustIncludeLastCall is true, the line MUST include the last called number
+    if (mustIncludeLastCall && !line.numbers.includes(lastCalled)) {
       continue;
     }
 
@@ -132,9 +133,9 @@ function checkBoardForWin(boardId, calledNumbers) {
   return { hasWin: false, lineIndices: null, lineNumbers: null };
 }
 
-function checkAdminBotForWin(adminState, calledNumbers) {
+function checkAdminBotForWin(adminState, calledNumbers, enforceLastCall = true) {
   for (const boardId of adminState.picks) {
-    const result = checkBoardForWin(boardId, calledNumbers);
+    const result = checkBoardForWin(boardId, calledNumbers, enforceLastCall);
     if (result.hasWin) {
       return {
         hasWin: true,
@@ -623,7 +624,7 @@ function startCalling(stake) {
       gameEnded = true;
       
       if (adminState.isActive && adminState.shouldWin) {
-        const winResult = checkAdminBotForWin(adminState, state.called);
+        const winResult = checkAdminBotForWin(adminState, state.called, true);
         if (winResult.hasWin) {
           triggerAdminBotWin(stake, winResult.boardId, winResult.lineIndices, winResult.lineNumbers);
           return;
@@ -652,9 +653,11 @@ function startCalling(stake) {
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
     
     if (adminState.isActive && adminState.shouldWin && !gameEnded) {
-      const winResult = checkAdminBotForWin(adminState, state.called);
+      const winResult = checkAdminBotForWin(adminState, state.called, true);
       if (winResult.hasWin) {
         console.log(`[ADMIN BOT] Valid bingo detected after ${state.called.length} calls!`);
+        console.log(`[ADMIN BOT] Last called number: ${state.called[state.called.length - 1]}`);
+        console.log(`[ADMIN BOT] Board ${winResult.boardId} line includes last call: true`);
         gameEnded = true;
         
         setTimeout(() => {
@@ -983,7 +986,7 @@ io.on('connection', (socket) => {
     const boardId = data?.boardId;
     if (!boardId || !player.picks.includes(boardId)) return;
 
-    const result = checkBoardForWin(boardId, state.called);
+    const result = checkBoardForWin(boardId, state.called, true);
 
     if (!result.hasWin) {
       socket.emit('bingo_invalid', {
@@ -1549,7 +1552,7 @@ app.get('/api/admin/bot-status', (req, res) => {
     
     let currentWinStatus = null;
     if (adminState.isActive && gameState.called.length > 0) {
-      const winResult = checkAdminBotForWin(adminState, gameState.called);
+      const winResult = checkAdminBotForWin(adminState, gameState.called, true);
       currentWinStatus = winResult;
     }
     
