@@ -11,7 +11,6 @@ const getApiUrl = () => {
 }
 
 type Phase = 'lobby' | 'countdown' | 'calling'
-// Updated Page type to include bingoHouseSelect and aviatorGamePage
 type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game' | 'bingoHouseSelect' | 'aviatorGamePage'
 type Language = 'en' | 'am' | 'ti' | 'or'
 
@@ -47,9 +46,6 @@ const translations = {
     game_title_keno: 'KENO', // New title for Keno game card (replaces old play_keno for title use)
     play_now: 'Play now', // Used for all game buttons now
     select_bingo_house: 'Select BINGO Bet House', // New title for the Bingo bet house selection page
-    // --- Removed original 'play_keno' and 'bet_houses' keys ---
-    // play_keno: 'PLAY PRO KENO 80', // Removed or renamed
-    // bet_houses: 'Bet Houses', // Removed
     bet_houses: 'Bet Houses', // Keeping this for now as it's used in instructions
 
     stake: 'Stake',
@@ -103,13 +99,13 @@ const translations = {
     audio: 'Audio',
     auto_mark_me: 'Auto mark (me)',
     auto_algo: 'Auto algorithm mark',
-    players_label: 'Players', // Added this as it was used but not defined in EN
-    waiting: 'Waiting', // Added this as it was used but not defined in EN
-    prize: 'Prize', // Added this as it was used but not defined in EN
-    active: 'Active', // Added this as it was used but not defined in EN
-    go_lobby: 'Go to Lobby', // Added this as it was used but not defined in EN
-    join_wait: 'Join & Wait', // Added this as it was used but not defined in EN
-
+    players_label: 'Players',
+    waiting: 'Waiting',
+    prize: 'Prize',
+    active: 'Active',
+    go_lobby: 'Go to Lobby',
+    join_wait: 'Join & Wait',
+    insufficient_balance_msg: 'Insufficient balance to join this bet house.', // NEW
   },
   am: {
     hello: 'ሰላም',
@@ -132,15 +128,12 @@ const translations = {
     bonus: 'ቦነስ',
     instructions: 'መመሪያዎች',
     invite: 'ጓደኛ ይጋብዙ',
-    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
     game_title_bingo: 'ቢንጎ',
     game_title_aviator: 'አቪዬተር',
     game_title_keno: 'ኬኖ',
     play_now: 'አሁን ተጫወት',
     select_bingo_house: 'የቢንጎ ውርርድ ቤት ይምረጡ',
-    // --- Removed original 'play_keno' and 'bet_houses' keys ---
-    // play_keno: 'PRO KENO 80 ተጫወት', // Removed or renamed
-    bet_houses: 'የውርርድ ቤቶች', // Keeping this for now as it's used in instructions
+    bet_houses: 'የውርርድ ቤቶች',
     
     stake: 'ውርርድ',
     select_boards: 'ካርቶዎችን ይምረጡ',
@@ -195,6 +188,7 @@ const translations = {
     active: 'ተጫዋቾች',
     go_lobby: 'ወደ ሎቢ',
     join_wait: 'ተቀላቀል & ጠብቅ',
+    insufficient_balance_msg: 'ይህን ውርርድ ለመቀላቀል በቂ ሂሳብ የለዎትም።', // NEW
   },
   ti: {
     hello: 'ሰላም',
@@ -217,15 +211,12 @@ const translations = {
     bonus: 'ቦነስ',
     instructions: 'መምርሒ',
     invite: 'ዓርኪ ዓድም',
-    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
     game_title_bingo: 'ቢንጎ',
     game_title_aviator: 'ኣቭያተር',
     game_title_keno: 'ኬኖ',
     play_now: 'ሕጂ ተጫወት',
     select_bingo_house: 'ናይ ቢንጎ ውርርድ ገዛ ምረጽ',
-    // --- Removed original 'play_keno' and 'bet_houses' keys ---
-    // play_keno: 'PRO KENO 80 ተጫወት', // Removed or renamed
-    bet_houses: 'ናይ ውርርድ ቤቶች', // Keeping this for now as it's used in instructions
+    bet_houses: 'ናይ ውርርድ ቤቶች',
     
     stake: 'ውርርድ',
     select_boards: 'ካርቶን ምረጽ',
@@ -280,6 +271,7 @@ const translations = {
     active: 'ተጫወቲ',
     go_lobby: 'ናብ ሎቢ',
     join_wait: 'ተሓወስ & ተጸበ',
+    insufficient_balance_msg: 'ነዚ ውርርድ ምሕዋስ ዘይምኸኣል', // NEW
   },
   or: {
     hello: 'Akkam',
@@ -302,15 +294,12 @@ const translations = {
     bonus: 'Boonasii',
     instructions: 'Qajeelfama',
     invite: 'Michuu Afferi',
-    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
     game_title_bingo: 'BINGO',
     game_title_aviator: 'Aviator',
     game_title_keno: 'KENO',
     play_now: 'Amma Taphadhu',
     select_bingo_house: 'Mana Qabsiisaa BINGO Filadhu',
-    // --- Removed original 'play_keno' and 'bet_houses' keys ---
-    // play_keno: 'PRO KENO 80 Taphadhu', // Removed or renamed
-    bet_houses: 'Manni Qabsiisaa', // Keeping this for now as it's used in instructions
+    bet_houses: 'Manni Qabsiisaa',
     
     stake: 'Qabsiisa',
     select_boards: 'Kaartii Filadhu',
@@ -365,6 +354,7 @@ const translations = {
     active: 'Taphataa',
     go_lobby: 'Gara Lobby',
     join_wait: 'Seeni & Eegi',
+    insufficient_balance_msg: 'Baalansiin kee xiqqaadha.', // NEW
   }
 }
 
@@ -646,7 +636,8 @@ export default function App() {
     
       setPicks([])
       setMarkedNumbers(new Set())
-      setCurrentPage('lobby')
+      // MODIFICATION: Redirect to bingoHouseSelect after a winner is announced
+      setCurrentPage('bingoHouseSelect') 
       setIsReady(false)
       setIsWaiting(false)
       autoBingoSentRef.current = false
@@ -743,13 +734,19 @@ export default function App() {
 
   const handleJoinBetHouse = (stakeAmount: number) => {
     if (!socket) return
+
+    // MODIFICATION: Insufficient Balance Check
+    if (balance < stakeAmount) {
+      alert(t('insufficient_balance_msg'));
+      return; // Stop execution if balance is insufficient
+    }
+
     setCurrentBetHouse(stakeAmount)
     setStake(stakeAmount)
     setPicks([])
     setIsReady(false)
     setIsWaiting(false)
     socket.emit('join_bet_house', stakeAmount)
-    // After selecting a bet house, always go to the lobby to select boards
     setCurrentPage('lobby') 
   }
 
@@ -2197,53 +2194,50 @@ export default function App() {
   return (
     <>
       {mainPage}
-      // Find this section in your App.tsx file - it's inside the winnerInfo condition
-{
-  winnerInfo && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-        {/* Winner content */}
-        <div className="flex justify-end">
-          <button
-            onClick={async () => {
-              try {
-                // Fetch the current balance from the server
-                const response = await fetch(`${getApiUrl()}/api/user/balance`, {
-                  method: 'GET',
-                  headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                  }
-                });
-                
-                if (!response.ok) {
-                  throw new Error('Failed to fetch balance');
-                }
-                
-                const data = await response.json();
-                
-                // Check if user has sufficient balance for minimum bet (10 Birr)
-                if (data.balance >= 10) {
-                  // Show the bet house selection page
-                  setCurrentPage('bingoHouseSelect');
-                } else {
-                  // Show error message instead of redirecting
-                  alert('Insufficient balance to continue playing. Please deposit more funds.');
-                }
-              } catch (error) {
-                console.error('Error checking balance:', error);
-                alert('Error checking balance. Please try again.');
-              }
-              setWinnerInfo(null);
-            }}
-            className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
-          >
-            {t('ok')}
-          </button>
+      {winnerInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
+              {t('bingo_btn')}
+            </div>
+            <div className="text-xs sm:text-sm text-slate-300 space-y-1">
+              {winnerInfo.playerId && (
+                <div>
+                  <span className="text-slate-500">{t('winner')}:</span>{' '}
+                  <span className="font-mono break-all">{winnerInfo.playerId}</span>
+                </div>
+              )}
+              {typeof winnerInfo.prize === 'number' && (
+                <div>
+                  <span className="text-slate-500">{t('prize')}:</span>{' '}
+                  <span className="font-semibold">{winnerInfo.prize} Birr</span>
+                </div>
+              )}
+              {typeof winnerInfo.stake === 'number' && (
+                <div>
+                  <span className="text-slate-500">{t('stake')}:</span>{' '}
+                  <span>{winnerInfo.stake} Birr</span>
+                </div>
+              )}
+              <div>
+                <span className="text-slate-500">{t('winning_board')}:</span>{' '}
+                <span className="font-semibold">Board {winnerInfo.boardId}</span>
+              </div>
+            </div>
+
+            {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setWinnerInfo(null)}
+                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+              >
+                {t('ok')}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  )
-}
+      )}
     </>
   )
 }
