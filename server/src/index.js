@@ -1112,7 +1112,7 @@ server.listen(PORT, () => {
       startCountdown(stake);
     }
   });
-  if (picks === 2) {
+  if (picks = 2) {
     return 10;  
   } else {
     return (picks - 2) * 25;  
