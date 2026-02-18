@@ -11,7 +11,8 @@ const getApiUrl = () => {
 }
 
 type Phase = 'lobby' | 'countdown' | 'calling'
-type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game'
+// Updated Page type to include bingoHouseSelect and aviatorGamePage
+type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game' | 'bingoHouseSelect' | 'aviatorGamePage'
 type Language = 'en' | 'am' | 'ti' | 'or'
 
 // --- TRANSLATIONS CONFIGURATION ---
@@ -40,18 +41,17 @@ const translations = {
     bonus: 'Bonus',
     instructions: 'Instructions',
     invite: 'Invite Friends',
-    play_keno: 'PLAY PRO KENO 80',
-    bet_houses: 'Bet Houses',
-    play_now: 'Play now',
-    go_lobby: 'Go to Lobby',
-    join_wait: 'Join & Wait',
-    active: 'Active',
-    waiting: 'Waiting',
-    prize: 'Prize',
-    select_lang: 'Select Language',
-    welcome_bonus_title: 'WELCOME BONUS!',
-    welcome_bonus_msg: '100 Birr has been added to your account.',
-    players_label: 'Players',
+    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
+    game_title_bingo: 'BINGO', // New title for BINGO game card
+    game_title_aviator: 'Aviator', // New title for Aviator game card
+    game_title_keno: 'KENO', // New title for Keno game card (replaces old play_keno for title use)
+    play_now: 'Play now', // Used for all game buttons now
+    select_bingo_house: 'Select BINGO Bet House', // New title for the Bingo bet house selection page
+    // --- Removed original 'play_keno' and 'bet_houses' keys ---
+    // play_keno: 'PLAY PRO KENO 80', // Removed or renamed
+    // bet_houses: 'Bet Houses', // Removed
+    bet_houses: 'Bet Houses', // Keeping this for now as it's used in instructions
+
     stake: 'Stake',
     select_boards: 'Select Your Boards',
     selected: 'Selected',
@@ -102,7 +102,14 @@ const translations = {
     // Auto/Options
     audio: 'Audio',
     auto_mark_me: 'Auto mark (me)',
-    auto_algo: 'Auto algorithm mark'
+    auto_algo: 'Auto algorithm mark',
+    players_label: 'Players', // Added this as it was used but not defined in EN
+    waiting: 'Waiting', // Added this as it was used but not defined in EN
+    prize: 'Prize', // Added this as it was used but not defined in EN
+    active: 'Active', // Added this as it was used but not defined in EN
+    go_lobby: 'Go to Lobby', // Added this as it was used but not defined in EN
+    join_wait: 'Join & Wait', // Added this as it was used but not defined in EN
+
   },
   am: {
     hello: 'ሰላም',
@@ -125,18 +132,16 @@ const translations = {
     bonus: 'ቦነስ',
     instructions: 'መመሪያዎች',
     invite: 'ጓደኛ ይጋብዙ',
-    play_keno: 'PRO KENO 80 ተጫወት',
-    bet_houses: 'የውርርድ ቤቶች',
+    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
+    game_title_bingo: 'ቢንጎ',
+    game_title_aviator: 'አቪዬተር',
+    game_title_keno: 'ኬኖ',
     play_now: 'አሁን ተጫወት',
-    go_lobby: 'ወደ ሎቢ',
-    join_wait: 'ተቀላቀል & ጠብቅ',
-    active: 'ተጫዋቾች',
-    waiting: 'በመጠባበቅ ላይ',
-    prize: 'ሽልማት',
-    select_lang: 'ቋንቋ ይምረጡ',
-    welcome_bonus_title: 'የእንኳን ደህና መጡ ቦነስ!',
-    welcome_bonus_msg: '100 ብር ወደ ሂሳብዎ ተጨምሯል።',
-    players_label: 'ተጫዋቾች',
+    select_bingo_house: 'የቢንጎ ውርርድ ቤት ይምረጡ',
+    // --- Removed original 'play_keno' and 'bet_houses' keys ---
+    // play_keno: 'PRO KENO 80 ተጫወት', // Removed or renamed
+    bet_houses: 'የውርርድ ቤቶች', // Keeping this for now as it's used in instructions
+    
     stake: 'ውርርድ',
     select_boards: 'ካርቶዎችን ይምረጡ',
     selected: 'ተመርጧል',
@@ -183,7 +188,13 @@ const translations = {
     dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
     audio: 'ድምፅ',
     auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
-    auto_algo: 'ራስ-ሰር አልጎሪዝም'
+    auto_algo: 'ራስ-ሰር አልጎሪዝም',
+    players_label: 'ተጫዋቾች',
+    waiting: 'በመጠባበቅ ላይ',
+    prize: 'ሽልማት',
+    active: 'ተጫዋቾች',
+    go_lobby: 'ወደ ሎቢ',
+    join_wait: 'ተቀላቀል & ጠብቅ',
   },
   ti: {
     hello: 'ሰላም',
@@ -206,18 +217,16 @@ const translations = {
     bonus: 'ቦነስ',
     instructions: 'መምርሒ',
     invite: 'ዓርኪ ዓድም',
-    play_keno: 'PRO KENO 80 ተጫወት',
-    bet_houses: 'ናይ ውርርድ ቤቶች',
+    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
+    game_title_bingo: 'ቢንጎ',
+    game_title_aviator: 'ኣቭያተር',
+    game_title_keno: 'ኬኖ',
     play_now: 'ሕጂ ተጫወት',
-    go_lobby: 'ናብ ሎቢ',
-    join_wait: 'ተሓወስ & ተጸበ',
-    active: 'ተጫወቲ',
-    waiting: 'ዝጽበዩ',
-    prize: 'ሽልማት',
-    select_lang: 'ቋንቋ ምረጽ',
-    welcome_bonus_title: 'ናይ እንቋዕ ብደሓን መጻእኩም ቦነስ!',
-    welcome_bonus_msg: '100 ቅርሺ ናብ ሒሳብካ ተወሲኹ ኣሎ።',
-    players_label: 'ተጫወቲ',
+    select_bingo_house: 'ናይ ቢንጎ ውርርድ ገዛ ምረጽ',
+    // --- Removed original 'play_keno' and 'bet_houses' keys ---
+    // play_keno: 'PRO KENO 80 ተጫወት', // Removed or renamed
+    bet_houses: 'ናይ ውርርድ ቤቶች', // Keeping this for now as it's used in instructions
+    
     stake: 'ውርርድ',
     select_boards: 'ካርቶን ምረጽ',
     selected: 'ተመሪጹ',
@@ -264,7 +273,13 @@ const translations = {
     dep_with_desc: 'ኣብ መእተዊ ገጽ ዘሎ ተቀመጥ ዝብል ተጠቐም።',
     audio: 'ድምጺ',
     auto_mark_me: 'ኦቶ ምልክት (ኣነ)',
-    auto_algo: 'ኦቶ ኣልጎሪዝም'
+    auto_algo: 'ኦቶ ኣልጎሪዝም',
+    players_label: 'ተጫወቲ',
+    waiting: 'ዝጽበዩ',
+    prize: 'ሽልማት',
+    active: 'ተጫወቲ',
+    go_lobby: 'ናብ ሎቢ',
+    join_wait: 'ተሓወስ & ተጸበ',
   },
   or: {
     hello: 'Akkam',
@@ -287,18 +302,16 @@ const translations = {
     bonus: 'Boonasii',
     instructions: 'Qajeelfama',
     invite: 'Michuu Afferi',
-    play_keno: 'PRO KENO 80 Taphadhu',
-    bet_houses: 'Manni Qabsiisaa',
+    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
+    game_title_bingo: 'BINGO',
+    game_title_aviator: 'Aviator',
+    game_title_keno: 'KENO',
     play_now: 'Amma Taphadhu',
-    go_lobby: 'Gara Lobby',
-    join_wait: 'Seeni & Eegi',
-    active: 'Taphataa',
-    waiting: 'Eegaa jira',
-    prize: 'Badhaasa',
-    select_lang: 'Afaan Filadhu',
-    welcome_bonus_title: 'Boonasii Baga Nagaan Dhuftanii!',
-    welcome_bonus_msg: '100 Birr herrega keessan irratti dabalameera.',
-    players_label: 'Taphataa',
+    select_bingo_house: 'Mana Qabsiisaa BINGO Filadhu',
+    // --- Removed original 'play_keno' and 'bet_houses' keys ---
+    // play_keno: 'PRO KENO 80 Taphadhu', // Removed or renamed
+    bet_houses: 'Manni Qabsiisaa', // Keeping this for now as it's used in instructions
+    
     stake: 'Qabsiisa',
     select_boards: 'Kaartii Filadhu',
     selected: 'Filatame',
@@ -345,7 +358,13 @@ const translations = {
     dep_with_desc: 'Fuula duraa irratti button galchii fayyadami.',
     audio: 'Sagalee',
     auto_mark_me: 'Ofiin Mallatteessi (Ana)',
-    auto_algo: 'Algoorizimii Ofiin'
+    auto_algo: 'Algoorizimii Ofiin',
+    players_label: 'Taphataa',
+    waiting: 'Eegaa jira',
+    prize: 'Badhaasa',
+    active: 'Taphataa',
+    go_lobby: 'Gara Lobby',
+    join_wait: 'Seeni & Eegi',
   }
 }
 
@@ -708,7 +727,7 @@ export default function App() {
     return () => window.clearInterval(id)
   }, [phase, callCountdown])
 
-  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
+  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), []);
 
   const togglePick = (n: number) => {
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
@@ -730,9 +749,8 @@ export default function App() {
     setIsReady(false)
     setIsWaiting(false)
     socket.emit('join_bet_house', stakeAmount)
-    if (currentPage !== 'welcome') {
-      setCurrentPage('lobby')
-    }
+    // After selecting a bet house, always go to the lobby to select boards
+    setCurrentPage('lobby') 
   }
 
   const handleStartGame = () => {
@@ -1302,7 +1320,7 @@ export default function App() {
             <div className="flex gap-2 w-full sm:w-auto">
               <button
                 className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm flex-1 sm:flex-none"
-                onClick={() => setCurrentPage('welcome')}
+                onClick={() => setCurrentPage('bingoHouseSelect')} // Changed to go back to bingo house selection
               >
                 {t('switch_house')}
               </button>
@@ -1617,18 +1635,75 @@ export default function App() {
           </button>
         </div>
 
-        {/* PRO KENO GAME BUTTON */}
-        <div className="py-2">
-          <a href="/prokeno.html" className="block w-full">
-            <button className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-lg sm:text-xl py-4 rounded-xl shadow-[0_0_20px_rgba(192,38,211,0.5)] transform transition hover:scale-[1.02] border border-white/10 flex items-center justify-center gap-3 relative overflow-hidden group">
-              <span className="text-2xl animate-bounce">🎰</span>
-              <span>{t('play_keno')}</span>
-              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
-            </button>
-          </a>
+        {/* Game Selection Buttons */}
+        <div className="space-y-4">
+            {/* BINGO Game Button */}
+            <div className="bg-emerald-700/80 rounded-xl p-4 shadow-lg border border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_bingo')}</h3>
+                    <div className="flex items-center gap-1">
+                        <span className="bg-blue-500 text-white rounded px-2 py-1 text-sm font-bold">B</span>
+                        <span className="bg-pink-500 text-white rounded px-2 py-1 text-sm font-bold">I</span>
+                        <span className="bg-purple-500 text-white rounded px-2 py-1 text-sm font-bold">N</span>
+                        <span className="bg-green-500 text-white rounded px-2 py-1 text-sm font-bold">G</span>
+                        <span className="bg-orange-500 text-white rounded px-2 py-1 text-sm font-bold">O</span>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setCurrentPage('bingoHouseSelect')} // Navigates to new Bingo bet house selection page
+                    className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                    {t('play_now')}
+                </button>
+            </div>
+
+            {/* Aviator Game Button (Placeholder) */}
+            <div className="bg-red-700/80 rounded-xl p-4 shadow-lg border border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_aviator')}</h3>
+                    <div className="text-5xl">✈️</div> {/* Icon for Aviator */}
+                </div>
+                <button
+                    onClick={() => alert('Aviator game is coming soon!')} // Placeholder action
+                    className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                    {t('play_now')}
+                </button>
+            </div>
+
+            {/* KENO Game Button */}
+            <div className="bg-purple-700/80 rounded-xl p-4 shadow-lg border border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_keno')}</h3>
+                    <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-xl font-black flex-shrink-0">80</div>
+                </div>
+                <a href="/prokeno.html" className="block w-full">
+                    <button className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2">
+                        {t('play_now')}
+                    </button>
+                </a>
+            </div>
         </div>
-        
-        <div className="text-base sm:text-xl font-semibold">{t('bet_houses')}</div>
+
+        <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
+      </div>
+    </div>
+  )
+
+  // New function to render Bingo bet house selection page
+  const renderBingoHouseSelectPage = () => (
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
+        <div className="flex items-center justify-between py-1 sm:py-2">
+          <button
+            className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
+            onClick={() => setCurrentPage('welcome')}
+          >
+            {t('back')}
+          </button>
+          <div className="text-lg sm:text-2xl font-bold">{t('select_bingo_house')}</div>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
           {betHouses.length > 0 ? betHouses.map((house: any) => {
             const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
@@ -1662,7 +1737,6 @@ export default function App() {
                     className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
                   onClick={() => {
                       handleJoinBetHouse(house.stake)
-                    setCurrentPage('lobby')
                   }}
                 >
                     {isSelected ? t('go_lobby') : isLive ? t('join_wait') : t('play_now')}
@@ -1672,6 +1746,7 @@ export default function App() {
             </div>
             )
           }) : (
+            // Fallback rendering for when betHouses data is not yet loaded or empty
             [10, 20, 50, 100, 200].map(amount => {
               const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
                 10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
@@ -1685,210 +1760,25 @@ export default function App() {
                 <div key={amount} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4`}>
                   <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
                   <div className="text-xl sm:text-3xl font-extrabold">{amount} Birr</div>
-            <div className="mt-auto flex items-center justify-between gap-2">
-              <button
-                className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
-                onClick={() => {
+                  <div className="mt-auto flex items-center justify-between gap-2">
+                    <button
+                      className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
+                      onClick={() => {
                         handleJoinBetHouse(amount)
-                  setCurrentPage('lobby')
-                }}
-              >
-                {t('play_now')}
-              </button>
+                      }}
+                    >
+                      {t('play_now')}
+                    </button>
                     <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
-            </div>
-          </div>
+                  </div>
+                </div>
               )
             })
           )}
         </div>
-
-        <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
       </div>
     </div>
   )
-
-  const renderInstructionsPage = () => (
-    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4">
-        <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">{t('how_to_play')}</div>
-        <ol className="list-decimal space-y-1 sm:space-y-2 ml-4 sm:ml-5 text-slate-200 text-xs sm:text-sm">
-          <li>{t('rule_1')}</li>
-          <li>{t('rule_2')}</li>
-          <li>{t('rule_3')}</li>
-          <li>{t('rule_4')}</li>
-          <li>{t('rule_5')}</li>
-        </ol>
-        <div className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6">{t('dep_with_title')}</div>
-        <p className="text-slate-200 text-xs sm:text-sm">{t('dep_with_desc')}</p>
-        <div className="flex justify-end">
-          <button className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
-        </div>
-      </div>
-    </div>
-  )
-
-  const providers = [
-    { id: 'telebirr', name: 'Telebirr', logo: '🌀' },
-    { id: 'ebirr', name: 'Ebirr', logo: '🟢' },
-    { id: 'cbe', name: 'CBE', logo: '🏦' },
-    { id: 'awash', name: 'Awash', logo: '🏦' },
-    { id: 'dashen', name: 'Dashen', logo: '🏦' },
-    { id: 'boa', name: 'Bank of Abyssinia', logo: '🏦' },
-  ]
-
-  const providerToAccount: Record<string, { account: string; name: string }> = {
-    telebirr: { account: '0966 000 0000', name: 'Company Telebirr' },
-    ebirr: { account: '0911 000 000', name: 'Company Ebirr' },
-    cbe: { account: '1000533912889', name: 'Eyoel Michael' },
-    awash: { account: '01320971375900', name: 'Eyoel Michael' },
-    dashen: { account: '0123 4567 8901', name: 'Company Dashen' },
-    boa: { account: '0222 3333 4444', name: 'Company BoA' },
-  }
-
-  const renderDepositSelect = () => (
-    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl">
-        <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">{t('select_payment')}</div>
-        <div className="bg-emerald-600/80 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm mb-2 sm:mb-3">{t('recommended')}</div>
-        <div className="space-y-2 sm:space-y-3">
-          {providers.map(p => (
-            <button
-              key={p.id}
-              onClick={() => { setSelectedProvider(p.id); setCurrentPage('depositConfirm') }}
-              className="w-full bg-slate-800 hover:bg-slate-700 rounded-lg sm:rounded-xl p-3 sm:p-4 flex items-center justify-between border border-slate-700"
-            >
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-xl sm:text-2xl">{p.logo}</div>
-                <div className="text-base sm:text-lg">{p.name}</div>
-              </div>
-              <div className="text-slate-400">›</div>
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 sm:mt-6">
-          <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
-        </div>
-      </div>
-    </div>
-  )
-
-  const renderDepositConfirm = () => {
-    const info = providerToAccount[selectedProvider] || { account: '—', name: '—' }
-    return (
-      <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
-          <div className="text-xl sm:text-2xl font-bold">{t('confirm_payment')}</div>
-          <div>
-            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('deposit_account')}</div>
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-              <div className="text-sm sm:text-lg font-mono break-all">{info.account}</div>
-              <div className="text-xs sm:text-sm text-slate-400 mt-1">{info.name} ({selectedProvider === 'awash' ? 'Awash Bank' : ''})</div>
-            </div>
-          </div>
-          <div className="space-y-2 sm:space-y-3">
-            <div>
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('amount_deposit')}</div>
-              <input
-                type="number"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="Enter amount in Birr"
-                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
-              />
-            </div>
-            <div className="space-y-1 sm:space-y-2">
-              <div className="text-xs sm:text-sm text-slate-300">{t('paste_deposit_msg')}</div>
-              <textarea
-                value={depositMessage}
-                onChange={(e) => setDepositMessage(e.target.value)}
-                placeholder="Paste the SMS or confirmation message you received after depositing to the account above. The message should include: amount, account number, and transaction ID."
-                rows={4}
-                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none resize-none text-xs sm:text-sm"
-              />
-            </div>
-            <button
-              className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-emerald-600 text-black font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={!depositAmount || !depositMessage.trim() || depositVerifying}
-              onClick={async () => {
-                const amountNum = Number(depositAmount)
-                if (!Number.isFinite(amountNum) || amountNum <= 0) {
-                  alert('Enter a valid amount')
-                  return
-                }
-                if (!depositMessage.trim()) {
-                  alert('Please paste your deposit confirmation message')
-                  return
-                }
-                
-                setDepositVerifying(true)
-                try {
-                  const verification = await verifyDepositMessage(
-                    depositMessage,
-                    amountNum,
-                    info.account,
-                    info.name
-                  )
-                  
-                  if (!verification.valid) {
-                    alert(verification.reason || 'Verification failed')
-                    setDepositVerifying(false)
-                    return
-                  }
-                  
-                  const response = await fetch(`${getApiUrl()}/api/deposit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      userId,
-                      amount: amountNum,
-                      provider: selectedProvider,
-                      account: info.account,
-                      accountName: info.name,
-                      message: depositMessage,
-                      transactionId: verification.transactionId,
-                    }),
-                  })
-                  
-                  const result = await response.json()
-                  
-                  if (!result.success) {
-                    alert(result.error || 'Deposit verification failed')
-                    setDepositVerifying(false)
-                    return
-                  }
-                  
-                  setDepositAmount('')
-                  setDepositMessage('')
-                  setCurrentPage('welcome')
-                  alert('Deposit verified and processed successfully!')
-                } catch (e: any) {
-                  alert(e?.message || 'Failed to verify deposit. Please try again.')
-                } finally {
-                  setDepositVerifying(false)
-                }
-              }}
-            >
-              {depositVerifying ? t('verifying') : t('verify_submit')}
-            </button>
-          </div>
-          <div className="mt-4 sm:mt-6">
-            <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">{t('how_to_deposit')}</div>
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 text-slate-300 text-xs sm:text-sm space-y-1 sm:space-y-2">
-              <p>1. Send the exact amount ({depositAmount || '___'} Birr) to the account above using {selectedProvider}.</p>
-              <p>2. After the deposit is successful, you will receive a confirmation SMS/message.</p>
-              <p>3. Copy and paste the entire confirmation message in the text area above.</p>
-              <p>4. Click "Verify & Submit Deposit" to instantly verify and process your deposit.</p>
-              <p className="text-amber-400 mt-1 sm:mt-2">The system will automatically verify: amount, account number, and transaction ID. Account holder name is optional.</p>
-            </div>
-          </div>
-          <div>
-            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('depositSelect')}>{t('back')}</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
 
   const renderGamePage = () => {
@@ -1918,7 +1808,8 @@ export default function App() {
                 setTakenBoards([])
                 setPhase('lobby')
                 if (previousStake) {
-                  setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('lobby')
+                  // After leaving game, return to the bet house selection page
+                  setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('bingoHouseSelect') 
                 } else {
                   setCurrentPage('welcome')
                 }
@@ -2299,6 +2190,7 @@ export default function App() {
     : currentPage === 'depositSelect' ? renderDepositSelect()
     : currentPage === 'depositConfirm' ? renderDepositConfirm()
     : currentPage === 'withdrawal' ? renderWithdrawalPage()
+    : currentPage === 'bingoHouseSelect' ? renderBingoHouseSelectPage() // New page for Bingo bet house selection
     : currentPage === 'lobby' ? renderLobbyPage()
     : renderGamePage()
 
