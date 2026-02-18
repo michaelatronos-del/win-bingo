@@ -2197,50 +2197,53 @@ export default function App() {
   return (
     <>
       {mainPage}
-      {winnerInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-              {t('bingo_btn')}
-            </div>
-            <div className="text-xs sm:text-sm text-slate-300 space-y-1">
-              {winnerInfo.playerId && (
-                <div>
-                  <span className="text-slate-500">{t('winner')}:</span>{' '}
-                  <span className="font-mono break-all">{winnerInfo.playerId}</span>
-                </div>
-              )}
-              {typeof winnerInfo.prize === 'number' && (
-                <div>
-                  <span className="text-slate-500">{t('prize')}:</span>{' '}
-                  <span className="font-semibold">{winnerInfo.prize} Birr</span>
-                </div>
-              )}
-              {typeof winnerInfo.stake === 'number' && (
-                <div>
-                  <span className="text-slate-500">{t('stake')}:</span>{' '}
-                  <span>{winnerInfo.stake} Birr</span>
-                </div>
-              )}
-              <div>
-                <span className="text-slate-500">{t('winning_board')}:</span>{' '}
-                <span className="font-semibold">Board {winnerInfo.boardId}</span>
-              </div>
-            </div>
-
-            {renderCard(winnerInfo.boardId, false, winnerInfo.lineIndices)}
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setWinnerInfo(null)}
-                className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
-              >
-                {t('ok')}
-              </button>
-            </div>
-          </div>
+      // Find this section in your App.tsx file - it's inside the winnerInfo condition
+{
+  winnerInfo && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
+        {/* Winner content */}
+        <div className="flex justify-end">
+          <button
+            onClick={async () => {
+              try {
+                // Fetch the current balance from the server
+                const response = await fetch(`${getApiUrl()}/api/user/balance`, {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                  }
+                });
+                
+                if (!response.ok) {
+                  throw new Error('Failed to fetch balance');
+                }
+                
+                const data = await response.json();
+                
+                // Check if user has sufficient balance for minimum bet (10 Birr)
+                if (data.balance >= 10) {
+                  // Show the bet house selection page
+                  setCurrentPage('bingoHouseSelect');
+                } else {
+                  // Show error message instead of redirecting
+                  alert('Insufficient balance to continue playing. Please deposit more funds.');
+                }
+              } catch (error) {
+                console.error('Error checking balance:', error);
+                alert('Error checking balance. Please try again.');
+              }
+              setWinnerInfo(null);
+            }}
+            className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold text-sm sm:text-base"
+          >
+            {t('ok')}
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
     </>
   )
 }
