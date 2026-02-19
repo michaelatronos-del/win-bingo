@@ -40,14 +40,12 @@ const translations = {
     bonus: 'Bonus',
     instructions: 'Instructions',
     invite: 'Invite Friends',
-    // --- NEW/UPDATED GAME TITLES AND PAGE TITLES ---
-    game_title_bingo: 'BINGO', // New title for BINGO game card
-    game_title_aviator: 'Aviator', // New title for Aviator game card
-    game_title_keno: 'KENO', // New title for Keno game card (replaces old play_keno for title use)
-    play_now: 'Play now', // Used for all game buttons now
-    select_bingo_house: 'Select BINGO Bet House', // New title for the Bingo bet house selection page
-    bet_houses: 'Bet Houses', // Keeping this for now as it's used in instructions
-
+    game_title_bingo: 'BINGO',
+    game_title_aviator: 'Aviator',
+    game_title_keno: 'KENO',
+    play_now: 'Play now',
+    select_bingo_house: 'Select BINGO Bet House',
+    bet_houses: 'Bet Houses',
     stake: 'Stake',
     select_boards: 'Select Your Boards',
     selected: 'Selected',
@@ -55,7 +53,6 @@ const translations = {
     ready: 'Ready!',
     switch_house: 'Switch Bet House',
     game_in_progress: 'Game in progress',
-    // Game Page
     current_call: 'CURRENT CALL',
     last_5: 'LAST 5 CALLED',
     live_caller: 'LIVE CALLER',
@@ -66,7 +63,6 @@ const translations = {
     next_call_in: 'Next call in',
     winner: 'Winner',
     winning_board: 'Winning Board',
-    // Deposit & Withdraw
     select_payment: 'Select Payment Platform',
     recommended: 'Recommended',
     confirm_payment: 'Confirm payment',
@@ -86,7 +82,6 @@ const translations = {
     your_account: 'Your Account',
     paste_withdraw_msg: 'Paste withdrawal confirmation message',
     verify_withdraw: 'Verify Withdrawal',
-    // Instructions
     how_to_play: 'How to play',
     rule_1: 'Choose a bet house.',
     rule_2: 'Select up to 2 boards in the lobby.',
@@ -95,7 +90,6 @@ const translations = {
     rule_5: 'Press BINGO only when a full line is complete including the last call.',
     dep_with_title: 'Deposits & Withdrawals',
     dep_with_desc: 'Use the Deposit button on the Welcome page.',
-    // Auto/Options
     audio: 'Audio',
     auto_mark_me: 'Auto mark (me)',
     auto_algo: 'Auto algorithm mark',
@@ -105,7 +99,7 @@ const translations = {
     active: 'Active',
     go_lobby: 'Go to Lobby',
     join_wait: 'Join & Wait',
-    insufficient_balance_msg: 'Insufficient balance to join this bet house.', // NEW
+    insufficient_balance_msg: 'Insufficient balance to join this bet house.',
   },
   am: {
     hello: 'ሰላም',
@@ -151,7 +145,7 @@ const translations = {
     tap_mark_hint: 'ቁጥሮችን ለመለየት ይንኩ። FREE በራስ-ሰር ይሞላል።',
     next_call_in: 'ቀጣይ ቁጥር በ',
     winner: 'አሸናፊ',
-    winning_board: 'ያሸነፈው ካርቶ',
+    winning_board: 'ያሸንፈው ካርቶ',
     select_payment: 'የክፍያ አማራጭ ይምረጡ',
     recommended: 'የሚመከር',
     confirm_payment: 'ክፍያ ያረጋግጡ',
@@ -188,7 +182,7 @@ const translations = {
     active: 'ተጫዋቾች',
     go_lobby: 'ወደ ሎቢ',
     join_wait: 'ተቀላቀል & ጠብቅ',
-    insufficient_balance_msg: 'ይህን ውርርድ ለመቀላቀል በቂ ሂሳብ የለዎትም።', // NEW
+    insufficient_balance_msg: 'ይህን ውርርድ ለመቀላቀል በቂ ሂሳብ የለዎትም።',
   },
   ti: {
     hello: 'ሰላም',
@@ -271,7 +265,7 @@ const translations = {
     active: 'ተጫወቲ',
     go_lobby: 'ናብ ሎቢ',
     join_wait: 'ተሓወስ & ተጸበ',
-    insufficient_balance_msg: 'ነዚ ውርርድ ምሕዋስ ዘይምኸኣል', // NEW
+    insufficient_balance_msg: 'ነዚ ውርርድ ምሕዋስ ዘይምኸኣል',
   },
   or: {
     hello: 'Akkam',
@@ -354,7 +348,7 @@ const translations = {
     active: 'Taphataa',
     go_lobby: 'Gara Lobby',
     join_wait: 'Seeni & Eegi',
-    insufficient_balance_msg: 'Baalansiin kee xiqqaadha.', // NEW
+    insufficient_balance_msg: 'Baalansiin kee xiqqaadha.',
   }
 }
 
@@ -474,12 +468,93 @@ export default function App() {
     }
   }
 
-  // Check for existing session on mount
+  // FIXED: Telegram Auto-Login - Check FIRST before regular session check
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tgToken = urlParams.get('tg_token');
+    
+    console.log('🔍 Checking for Telegram token:', tgToken ? 'Found' : 'Not found');
+    
+    if (tgToken) {
+      console.log('📱 Telegram WebApp detected, attempting auto-login...');
+      
+      // Show loading state
+      setLoginLoading(true);
+      setCurrentPage('login');
+      
+      fetch(`${getApiUrl()}/api/telegram/auto-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tgToken })
+      })
+        .then(res => {
+          console.log('📥 Auto-login response status:', res.status);
+          return res.json();
+        })
+        .then(data => {
+          console.log('📥 Auto-login response data:', data);
+          
+          if (data.success) {
+            console.log('✅ Telegram auto-login successful!');
+            console.log('   User ID:', data.userId);
+            console.log('   Username:', data.username);
+            console.log('   Balance:', data.balance);
+            
+            // Save to localStorage
+            localStorage.setItem('userId', data.userId);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('authToken', data.token);
+            
+            // Set state
+            setUserId(data.userId);
+            setUsername(data.username);
+            setIsAuthenticated(true);
+            setBalance(data.balance || 0);
+            setLoginLoading(false);
+            
+            // Clear URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Navigate to welcome page
+            setTimeout(() => {
+              setCurrentPage('welcome');
+            }, 100);
+          } else {
+            console.error('❌ Telegram auto-login failed:', data.error);
+            setLoginError(data.error || 'Auto-login failed');
+            setLoginLoading(false);
+            setCurrentPage('login');
+          }
+        })
+        .catch(err => {
+          console.error('❌ Telegram auto-login error:', err);
+          setLoginError('Connection error during auto-login');
+          setLoginLoading(false);
+          setCurrentPage('login');
+        });
+      
+      // Return early to prevent regular session check
+      return;
+    }
+    
+    // Only check regular session if no Telegram token
+    console.log('🔍 No Telegram token, checking regular session...');
+    checkExistingSession();
+  }, []); // Run only once on mount
+
+  // Separate function for existing session check
+  const checkExistingSession = () => {
     try {
-      const savedUserId = localStorage.getItem('userId')
-      const savedUsername = localStorage.getItem('username')
-      const savedToken = localStorage.getItem('authToken')
+      const savedUserId = localStorage.getItem('userId');
+      const savedUsername = localStorage.getItem('username');
+      const savedToken = localStorage.getItem('authToken');
+      
+      console.log('🔍 Checking existing session:', {
+        hasUserId: !!savedUserId,
+        hasUsername: !!savedUsername,
+        hasToken: !!savedToken
+      });
+      
       if (savedUserId && savedUsername && savedToken) {
         fetch(`${getApiUrl()}/api/auth/verify`, {
           method: 'POST',
@@ -489,25 +564,37 @@ export default function App() {
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              setUserId(savedUserId)
-              setUsername(savedUsername)
-              setIsAuthenticated(true)
-              setCurrentPage('welcome')
+              console.log('✅ Session verified');
+              setUserId(savedUserId);
+              setUsername(savedUsername);
+              setIsAuthenticated(true);
+              setCurrentPage('welcome');
             } else {
-              localStorage.removeItem('userId')
-              localStorage.removeItem('username')
-              localStorage.removeItem('authToken')
+              console.log('⚠️ Session invalid, clearing storage');
+              localStorage.removeItem('userId');
+              localStorage.removeItem('username');
+              localStorage.removeItem('authToken');
+              setCurrentPage('login');
             }
           })
-          .catch(() => {
-            localStorage.removeItem('userId')
-            localStorage.removeItem('username')
-            localStorage.removeItem('authToken')
-          })
+          .catch(err => {
+            console.error('❌ Session verification error:', err);
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            localStorage.removeItem('authToken');
+            setCurrentPage('login');
+          });
+      } else {
+        console.log('ℹ️ No existing session found');
+        setCurrentPage('login');
       }
-    } catch {}
-  }, [])
-   
+    } catch (error) {
+      console.error('❌ Error checking session:', error);
+      setCurrentPage('login');
+    }
+  };
+
+  // Socket.io connection, game logic, rendering functions, etc.
   useEffect(() => {
     if (!isAuthenticated) return
     
@@ -516,65 +603,6 @@ export default function App() {
       reconnection: true,
       auth: { userId, username }
     })
-      // Add near the top of App.tsx, after other useEffects
-
-// Telegram Auto-Login
-useEffect(() => {
-   const handleContact = (contact: any) => {
-  console.log('Received contact:', contact);
-  
-  if (!contact || !contact.contact) {
-    alert('Invalid contact information. Please try again.');
-    return;
-  }
-
-  const user = contact.contact.user;
-  const phone = contact.contact.phone_number;
-
-  if (!user || !user.id || !phone) {
-    alert('Incomplete contact information. Please share your contact again.');
-    return;
-  }
-
-  // The critical fix: Use user.id as telegramId
-  const registrationData = {
-    telegramId: user.id,  // This was missing
-    phoneNumber: phone,
-    username: user.username || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-    firstName: user.first_name || '',
-    lastName: user.last_name || '',
-    language: 'en' // You can get this from your app language setting
-  };
-
-  console.log('Sending registration data:', registrationData);
-
-  fetch(`${getApiUrl()}/api/telegram/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(registrationData)
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      // Save auth token and redirect
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userId', data.userId);
-      localStorage.setItem('username', data.username);
-      
-      // Redirect to game
-      window.location.href = "/"; // Or whatever your game URL is
-    } else {
-      alert(data.error || 'Registration failed. Please try again.');
-      console.error('Registration error:', data.error);
-    }
-  })
-  .catch(error => {
-    console.error('Registration network error:', error);
-    alert('Network error. Please check your connection and try again.');
-  });
-}
-}, []);
-    setSocket(s)
     
     s.on('init', (d: any) => {
       setPhase(d.phase)
@@ -2251,7 +2279,19 @@ useEffect(() => {
 
   return (
     <>
-      {mainPage}
+      {/* Add loading overlay for Telegram login */}
+      {loginLoading && currentPage === 'login' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+            <p className="text-white text-lg">Signing you in...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Rest of your app */}
+      {!loginLoading && mainPage}
+      
       {winnerInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
