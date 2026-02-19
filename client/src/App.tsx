@@ -520,33 +520,59 @@ export default function App() {
 
 // Telegram Auto-Login
 useEffect(() => {
-  // Check if opened from Telegram WebApp
-  const urlParams = new URLSearchParams(window.location.search);
-  const tgToken = urlParams.get('tg_token');
+   const handleContact = (contact: any) => {
+  console.log('Received contact:', contact);
   
-  if (tgToken) {
-    // Auto-login with Telegram token
-    fetch(`${getApiUrl()}/api/telegram/auto-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: tgToken })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          localStorage.setItem('userId', data.userId);
-          localStorage.setItem('username', data.username);
-          localStorage.setItem('authToken', data.token);
-          
-          setUserId(data.userId);
-          setUsername(data.username);
-          setIsAuthenticated(true);
-          setBalance(data.balance || 0);
-          setCurrentPage('welcome');
-        }
-      })
-      .catch(err => console.error('Telegram auto-login failed:', err));
+  if (!contact || !contact.contact) {
+    alert('Invalid contact information. Please try again.');
+    return;
   }
+
+  const user = contact.contact.user;
+  const phone = contact.contact.phone_number;
+
+  if (!user || !user.id || !phone) {
+    alert('Incomplete contact information. Please share your contact again.');
+    return;
+  }
+
+  // The critical fix: Use user.id as telegramId
+  const registrationData = {
+    telegramId: user.id,  // This was missing
+    phoneNumber: phone,
+    username: user.username || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+    firstName: user.first_name || '',
+    lastName: user.last_name || '',
+    language: 'en' // You can get this from your app language setting
+  };
+
+  console.log('Sending registration data:', registrationData);
+
+  fetch(`${getApiUrl()}/api/telegram/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(registrationData)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      // Save auth token and redirect
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userId', data.userId);
+      localStorage.setItem('username', data.username);
+      
+      // Redirect to game
+      window.location.href = "/"; // Or whatever your game URL is
+    } else {
+      alert(data.error || 'Registration failed. Please try again.');
+      console.error('Registration error:', data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Registration network error:', error);
+    alert('Network error. Please check your connection and try again.');
+  });
+}
 }, []);
     setSocket(s)
     

@@ -5,6 +5,16 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8265646245:AAFoz7VyX2P71G4z
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://win-bingo-frontend.onrender.com';
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001/api';
 
+console.log('🤖 Bot Configuration:');
+console.log('   Frontend URL:', FRONTEND_URL);
+console.log('   API Base URL:', API_BASE_URL);
+console.log('   Bot Token:', BOT_TOKEN ? '✓ Set' : '✗ Missing');
+
+if (!BOT_TOKEN) {
+  console.error('❌ TELEGRAM_BOT_TOKEN is not set!');
+  process.exit(1);
+}
+
 // Initialize bot
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
@@ -22,7 +32,10 @@ const translations = {
     alreadyRegistered: "Welcome back! You're already registered. Click Play to start!",
     playButton: "🎮 Play",
     errorOccurred: "An error occurred. Please try again.",
-    insufficientBalance: "Insufficient balance. Please deposit to continue playing."
+    insufficientBalance: "Insufficient balance. Please deposit to continue playing.",
+    sessionExpired: "Session expired. Please type /start again.",
+    shareOwnContact: "Please share your own contact information.",
+    registering: "Registering your account... ⏳"
   },
   am: {
     welcome: "እንኳን ወደ ዊን ቢንጎ በደህና መጡ! 🎮",
@@ -33,7 +46,10 @@ const translations = {
     alreadyRegistered: "እንኳን ደህና መጡ! አስቀድመው ተመዝግበዋል። ለመጫወት Play ይጫኑ!",
     playButton: "🎮 ተጫወት",
     errorOccurred: "ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
-    insufficientBalance: "በቂ ሂሳብ የለም። ለመቀጠል እባክዎ ገንዘብ ያስገቡ።"
+    insufficientBalance: "በቂ ሂሳብ የለም። ለመቀጠል እባክዎ ገንዘብ ያስገቡ።",
+    sessionExpired: "ጊዜው አልፏል። እባክዎ /start ይጻፉ።",
+    shareOwnContact: "እባክዎ የራስዎን ስልክ ቁጥር ያጋሩ።",
+    registering: "እየመዘገቡ ነው... ⏳"
   },
   ti: {
     welcome: "ናብ ዊን ቢንጎ እንቋዕ ብደሓን መጻእኩም! 🎮",
@@ -44,7 +60,10 @@ const translations = {
     alreadyRegistered: "እንቋዕ ደሓን መጻእኩም! ኣስቀድም ተመዝጊብኩም። ንምጽዋት Play ጠውቑ!",
     playButton: "🎮 ተጫወት",
     errorOccurred: "ጌጋ ተፈጢሩ። በጃኹም ተመለሱ ሞክሩ።",
-    insufficientBalance: "በቂ ሂሳብ የለን። ንምቕፃል በጃኹም ገንዘብ ኣእትዉ።"
+    insufficientBalance: "በቂ ሂሳብ የለን። ንምቕፃል በጃኹም ገንዘብ ኣእትዉ።",
+    sessionExpired: "ጊዜኹም ወዲኡ። በጃኹም /start ጽሓፉ።",
+    shareOwnContact: "በጃኹም ናይ ገዛእ ርእስኹም ስልክ ቁጽሪ ኣካፍሉ።",
+    registering: "ይምዝገብ ኣሎ... ⏳"
   },
   or: {
     welcome: "Gara Win Bingo baga nagaan dhuftan! 🎮",
@@ -55,14 +74,17 @@ const translations = {
     alreadyRegistered: "Baga nagaan dhuftan! Duraanuu galmaa'amtaniirtu. Play cuqaasaa!",
     playButton: "🎮 Taphadhu",
     errorOccurred: "Dogongora uumame. Mee irra deebi'ii yaali.",
-    insufficientBalance: "Baalansiin hin gahu. Itti fufuuf maadhee galchaa."
+    insufficientBalance: "Baalansiin hin gahu. Itti fufuuf maadhee galchaa.",
+    sessionExpired: "Yeroon darbee jira. Mee /start barreessaa.",
+    shareOwnContact: "Mee lakkoofsa bilbila keessan qooddadhaa.",
+    registering: "Galmaa'uu jira... ⏳"
   }
 };
 
 // Get translation
 const t = (userId, key) => {
   const lang = userSessions.get(userId)?.language || 'en';
-  return translations[lang][key] || translations.en[key];
+  return translations[lang]?.[key] || translations.en[key] || key;
 };
 
 // Language selection keyboard
@@ -115,6 +137,11 @@ bot.onText(/\/start/, async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
 
+  console.log(`\n📱 /start command from:`);
+  console.log(`   User ID: ${userId}`);
+  console.log(`   Username: @${msg.from.username || 'none'}`);
+  console.log(`   Name: ${msg.from.first_name || ''} ${msg.from.last_name || ''}`);
+
   // Initialize session
   if (!userSessions.has(userId)) {
     userSessions.set(userId, {
@@ -124,17 +151,26 @@ bot.onText(/\/start/, async (msg) => {
       language: null,
       registered: false
     });
+    console.log('   ✓ Session initialized');
   }
 
   // Check if user is already registered
   try {
-    const checkResponse = await fetch(`${API_BASE_URL}/telegram/check-user`, {
+    const checkUrl = `${API_BASE_URL}/telegram/check-user`;
+    console.log(`   🔍 Checking registration at: ${checkUrl}`);
+    
+    const checkResponse = await fetch(checkUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegramId: userId })
     });
 
+    if (!checkResponse.ok) {
+      throw new Error(`HTTP ${checkResponse.status}: ${checkResponse.statusText}`);
+    }
+
     const checkData = await checkResponse.json();
+    console.log('   📥 Check response:', checkData);
 
     if (checkData.exists) {
       // User already registered
@@ -143,6 +179,8 @@ bot.onText(/\/start/, async (msg) => {
       session.token = checkData.token;
       session.language = checkData.language || 'en';
       
+      console.log('   ✅ User already registered, sending Play button');
+      
       await bot.sendMessage(
         chatId,
         t(userId, 'alreadyRegistered'),
@@ -150,8 +188,11 @@ bot.onText(/\/start/, async (msg) => {
       );
       return;
     }
+    
+    console.log('   ℹ️ New user, showing language selection');
   } catch (error) {
-    console.error('Error checking user:', error);
+    console.error('   ❌ Error checking user:', error.message);
+    console.error('   Stack:', error.stack);
   }
 
   // New user - ask for language
@@ -168,11 +209,15 @@ bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
 
+  console.log(`\n🌐 Language selection: ${data} from user ${userId}`);
+
   if (data.startsWith('lang_')) {
     const lang = data.replace('lang_', '');
     const session = userSessions.get(userId) || {};
     session.language = lang;
     userSessions.set(userId, session);
+
+    console.log(`   ✓ Language set to: ${lang}`);
 
     await bot.answerCallbackQuery(query.id);
     await bot.deleteMessage(chatId, query.message.message_id);
@@ -181,6 +226,7 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, t(userId, 'welcome'));
     
     // Request phone number
+    console.log('   📞 Requesting phone number');
     await bot.sendMessage(
       chatId,
       t(userId, 'sharePhone'),
@@ -189,45 +235,79 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// Handle contact sharing
+// Handle contact sharing - UPDATED WITH BETTER ERROR HANDLING
 bot.on('contact', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
   const contact = msg.contact;
 
-  // Verify it's the user's own contact
-  if (contact.user_id !== userId) {
-    await bot.sendMessage(chatId, "Please share your own contact information.");
+  console.log(`\n📞 Contact received:`);
+  console.log(`   User ID: ${userId}`);
+  console.log(`   Contact Phone: ${contact.phone_number}`);
+  console.log(`   Contact User ID: ${contact.user_id || 'not provided'}`);
+  console.log(`   First Name: ${contact.first_name || ''}`);
+  console.log(`   Last Name: ${contact.last_name || ''}`);
+
+  // Verify it's the user's own contact (if user_id is provided)
+  if (contact.user_id && contact.user_id !== userId) {
+    console.log('   ⚠️ User tried to share someone else\'s contact');
+    await bot.sendMessage(chatId, t(userId, 'shareOwnContact'));
     return;
   }
 
   const session = userSessions.get(userId);
   if (!session) {
-    await bot.sendMessage(chatId, "Session expired. Please type /start again.");
+    console.log('   ❌ No session found for user');
+    await bot.sendMessage(chatId, t(userId, 'sessionExpired'));
     return;
   }
 
   const username = msg.from.username || `user${userId}`;
   const phoneNumber = contact.phone_number;
 
+  // Send "registering" message
+  await bot.sendMessage(chatId, t(userId, 'registering'));
+
   try {
-    // Register user via API
-    const response = await fetch(`${API_BASE_URL}/telegram/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        telegramId: userId,
-        username: username,
-        phoneNumber: phoneNumber,
-        firstName: msg.from.first_name,
-        lastName: msg.from.last_name,
-        language: session.language || 'en'
-      })
+    const registerUrl = `${API_BASE_URL}/telegram/register`;
+    console.log(`   📝 Registering at: ${registerUrl}`);
+    
+    const requestBody = {
+      telegramId: userId,
+      username: username,
+      phoneNumber: phoneNumber,
+      firstName: msg.from.first_name || contact.first_name || '',
+      lastName: msg.from.last_name || contact.last_name || '',
+      language: session.language || 'en'
+    };
+    
+    console.log('   📤 Request body:', {
+      ...requestBody,
+      phoneNumber: '***' + phoneNumber.slice(-4)
     });
 
+    const response = await fetch(registerUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    console.log(`   📥 Response status: ${response.status} ${response.statusText}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`   ❌ HTTP Error: ${errorText}`);
+      throw new Error(`Server returned ${response.status}: ${errorText}`);
+    }
+
     const result = await response.json();
+    console.log('   📥 Response data:', result);
 
     if (!result.success) {
+      console.error('   ❌ Registration failed:', result.error);
       await bot.sendMessage(chatId, result.error || t(userId, 'errorOccurred'));
       return;
     }
@@ -237,6 +317,11 @@ bot.on('contact', async (msg) => {
     session.token = result.token;
     session.gameUserId = result.userId;
     userSessions.set(userId, session);
+
+    console.log(`   ✅ Registration successful!`);
+    console.log(`      Username: ${result.username}`);
+    console.log(`      User ID: ${result.userId}`);
+    console.log(`      Balance: ${result.balance} Birr`);
 
     // Remove keyboard
     await bot.sendMessage(chatId, t(userId, 'registered'), {
@@ -250,9 +335,18 @@ bot.on('contact', async (msg) => {
       getPlayKeyboard(userId)
     );
 
+    console.log('   🎮 Play button sent');
+
   } catch (error) {
-    console.error('Registration error:', error);
-    await bot.sendMessage(chatId, t(userId, 'errorOccurred'));
+    console.error('   ❌ Registration error:', error.message);
+    console.error('   Stack:', error.stack);
+    
+    await bot.sendMessage(
+      chatId, 
+      t(userId, 'errorOccurred') + 
+      '\n\n🔧 Error: ' + error.message +
+      '\n\nPlease contact support if this persists.'
+    );
   }
 });
 
@@ -262,11 +356,15 @@ bot.onText(/\/play/, async (msg) => {
   const chatId = msg.chat.id;
   const session = userSessions.get(userId);
 
+  console.log(`\n🎮 /play command from user ${userId}`);
+
   if (!session || !session.registered) {
+    console.log('   ⚠️ User not registered');
     await bot.sendMessage(chatId, "Please register first using /start");
     return;
   }
 
+  console.log('   ✓ Sending play button');
   await bot.sendMessage(
     chatId,
     "Click the button below to play! 🎮",
@@ -277,6 +375,7 @@ bot.onText(/\/play/, async (msg) => {
 // Command: /language
 bot.onText(/\/language/, async (msg) => {
   const chatId = msg.chat.id;
+  console.log(`\n🌐 /language command from user ${msg.from.id}`);
   await bot.sendMessage(chatId, "Select your language:", languageKeyboard);
 });
 
@@ -284,6 +383,8 @@ bot.onText(/\/language/, async (msg) => {
 bot.onText(/\/help/, async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
+  
+  console.log(`\n❓ /help command from user ${userId}`);
   
   const helpText = `
 🎮 *Win Bingo Bot Help*
@@ -293,6 +394,7 @@ Commands:
 /play - Open the game
 /language - Change language
 /help - Show this help message
+/debug - Show debug information
 
 How to play:
 1. Use /start to register
@@ -305,6 +407,76 @@ Need support? Contact @YourSupportUsername
   await bot.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
 });
 
+// Command: /debug (for troubleshooting)
+bot.onText(/\/debug/, async (msg) => {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
+  const session = userSessions.get(userId);
+  
+  console.log(`\n🔧 /debug command from user ${userId}`);
+  
+  const debugInfo = `
+🔧 *Debug Info*
+
+User ID: \`${userId}\`
+Session exists: ${session ? '✓' : '✗'}
+Registered: ${session?.registered ? '✓' : '✗'}
+Language: ${session?.language || 'not set'}
+Token: ${session?.token ? '✓ Set' : '✗ Missing'}
+
+API URL: \`${API_BASE_URL}\`
+Frontend: \`${FRONTEND_URL}\`
+
+Bot Status: ✓ Running
+  `;
+  
+  await bot.sendMessage(chatId, debugInfo, { parse_mode: 'Markdown' });
+});
+
+// Error handling for polling
+bot.on('polling_error', (error) => {
+  console.error('❌ Telegram polling error:', error.code);
+  console.error('   Message:', error.message);
+  
+  // Don't exit on common errors
+  if (error.code === 'EFATAL') {
+    console.error('   Fatal error - bot may need restart');
+  }
+});
+
+// Error handling for webhook errors (if using webhooks)
+bot.on('webhook_error', (error) => {
+  console.error('❌ Telegram webhook error:', error);
+});
+
+// General error handler
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('   Reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('   Stack:', error.stack);
+  // Don't exit - keep bot running
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n⚠️ Received SIGINT, shutting down gracefully...');
+  bot.stopPolling();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n⚠️ Received SIGTERM, shutting down gracefully...');
+  bot.stopPolling();
+  process.exit(0);
+});
+
+// Log successful bot start
 console.log('✅ Telegram Bot is running...');
+console.log('📡 Listening for commands...');
+console.log('');
 
 export default bot;

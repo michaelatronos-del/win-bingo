@@ -843,17 +843,39 @@ app.post('/api/telegram/register', async (req, res) => {
   try {
     const { telegramId, username, phoneNumber, firstName, lastName, language } = req.body;
 
+    console.log('📝 Telegram Registration attempt:', { 
+      telegramId, 
+      username, 
+      phoneNumber: phoneNumber ? '***' + phoneNumber.slice(-4) : 'missing',
+      firstName,
+      language 
+    });
+
     if (!telegramId || !phoneNumber) {
-      return res.json({ success: false, error: 'Missing required fields' });
+      console.error('❌ Missing required fields:', { 
+        telegramId: !!telegramId, 
+        phoneNumber: !!phoneNumber 
+      });
+      return res.json({ 
+        success: false, 
+        error: 'Missing required fields (telegramId or phoneNumber)', 
+        received: { telegramId: !!telegramId, phoneNumber: !!phoneNumber }
+      });
     }
 
     const tgId = String(telegramId);
 
-    const existingUser = Array.from(users.entries()).find(([_, data]) => String(data.telegramId || '') === tgId);
+    // Check if user already exists
+    const existingUser = Array.from(users.entries()).find(
+      ([_, data]) => String(data.telegramId || '') === tgId
+    );
+    
     if (existingUser) {
+      console.log('⚠️ User already registered:', tgId);
       return res.json({ success: false, error: 'User already registered' });
     }
 
+    // Create username
     let baseUsername = (username || '').trim();
     if (!baseUsername) {
       baseUsername = (firstName || 'player').toString();
@@ -863,6 +885,7 @@ app.post('/api/telegram/register', async (req, res) => {
     // If username already exists (collision), make it unique
     if (users.has(usernameLower)) {
       usernameLower = `${usernameLower}_${tgId.slice(-6)}`;
+      console.log('🔄 Username collision, using:', usernameLower);
     }
 
     const userId = crypto.randomBytes(16).toString('hex');
@@ -891,7 +914,7 @@ app.post('/api/telegram/register', async (req, res) => {
       telegramId: tgId
     });
 
-    console.log(`Telegram user registered: ${usernameLower} (${userId})`);
+    console.log(`✅ Telegram user registered: ${usernameLower} (${userId}) - Balance: 100 Birr`);
 
     res.json({
       success: true,
@@ -901,8 +924,13 @@ app.post('/api/telegram/register', async (req, res) => {
       balance: 100
     });
   } catch (error) {
-    console.error('Telegram registration error:', error);
-    res.json({ success: false, error: 'Server error during registration' });
+    console.error('❌ Telegram registration error:', error);
+    console.error('Error stack:', error.stack);
+    res.json({ 
+      success: false, 
+      error: 'Server error during registration', 
+      details: error.message 
+    });
   }
 });
 
