@@ -479,4 +479,4 @@ console.log('✅ Telegram Bot is running...');
 console.log('📡 Listening for commands...');
 console.log('');
 
-export default bot
+export default bot;
