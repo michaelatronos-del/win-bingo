@@ -1,9 +1,12 @@
 import TelegramBot from 'node-telegram-bot-api';
 import crypto from 'crypto';
 
+// UPDATED: Use deployed backend URL instead of localhost
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8265646245:AAFoz7VyX2P71G4zkd4YNrKWdWpHRgniOOE';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://win-bingo-frontend.onrender.com';
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001/api';
+
+// FIX: Changed from localhost to actual Render backend URL
+const API_BASE_URL = process.env.API_BASE_URL || 'https://win-bingo-backend.onrender.com/api';
 
 console.log('🤖 Bot Configuration:');
 console.log('   Frontend URL:', FRONTEND_URL);
@@ -16,9 +19,17 @@ if (!BOT_TOKEN) {
 }
 
 // Initialize bot
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(BOT_TOKEN, { 
+  polling: true,
+  request: {
+    agentOptions: {
+      keepAlive: true,
+      family: 4
+    }
+  }
+});
 
-// Store user sessions (in production, use Redis or database)
+// Store user sessions
 const userSessions = new Map();
 
 // Language translations
@@ -35,7 +46,8 @@ const translations = {
     insufficientBalance: "Insufficient balance. Please deposit to continue playing.",
     sessionExpired: "Session expired. Please type /start again.",
     shareOwnContact: "Please share your own contact information.",
-    registering: "Registering your account... ⏳"
+    registering: "Registering your account... ⏳",
+    backendDown: "Backend server is not responding. Please try again in a few moments."
   },
   am: {
     welcome: "እንኳን ወደ ዊን ቢንጎ በደህና መጡ! 🎮",
@@ -49,7 +61,8 @@ const translations = {
     insufficientBalance: "በቂ ሂሳብ የለም። ለመቀጠል እባክዎ ገንዘብ ያስገቡ።",
     sessionExpired: "ጊዜው አልፏል። እባክዎ /start ይጻፉ።",
     shareOwnContact: "እባክዎ የራስዎን ስልክ ቁጥር ያጋሩ።",
-    registering: "እየመዘገቡ ነው... ⏳"
+    registering: "እየመዘገቡ ነው... ⏳",
+    backendDown: "ሰርቨሩ አልተገኘም። እባክዎ ቆይተው ይሞክሩ።"
   },
   ti: {
     welcome: "ናብ ዊን ቢንጎ እንቋዕ ብደሓን መጻእኩም! 🎮",
@@ -63,7 +76,8 @@ const translations = {
     insufficientBalance: "በቂ ሂሳብ የለን። ንምቕፃል በጃኹም ገንዘብ ኣእትዉ።",
     sessionExpired: "ጊዜኹም ወዲኡ። በጃኹም /start ጽሓፉ።",
     shareOwnContact: "በጃኹም ናይ ገዛእ ርእስኹም ስልክ ቁጽሪ ኣካፍሉ።",
-    registering: "ይምዝገብ ኣሎ... ⏳"
+    registering: "ይምዝገብ ኣሎ... ⏳",
+    backendDown: "ሰርቨር ኣይረኸበን። በጃኹም ቆይቲኹም ሞክሩ።"
   },
   or: {
     welcome: "Gara Win Bingo baga nagaan dhuftan! 🎮",
@@ -77,7 +91,8 @@ const translations = {
     insufficientBalance: "Baalansiin hin gahu. Itti fufuuf maadhee galchaa.",
     sessionExpired: "Yeroon darbee jira. Mee /start barreessaa.",
     shareOwnContact: "Mee lakkoofsa bilbila keessan qooddadhaa.",
-    registering: "Galmaa'uu jira... ⏳"
+    registering: "Galmaa'uu jira... ⏳",
+    backendDown: "Saarvarii hin argamne. Mee booda yaali."
   }
 };
 
@@ -132,6 +147,24 @@ const getPlayKeyboard = (userId) => {
   };
 };
 
+// Enhanced fetch with timeout and better error handling
+async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 // Command: /start
 bot.onText(/\/start/, async (msg) => {
   const userId = msg.from.id;
@@ -159,11 +192,11 @@ bot.onText(/\/start/, async (msg) => {
     const checkUrl = `${API_BASE_URL}/telegram/check-user`;
     console.log(`   🔍 Checking registration at: ${checkUrl}`);
     
-    const checkResponse = await fetch(checkUrl, {
+    const checkResponse = await fetchWithTimeout(checkUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegramId: userId })
-    });
+    }, 15000);
 
     if (!checkResponse.ok) {
       throw new Error(`HTTP ${checkResponse.status}: ${checkResponse.statusText}`);
@@ -192,7 +225,12 @@ bot.onText(/\/start/, async (msg) => {
     console.log('   ℹ️ New user, showing language selection');
   } catch (error) {
     console.error('   ❌ Error checking user:', error.message);
-    console.error('   Stack:', error.stack);
+    console.error('   Error name:', error.name);
+    
+    // If it's a network error, inform user but continue with registration
+    if (error.name === 'AbortError' || error.message.includes('fetch')) {
+      console.log('   ⚠️ Backend might be down, but continuing with registration flow');
+    }
   }
 
   // New user - ask for language
@@ -235,7 +273,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// Handle contact sharing - UPDATED WITH BETTER ERROR HANDLING
+// Handle contact sharing - ENHANCED WITH BETTER ERROR HANDLING
 bot.on('contact', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
@@ -266,7 +304,7 @@ bot.on('contact', async (msg) => {
   const phoneNumber = contact.phone_number;
 
   // Send "registering" message
-  await bot.sendMessage(chatId, t(userId, 'registering'));
+  const registeringMsg = await bot.sendMessage(chatId, t(userId, 'registering'));
 
   try {
     const registerUrl = `${API_BASE_URL}/telegram/register`;
@@ -286,21 +324,21 @@ bot.on('contact', async (msg) => {
       phoneNumber: '***' + phoneNumber.slice(-4)
     });
 
-    const response = await fetch(registerUrl, {
+    const response = await fetchWithTimeout(registerUrl, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
       body: JSON.stringify(requestBody)
-    });
+    }, 20000); // 20 second timeout
 
     console.log(`   📥 Response status: ${response.status} ${response.statusText}`);
     
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`   ❌ HTTP Error: ${errorText}`);
-      throw new Error(`Server returned ${response.status}: ${errorText}`);
+      throw new Error(`Server returned ${response.status}: ${errorText.substring(0, 100)}`);
     }
 
     const result = await response.json();
@@ -339,12 +377,27 @@ bot.on('contact', async (msg) => {
 
   } catch (error) {
     console.error('   ❌ Registration error:', error.message);
+    console.error('   Error type:', error.name);
     console.error('   Stack:', error.stack);
+    
+    let errorMessage = t(userId, 'errorOccurred');
+    
+    // Provide more specific error messages
+    if (error.name === 'AbortError') {
+      errorMessage = t(userId, 'backendDown');
+      console.error('   ⏱️ Request timeout - backend took too long to respond');
+    } else if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
+      errorMessage = t(userId, 'backendDown');
+      console.error('   🔌 Connection refused - backend is not accessible');
+    } else if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+      errorMessage = 'Cannot reach backend server. Please check if the server is running.';
+      console.error('   🌐 DNS error - cannot resolve backend hostname');
+    }
     
     await bot.sendMessage(
       chatId, 
-      t(userId, 'errorOccurred') + 
-      '\n\n🔧 Error: ' + error.message +
+      errorMessage + 
+      '\n\n🔧 Technical details: ' + error.message.substring(0, 100) +
       '\n\nPlease contact support if this persists.'
     );
   }
@@ -395,6 +448,7 @@ Commands:
 /language - Change language
 /help - Show this help message
 /debug - Show debug information
+/ping - Test backend connection
 
 How to play:
 1. Use /start to register
@@ -405,6 +459,33 @@ Need support? Contact @YourSupportUsername
   `;
   
   await bot.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
+});
+
+// Command: /ping - Test backend connection
+bot.onText(/\/ping/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  
+  console.log(`\n🏓 /ping command from user ${userId}`);
+  
+  await bot.sendMessage(chatId, '🏓 Pinging backend server...');
+  
+  try {
+    const start = Date.now();
+    const response = await fetchWithTimeout(`${API_BASE_URL.replace('/api', '')}/`, {
+      method: 'GET'
+    }, 5000);
+    
+    const elapsed = Date.now() - start;
+    
+    if (response.ok) {
+      await bot.sendMessage(chatId, `✅ Backend is online!\n⏱️ Response time: ${elapsed}ms\n📡 URL: ${API_BASE_URL}`);
+    } else {
+      await bot.sendMessage(chatId, `⚠️ Backend responded with status: ${response.status}\n📡 URL: ${API_BASE_URL}`);
+    }
+  } catch (error) {
+    await bot.sendMessage(chatId, `❌ Cannot reach backend!\n🔧 Error: ${error.message}\n📡 URL: ${API_BASE_URL}`);
+  }
 });
 
 // Command: /debug (for troubleshooting)
@@ -438,13 +519,12 @@ bot.on('polling_error', (error) => {
   console.error('❌ Telegram polling error:', error.code);
   console.error('   Message:', error.message);
   
-  // Don't exit on common errors
   if (error.code === 'EFATAL') {
     console.error('   Fatal error - bot may need restart');
   }
 });
 
-// Error handling for webhook errors (if using webhooks)
+// Error handling for webhook errors
 bot.on('webhook_error', (error) => {
   console.error('❌ Telegram webhook error:', error);
 });
@@ -458,7 +538,6 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('   Stack:', error.stack);
-  // Don't exit - keep bot running
 });
 
 // Graceful shutdown
@@ -477,6 +556,7 @@ process.on('SIGTERM', () => {
 // Log successful bot start
 console.log('✅ Telegram Bot is running...');
 console.log('📡 Listening for commands...');
+console.log('🔗 Backend URL:', API_BASE_URL);
 console.log('');
 
 export default bot;
