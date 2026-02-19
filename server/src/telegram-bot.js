@@ -1,7 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import crypto from 'crypto';
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8265646245:AAFoz7VyX2P71G4zkd4YNrKWdWpHRgniOOE';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://win-bingo-frontend.onrender.com';
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001/api';
 
