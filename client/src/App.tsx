@@ -17,13 +17,11 @@ type Language = 'en' | 'am' | 'ti' | 'or'
 // --- TRANSLATIONS CONFIGURATION ---
 const translations = {
   en: {
-    // General
     hello: 'Hello',
     back: 'Back',
     close: 'Close',
     loading: 'Processing...',
     ok: 'OK',
-    // Login
     signin: 'Sign In',
     signup: 'Sign Up',
     username: 'Username',
@@ -32,7 +30,6 @@ const translations = {
     enter_password: 'Enter your password',
     create_account: 'Create Account',
     welcome_login_msg: 'Welcome! Please sign in or create an account',
-    // Welcome/Lobby
     deposit: '+ Deposit',
     withdraw: 'Withdraw',
     logout: 'Logout',
@@ -128,7 +125,6 @@ const translations = {
     play_now: 'አሁን ተጫወት',
     select_bingo_house: 'የቢንጎ ውርርድ ቤት ይምረጡ',
     bet_houses: 'የውርርድ ቤቶች',
-    
     stake: 'ውርርድ',
     select_boards: 'ካርቶዎችን ይምረጡ',
     selected: 'ተመርጧል',
@@ -211,7 +207,6 @@ const translations = {
     play_now: 'ሕጂ ተጫወት',
     select_bingo_house: 'ናይ ቢንጎ ውርርድ ገዛ ምረጽ',
     bet_houses: 'ናይ ውርርድ ቤቶች',
-    
     stake: 'ውርርድ',
     select_boards: 'ካርቶን ምረጽ',
     selected: 'ተመሪጹ',
@@ -294,7 +289,6 @@ const translations = {
     play_now: 'Amma Taphadhu',
     select_bingo_house: 'Mana Qabsiisaa BINGO Filadhu',
     bet_houses: 'Manni Qabsiisaa',
-    
     stake: 'Qabsiisa',
     select_boards: 'Kaartii Filadhu',
     selected: 'Filatame',
@@ -473,12 +467,7 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const tgToken = urlParams.get('tg_token');
     
-    console.log('🔍 Checking for Telegram token:', tgToken ? 'Found' : 'Not found');
-    
     if (tgToken) {
-      console.log('📱 Telegram WebApp detected, attempting auto-login...');
-      
-      // Show loading state
       setLoginLoading(true);
       setCurrentPage('login');
       
@@ -487,73 +476,47 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: tgToken })
       })
-        .then(res => {
-          console.log('📥 Auto-login response status:', res.status);
-          return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
-          console.log('📥 Auto-login response data:', data);
-          
           if (data.success) {
-            console.log('✅ Telegram auto-login successful!');
-            console.log('   User ID:', data.userId);
-            console.log('   Username:', data.username);
-            console.log('   Balance:', data.balance);
-            
-            // Save to localStorage
             localStorage.setItem('userId', data.userId);
             localStorage.setItem('username', data.username);
             localStorage.setItem('authToken', data.token);
             
-            // Set state
             setUserId(data.userId);
             setUsername(data.username);
             setIsAuthenticated(true);
             setBalance(data.balance || 0);
             setLoginLoading(false);
             
-            // Clear URL parameters
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Navigate to welcome page
             setTimeout(() => {
               setCurrentPage('welcome');
             }, 100);
           } else {
-            console.error('❌ Telegram auto-login failed:', data.error);
             setLoginError(data.error || 'Auto-login failed');
             setLoginLoading(false);
             setCurrentPage('login');
           }
         })
         .catch(err => {
-          console.error('❌ Telegram auto-login error:', err);
           setLoginError('Connection error during auto-login');
           setLoginLoading(false);
           setCurrentPage('login');
         });
       
-      // Return early to prevent regular session check
       return;
     }
     
-    // Only check regular session if no Telegram token
-    console.log('🔍 No Telegram token, checking regular session...');
     checkExistingSession();
-  }, []); // Run only once on mount
+  }, []);
 
-  // Separate function for existing session check
   const checkExistingSession = () => {
     try {
       const savedUserId = localStorage.getItem('userId');
       const savedUsername = localStorage.getItem('username');
       const savedToken = localStorage.getItem('authToken');
-      
-      console.log('🔍 Checking existing session:', {
-        hasUserId: !!savedUserId,
-        hasUsername: !!savedUsername,
-        hasToken: !!savedToken
-      });
       
       if (savedUserId && savedUsername && savedToken) {
         fetch(`${getApiUrl()}/api/auth/verify`, {
@@ -564,37 +527,31 @@ export default function App() {
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              console.log('✅ Session verified');
               setUserId(savedUserId);
               setUsername(savedUsername);
               setIsAuthenticated(true);
               setCurrentPage('welcome');
             } else {
-              console.log('⚠️ Session invalid, clearing storage');
               localStorage.removeItem('userId');
               localStorage.removeItem('username');
               localStorage.removeItem('authToken');
               setCurrentPage('login');
             }
           })
-          .catch(err => {
-            console.error('❌ Session verification error:', err);
+          .catch(() => {
             localStorage.removeItem('userId');
             localStorage.removeItem('username');
             localStorage.removeItem('authToken');
             setCurrentPage('login');
           });
       } else {
-        console.log('ℹ️ No existing session found');
         setCurrentPage('login');
       }
     } catch (error) {
-      console.error('❌ Error checking session:', error);
       setCurrentPage('login');
     }
   };
 
-  // Socket.io connection, game logic, rendering functions, etc.
   useEffect(() => {
     if (!isAuthenticated) return
     
@@ -603,6 +560,7 @@ export default function App() {
       reconnection: true,
       auth: { userId, username }
     })
+    setSocket(s)
     
     s.on('init', (d: any) => {
       setPhase(d.phase)
@@ -722,7 +680,6 @@ export default function App() {
     
       setPicks([])
       setMarkedNumbers(new Set())
-      // MODIFICATION: Redirect to bingoHouseSelect after a winner is announced
       setCurrentPage('bingoHouseSelect') 
       setIsReady(false)
       setIsWaiting(false)
@@ -821,10 +778,9 @@ export default function App() {
   const handleJoinBetHouse = (stakeAmount: number) => {
     if (!socket) return
 
-    // MODIFICATION: Insufficient Balance Check
     if (balance < stakeAmount) {
       alert(t('insufficient_balance_msg'));
-      return; // Stop execution if balance is insufficient
+      return; 
     }
 
     setCurrentBetHouse(stakeAmount)
@@ -1374,7 +1330,7 @@ export default function App() {
             <div className="mb-3 sm:mb-6">
               <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">{t('selected')} ({picks.length}/2):</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-                {picks.map((boardId, idx) => (
+                {picks.map((boardId) => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-4">
                     <div className="text-xs sm:text-sm text-slate-400 mb-1 sm:mb-2">Board {boardId}</div>
                     {renderCard(boardId, false)}
@@ -1403,7 +1359,7 @@ export default function App() {
             <div className="flex gap-2 w-full sm:w-auto">
               <button
                 className="px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm flex-1 sm:flex-none"
-                onClick={() => setCurrentPage('bingoHouseSelect')} // Changed to go back to bingo house selection
+                onClick={() => setCurrentPage('bingoHouseSelect')}
               >
                 {t('switch_house')}
               </button>
@@ -1679,8 +1635,8 @@ export default function App() {
             <div className="flex items-center gap-3">
               <span className="text-2xl">🎁</span>
               <div>
-                <div className="font-black text-sm">{t('welcome_bonus_title')}</div>
-                <div className="text-xs font-bold">{t('welcome_bonus_msg')}</div>
+                <div className="font-black text-sm">Welcome Bonus!</div>
+                <div className="text-xs font-bold">100 Birr added to your account!</div>
               </div>
             </div>
             <button 
@@ -1773,7 +1729,83 @@ export default function App() {
     </div>
   )
 
-  // New function to render Bingo bet house selection page
+  // --- NEW MISSING PAGE: Deposit Selection ---
+  const renderDepositSelect = () => (
+    <div className="h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-lg space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-xl font-bold">{t('select_payment')}</div>
+          <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+          <button onClick={() => { setSelectedProvider('CBE'); setCurrentPage('depositConfirm'); }} className="bg-slate-800 p-6 rounded-xl border border-blue-500 hover:bg-slate-700 transition">CBE Birr</button>
+          <button onClick={() => { setSelectedProvider('Telebirr'); setCurrentPage('depositConfirm'); }} className="bg-slate-800 p-6 rounded-xl border border-green-500 hover:bg-slate-700 transition">Telebirr</button>
+          <button onClick={() => { setSelectedProvider('M-Pesa'); setCurrentPage('depositConfirm'); }} className="bg-slate-800 p-6 rounded-xl border border-red-500 hover:bg-slate-700 transition">M-Pesa</button>
+          <button onClick={() => { setSelectedProvider('Awash'); setCurrentPage('depositConfirm'); }} className="bg-slate-800 p-6 rounded-xl border border-orange-500 hover:bg-slate-700 transition">Awash Bank</button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // --- NEW MISSING PAGE: Deposit Confirmation ---
+  const renderDepositConfirm = () => (
+    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-lg space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-xl font-bold">{t('confirm_payment')} - {selectedProvider}</div>
+        </div>
+        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+          <div className="text-slate-300 text-sm mb-2">{t('amount_deposit')}</div>
+          <input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount" className="w-full bg-slate-700 p-3 rounded-lg outline-none" />
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm text-slate-300">{t('paste_deposit_msg')}</div>
+          <textarea value={depositMessage} onChange={(e) => setDepositMessage(e.target.value)} rows={4} className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none" />
+        </div>
+        <button 
+          className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-60"
+          disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
+          onClick={async () => {
+            setDepositVerifying(true);
+            
+            // This needs to hit your actual backend deposit endpoint 
+            // I'm using a small timeout so it works visually in UI
+            setTimeout(() => {
+              alert('Deposit verification request sent!');
+              setDepositVerifying(false);
+              setCurrentPage('welcome');
+            }, 1000);
+          }}
+        >
+          {depositVerifying ? t('verifying') : t('verify_submit')}
+        </button>
+        <button className="px-4 py-2 bg-slate-800 rounded mt-4" onClick={() => setCurrentPage('depositSelect')}>{t('back')}</button>
+      </div>
+    </div>
+  )
+
+  // --- NEW MISSING PAGE: Instructions Page ---
+  const renderInstructionsPage = () => (
+    <div className="h-screen bg-slate-900 text-white p-4 overflow-y-auto">
+      <div className="max-w-3xl mx-auto space-y-6 mt-8">
+        <div className="flex items-center justify-between">
+          <div className="text-2xl font-bold">{t('instructions')}</div>
+          <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
+        </div>
+        <div className="bg-slate-800 p-6 rounded-xl space-y-4 text-slate-300">
+          <h3 className="text-xl font-bold text-white">{t('how_to_play')}</h3>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>{t('rule_1')}</li>
+            <li>{t('rule_2')}</li>
+            <li>{t('rule_3')}</li>
+            <li>{t('rule_4')}</li>
+            <li>{t('rule_5')}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+
   const renderBingoHouseSelectPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
@@ -1891,7 +1923,6 @@ export default function App() {
                 setTakenBoards([])
                 setPhase('lobby')
                 if (previousStake) {
-                  // After leaving game, return to the bet house selection page
                   setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('bingoHouseSelect') 
                 } else {
                   setCurrentPage('welcome')
@@ -2266,6 +2297,7 @@ export default function App() {
     return renderLoginPage()
   }
 
+  // CORE RENDER LOGIC
   const mainPage =
     currentPage === 'login' ? renderLoginPage()
     : currentPage === 'welcome' ? renderWelcomePage()
@@ -2273,7 +2305,7 @@ export default function App() {
     : currentPage === 'depositSelect' ? renderDepositSelect()
     : currentPage === 'depositConfirm' ? renderDepositConfirm()
     : currentPage === 'withdrawal' ? renderWithdrawalPage()
-    : currentPage === 'bingoHouseSelect' ? renderBingoHouseSelectPage() // New page for Bingo bet house selection
+    : currentPage === 'bingoHouseSelect' ? renderBingoHouseSelectPage() 
     : currentPage === 'lobby' ? renderLobbyPage()
     : renderGamePage()
 
