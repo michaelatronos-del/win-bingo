@@ -6,6 +6,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
+// Add near the top with other imports
+import bot from './telegram-bot.js';
+
 const app = express();
 
 app.use(cors({
@@ -76,41 +79,35 @@ const kenoPickStats = new Map(); // number -> array of timestamps
 const kenoOnlinePlayers = new Set(); // socket IDs of players in keno room
 
 function recordKenoPicks(picks) {
-    const now = Date.now();
-    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
-    
-    picks.forEach(num => {
-        if (!kenoPickStats.has(num)) {
-            kenoPickStats.set(num, []);
-        }
-        
-        // Get existing timestamps and add new one
-        let timestamps = kenoPickStats.get(num);
-        timestamps.push(now);
-        
-        // Clean up old entries (keep only those within last 24h)
-        timestamps = timestamps.filter(t => t > twentyFourHoursAgo);
-        
-        // Update map
-        kenoPickStats.set(num, timestamps);
-    });
+  const now = Date.now();
+  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+
+  picks.forEach(num => {
+    if (!kenoPickStats.has(num)) {
+      kenoPickStats.set(num, []);
+    }
+
+    let timestamps = kenoPickStats.get(num);
+    timestamps.push(now);
+
+    timestamps = timestamps.filter(t => t > twentyFourHoursAgo);
+    kenoPickStats.set(num, timestamps);
+  });
 }
 
 function getHotNumbers() {
-    const now = Date.now();
-    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
-    
-    const counts = [];
-    for (let i = 1; i <= 80; i++) {
-        const timestamps = kenoPickStats.get(i) || [];
-        // Filter in case the map hasn't been cleaned recently, ensuring accuracy
-        const recentCount = timestamps.filter(t => t > twentyFourHoursAgo).length;
-        counts.push({ number: i, count: recentCount });
-    }
-    
-    // Sort by count descending
-    counts.sort((a, b) => b.count - a.count);
-    return counts;
+  const now = Date.now();
+  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+
+  const counts = [];
+  for (let i = 1; i <= 80; i++) {
+    const timestamps = kenoPickStats.get(i) || [];
+    const recentCount = timestamps.filter(t => t > twentyFourHoursAgo).length;
+    counts.push({ number: i, count: recentCount });
+  }
+
+  counts.sort((a, b) => b.count - a.count);
+  return counts;
 }
 
 function hashPassword(password) {
@@ -397,7 +394,6 @@ io.on('connection', (socket) => {
 
   socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
 
-  // Modified Keno Init to include hot numbers and online stats
   socket.emit('keno_init', {
     phase: kenoState.phase,
     seconds: kenoState.countdown,
@@ -409,12 +405,10 @@ io.on('connection', (socket) => {
     onlinePlayers: kenoOnlinePlayers.size
   });
 
-  // Modified Join Keno handler
   socket.on('join_keno', () => {
     socket.join('keno_room');
     kenoOnlinePlayers.add(socket.id);
-    
-    // Broadcast updated online count
+
     io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
 
     socket.emit('keno_state_sync', {
@@ -429,7 +423,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Modified Leave Keno handler
   socket.on('leave_keno', () => {
     socket.leave('keno_room');
     kenoOnlinePlayers.delete(socket.id);
@@ -631,10 +624,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    // Keno cleanup: remove from keno online players
     if (kenoOnlinePlayers.has(socket.id)) {
-        kenoOnlinePlayers.delete(socket.id);
-        io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
+      kenoOnlinePlayers.delete(socket.id);
+      io.to('keno_room').emit('keno_online_count', { count: kenoOnlinePlayers.size });
     }
 
     const stake = socketRooms.get(socket.id);
@@ -713,63 +705,59 @@ app.get('/api/user/balance', requireAuth, (req, res) => {
 });
 
 app.get('/api/games/keno/hot-numbers', requireAuth, (req, res) => {
-    const numbers = getHotNumbers();
-    res.json({ numbers });
+  const numbers = getHotNumbers();
+  res.json({ numbers });
 });
 
-// Updated Keno Bet Endpoint with tracking and broadcasting
 app.post('/api/games/keno/bet', requireAuth, (req, res) => {
-    const sessionUserId = req.session.userId;
-    const { amount, picks, gameId } = req.body;
+  const sessionUserId = req.session.userId;
+  const { amount, picks, gameId } = req.body;
 
-    if (kenoState.phase !== 'BETTING') {
-        return res.json({ success: false, error: 'Betting is closed. Wait for next round.' });
-    }
+  if (kenoState.phase !== 'BETTING') {
+    return res.json({ success: false, error: 'Betting is closed. Wait for next round.' });
+  }
 
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-        return res.json({ success: false, error: 'Invalid amount' });
-    }
+  const amountNum = Number(amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    return res.json({ success: false, error: 'Invalid amount' });
+  }
 
-    const current = userBalances.get(sessionUserId) || 0;
-    if (current < amountNum) {
-        return res.json({ success: false, error: 'Insufficient funds' });
-    }
+  const current = userBalances.get(sessionUserId) || 0;
+  if (current < amountNum) {
+    return res.json({ success: false, error: 'Insufficient funds' });
+  }
 
-    // Validate picks
-    if (!Array.isArray(picks) || picks.length < 2 || picks.length > 10) {
-        return res.json({ success: false, error: 'Invalid number of picks (2-10 required)' });
-    }
+  if (!Array.isArray(picks) || picks.length < 2 || picks.length > 10) {
+    return res.json({ success: false, error: 'Invalid number of picks (2-10 required)' });
+  }
 
-    const validPicks = picks.every(p => Number.isInteger(p) && p >= 1 && p <= 80);
-    if (!validPicks) {
-        return res.json({ success: false, error: 'Invalid picks (must be 1-80)' });
-    }
+  const validPicks = picks.every(p => Number.isInteger(p) && p >= 1 && p <= 80);
+  if (!validPicks) {
+    return res.json({ success: false, error: 'Invalid picks (must be 1-80)' });
+  }
 
-    userBalances.set(sessionUserId, current - amountNum);
-    
-    // Record picks for hot numbers stats
-    recordKenoPicks(picks);
-    
-    const ticketId = Date.now();
-    
-    // Broadcast this bet to all other players in keno room
-    const username = userIdToUsername.get(sessionUserId) || 'Player';
-    io.to('keno_room').emit('keno_player_bet', {
-        oderId: sessionUserId,
-        username: username,
-        gameId: gameId || kenoState.gameId,
-        picks: picks,
-        amount: amountNum,
-        ticketId: ticketId
-    });
-    
-    res.json({
-        success: true,
-        newBalance: userBalances.get(sessionUserId),
-        ticketId: ticketId,
-        gameId: kenoState.gameId
-    });
+  userBalances.set(sessionUserId, current - amountNum);
+
+  recordKenoPicks(picks);
+
+  const ticketId = Date.now();
+
+  const username = userIdToUsername.get(sessionUserId) || 'Player';
+  io.to('keno_room').emit('keno_player_bet', {
+    oderId: sessionUserId,
+    username: username,
+    gameId: gameId || kenoState.gameId,
+    picks: picks,
+    amount: amountNum,
+    ticketId: ticketId
+  });
+
+  res.json({
+    success: true,
+    newBalance: userBalances.get(sessionUserId),
+    ticketId: ticketId,
+    gameId: kenoState.gameId
+  });
 });
 
 app.post('/api/games/keno/settle', requireAuth, (req, res) => {
@@ -798,6 +786,160 @@ app.get('/api/games/keno/state', (req, res) => {
     currentBallIndex: kenoState.currentBallIndex,
     drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex)
   });
+});
+
+/* =======================
+   Telegram API endpoints
+   (added before server.listen())
+======================= */
+
+// Check if user exists
+app.post('/api/telegram/check-user', async (req, res) => {
+  try {
+    const { telegramId } = req.body;
+
+    if (!telegramId) {
+      return res.json({ success: false, error: 'Telegram ID required' });
+    }
+
+    const tgId = String(telegramId);
+
+    let foundUser = null;
+    let foundToken = null;
+
+    for (const [username, userData] of users.entries()) {
+      if (String(userData.telegramId || '') === tgId) {
+        foundUser = userData;
+
+        for (const [token, session] of userSessions.entries()) {
+          if (session.userId === userData.userId) {
+            foundToken = token;
+            break;
+          }
+        }
+        break;
+      }
+    }
+
+    if (foundUser) {
+      return res.json({
+        success: true,
+        exists: true,
+        userId: foundUser.userId,
+        token: foundToken,
+        language: foundUser.language || 'en'
+      });
+    }
+
+    res.json({ success: true, exists: false });
+  } catch (error) {
+    console.error('Check user error:', error);
+    res.json({ success: false, error: 'Server error' });
+  }
+});
+
+// Register Telegram user
+app.post('/api/telegram/register', async (req, res) => {
+  try {
+    const { telegramId, username, phoneNumber, firstName, lastName, language } = req.body;
+
+    if (!telegramId || !phoneNumber) {
+      return res.json({ success: false, error: 'Missing required fields' });
+    }
+
+    const tgId = String(telegramId);
+
+    const existingUser = Array.from(users.entries()).find(([_, data]) => String(data.telegramId || '') === tgId);
+    if (existingUser) {
+      return res.json({ success: false, error: 'User already registered' });
+    }
+
+    let baseUsername = (username || '').trim();
+    if (!baseUsername) {
+      baseUsername = (firstName || 'player').toString();
+    }
+    let usernameLower = baseUsername.trim().toLowerCase();
+
+    // If username already exists (collision), make it unique
+    if (users.has(usernameLower)) {
+      usernameLower = `${usernameLower}_${tgId.slice(-6)}`;
+    }
+
+    const userId = crypto.randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(phoneNumber); // Use phone as password
+
+    users.set(usernameLower, {
+      userId,
+      passwordHash,
+      createdAt: Date.now(),
+      telegramId: tgId,
+      phoneNumber,
+      firstName,
+      lastName,
+      language: language || 'en'
+    });
+
+    userIdToUsername.set(userId, usernameLower);
+    userBalances.set(userId, 100); // Welcome bonus
+
+    const token = generateToken();
+    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
+    userSessions.set(token, {
+      userId,
+      username: usernameLower,
+      expiresAt,
+      telegramId: tgId
+    });
+
+    console.log(`Telegram user registered: ${usernameLower} (${userId})`);
+
+    res.json({
+      success: true,
+      userId,
+      username: usernameLower,
+      token,
+      balance: 100
+    });
+  } catch (error) {
+    console.error('Telegram registration error:', error);
+    res.json({ success: false, error: 'Server error during registration' });
+  }
+});
+
+// Telegram auto-login endpoint
+app.post('/api/telegram/auto-login', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.json({ success: false, error: 'Token required' });
+    }
+
+    const session = userSessions.get(token);
+
+    if (!session) {
+      return res.json({ success: false, error: 'Invalid token' });
+    }
+
+    if (session.expiresAt < Date.now()) {
+      userSessions.delete(token);
+      return res.json({ success: false, error: 'Token expired' });
+    }
+
+    const username = userIdToUsername.get(session.userId);
+    const balance = userBalances.get(session.userId) || 0;
+
+    res.json({
+      success: true,
+      userId: session.userId,
+      username,
+      token,
+      balance
+    });
+  } catch (error) {
+    console.error('Auto-login error:', error);
+    res.json({ success: false, error: 'Server error' });
+  }
 });
 
 app.post('/api/deposit', (req, res) => {
@@ -1121,4 +1263,3 @@ server.listen(PORT, () => {
     process.exit(1);
   }
 });
-

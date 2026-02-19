@@ -507,7 +507,7 @@ export default function App() {
       }
     } catch {}
   }, [])
-
+   
   useEffect(() => {
     if (!isAuthenticated) return
     
@@ -516,6 +516,38 @@ export default function App() {
       reconnection: true,
       auth: { userId, username }
     })
+      // Add near the top of App.tsx, after other useEffects
+
+// Telegram Auto-Login
+useEffect(() => {
+  // Check if opened from Telegram WebApp
+  const urlParams = new URLSearchParams(window.location.search);
+  const tgToken = urlParams.get('tg_token');
+  
+  if (tgToken) {
+    // Auto-login with Telegram token
+    fetch(`${getApiUrl()}/api/telegram/auto-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: tgToken })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          localStorage.setItem('userId', data.userId);
+          localStorage.setItem('username', data.username);
+          localStorage.setItem('authToken', data.token);
+          
+          setUserId(data.userId);
+          setUsername(data.username);
+          setIsAuthenticated(true);
+          setBalance(data.balance || 0);
+          setCurrentPage('welcome');
+        }
+      })
+      .catch(err => console.error('Telegram auto-login failed:', err));
+  }
+}, []);
     setSocket(s)
     
     s.on('init', (d: any) => {
