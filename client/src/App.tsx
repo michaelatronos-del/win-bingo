@@ -1748,41 +1748,109 @@ export default function App() {
   )
 
   // --- NEW MISSING PAGE: Deposit Confirmation ---
-  const renderDepositConfirm = () => (
-    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-lg space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-xl font-bold">{t('confirm_payment')} - {selectedProvider}</div>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <div className="text-slate-300 text-sm mb-2">{t('amount_deposit')}</div>
-          <input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount" className="w-full bg-slate-700 p-3 rounded-lg outline-none" />
-        </div>
-        <div className="space-y-2">
-          <div className="text-sm text-slate-300">{t('paste_deposit_msg')}</div>
-          <textarea value={depositMessage} onChange={(e) => setDepositMessage(e.target.value)} rows={4} className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none" />
-        </div>
+  // --- UPDATED: Deposit Confirmation Page with Fixed CSS ---
+const renderDepositConfirm = () => (
+  <div className="h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 overflow-y-auto">
+    <div className="w-full max-w-lg space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <button 
-          className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-60"
-          disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
-          onClick={async () => {
-            setDepositVerifying(true);
-            
-            // This needs to hit your actual backend deposit endpoint 
-            // I'm using a small timeout so it works visually in UI
-            setTimeout(() => {
-              alert('Deposit verification request sent!');
-              setDepositVerifying(false);
-              setCurrentPage('welcome');
-            }, 1000);
-          }}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors" 
+          onClick={() => setCurrentPage('depositSelect')}
         >
-          {depositVerifying ? t('verifying') : t('verify_submit')}
+          ← {t('back')}
         </button>
-        <button className="px-4 py-2 bg-slate-800 rounded mt-4" onClick={() => setCurrentPage('depositSelect')}>{t('back')}</button>
+        <div className="text-xl font-bold">{t('confirm_payment')}</div>
+        <div className="w-20"></div> {/* Spacer for centering */}
+      </div>
+
+      {/* Provider Badge */}
+      <div className="text-center">
+        <span className="inline-block px-4 py-2 bg-emerald-600/20 border border-emerald-500/50 rounded-full text-emerald-400 text-sm font-semibold">
+          {selectedProvider}
+        </span>
+      </div>
+
+      {/* Amount Input Card */}
+      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg">
+        <label className="text-slate-300 text-sm font-medium mb-2 block">
+          {t('amount_deposit')}
+        </label>
+        <div className="relative">
+          <input 
+            type="number" 
+            value={depositAmount} 
+            onChange={(e) => setDepositAmount(e.target.value)} 
+            placeholder="0.00" 
+            className="w-full bg-slate-700 text-white p-4 rounded-lg outline-none border border-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-lg font-semibold placeholder-slate-500"
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">Birr</span>
+        </div>
+      </div>
+
+      {/* Deposit Instructions */}
+      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+        <h4 className="text-sm font-semibold text-slate-300 mb-2">{t('how_to_deposit')}</h4>
+        <ol className="text-xs text-slate-400 space-y-1 list-decimal list-inside">
+          <li>Enter the amount you want to deposit</li>
+          <li>Send money to the displayed account number</li>
+          <li>Paste the SMS confirmation message below</li>
+          <li>Click Verify & Submit to complete</li>
+        </ol>
+      </div>
+
+      {/* Message Textarea Card */}
+      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg">
+        <label className="text-slate-300 text-sm font-medium mb-2 block">
+          {t('paste_deposit_msg')}
+        </label>
+        <textarea 
+          value={depositMessage} 
+          onChange={(e) => setDepositMessage(e.target.value)} 
+          rows={5} 
+          placeholder="Paste your deposit confirmation SMS here..."
+          className="w-full bg-slate-700 text-white p-4 rounded-lg outline-none border border-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm placeholder-slate-500 resize-none"
+        />
+      </div>
+
+      {/* Submit Button */}
+      <button 
+        className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-emerald-500/25 active:scale-[0.98]"
+        disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
+        onClick={async () => {
+          setDepositVerifying(true);
+          setTimeout(() => {
+            alert('Deposit verification request sent!');
+            setDepositVerifying(false);
+            setCurrentPage('welcome');
+          }, 1000);
+        }}
+      >
+        {depositVerifying ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {t('verifying')}
+          </span>
+        ) : (
+          t('verify_submit')
+        )}
+      </button>
+
+      {/* Security Note */}
+      <div className="text-center text-xs text-slate-500">
+        <span className="inline-flex items-center gap-1">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          Your transaction is secure and encrypted
+        </span>
       </div>
     </div>
-  )
+  </div>
+)
 
   // --- NEW MISSING PAGE: Instructions Page ---
   const renderInstructionsPage = () => (
