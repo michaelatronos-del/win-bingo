@@ -1747,73 +1747,88 @@ export default function App() {
     </div>
   )
 
-  // --- FIXED: Deposit Confirmation Page ---
+  // --- FIXED: Deposit Confirmation Page (Mobile Compatible) ---
 const renderDepositConfirm = () => (
-  <div className="min-h-screen bg-slate-900 text-white flex flex-col p-4 pt-8">
-    <div className="w-full max-w-lg mx-auto space-y-5">
+  <div className="min-h-screen bg-slate-900 text-white p-4 pt-8 overflow-y-auto">
+    <div className="w-full max-w-lg mx-auto">
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center mb-6">
         <h1 className="text-xl font-bold">{t('confirm_payment')}</h1>
         <p className="text-emerald-400 text-sm mt-1">- {selectedProvider}</p>
       </div>
       
       {/* Amount to Deposit Section */}
-      <div className="space-y-2">
-        <label className="text-slate-300 text-sm block">{t('amount_deposit')}</label>
+      <div className="mb-5">
+        <label className="text-slate-300 text-sm block mb-2">{t('amount_deposit')}</label>
         <div className="relative">
           <input 
-            type="number" 
+            type="text"
+            inputMode="decimal"
             value={depositAmount} 
-            onChange={(e) => setDepositAmount(e.target.value)} 
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                setDepositAmount(val);
+              }
+            }}
             placeholder="Enter amount" 
-            min="1"
-            step="0.01"
-            className="w-full bg-slate-800 text-white text-base p-4 pr-16 rounded-xl outline-none border border-slate-600 focus:border-emerald-500 transition-colors placeholder:text-slate-500"
+            className="block w-full h-14 bg-slate-800 text-white text-base px-4 pr-16 rounded-xl border border-slate-600 focus:border-emerald-500 focus:outline-none"
             style={{ 
-              WebkitAppearance: 'none',
-              MozAppearance: 'textfield'
+              fontSize: '16px',
+              lineHeight: 'normal'
             }}
           />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium pointer-events-none">
+          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 font-medium pointer-events-none">
             Birr
           </span>
         </div>
       </div>
       
       {/* Deposit Confirmation Message Section */}
-      <div className="space-y-2">
-        <label className="text-slate-300 text-sm block">{t('paste_deposit_msg')}</label>
+      <div className="mb-5">
+        <label className="text-slate-300 text-sm block mb-2">{t('paste_deposit_msg')}</label>
         <textarea 
           value={depositMessage} 
           onChange={(e) => setDepositMessage(e.target.value)} 
-          rows={4} 
+          rows={5} 
           placeholder="Paste your deposit confirmation message here..."
-          className="w-full bg-slate-800 text-white text-sm p-4 rounded-xl outline-none border border-slate-600 focus:border-emerald-500 transition-colors placeholder:text-slate-500 resize-none"
+          className="block w-full bg-slate-800 text-white text-sm p-4 rounded-xl border border-slate-600 focus:border-emerald-500 focus:outline-none"
+          style={{ 
+            resize: 'none',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            minHeight: '120px',
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word'
+          }}
         />
       </div>
       
       {/* Action Buttons */}
-      <button 
-        className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
-        onClick={async () => {
-          setDepositVerifying(true);
-          setTimeout(() => {
-            alert('Deposit verification request sent!');
-            setDepositVerifying(false);
-            setCurrentPage('welcome');
-          }, 1000);
-        }}
-      >
-        {depositVerifying ? t('verifying') : t('verify_submit')}
-      </button>
-      
-      <button 
-        className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700 transition-colors"
-        onClick={() => setCurrentPage('depositSelect')}
-      >
-        {t('back')}
-      </button>
+      <div className="space-y-3">
+        <button 
+          className="block w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
+          onClick={async () => {
+            setDepositVerifying(true);
+            setTimeout(() => {
+              alert('Deposit verification request sent!');
+              setDepositVerifying(false);
+              setCurrentPage('welcome');
+            }, 1000);
+          }}
+        >
+          {depositVerifying ? t('verifying') : t('verify_submit')}
+        </button>
+        
+        <button 
+          className="block w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700"
+          onClick={() => setCurrentPage('depositSelect')}
+        >
+          {t('back')}
+        </button>
+      </div>
     </div>
   </div>
 )
