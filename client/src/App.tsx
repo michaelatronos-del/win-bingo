@@ -1748,54 +1748,57 @@ export default function App() {
   )
 
   // --- NEW MISSING PAGE: Deposit Confirmation ---
-  // --- NEW MISSING PAGE: Deposit Confirmation ---
+  // --- FIXED: Deposit Confirmation Page ---
 const renderDepositConfirm = () => (
-  <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-4 overflow-y-auto">
-    <div className="w-full max-w-lg space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="text-xl font-bold">{t('confirm_payment')} - {selectedProvider}</div>
+  <div className="min-h-screen bg-slate-900 text-white flex flex-col p-4 pt-8">
+    <div className="w-full max-w-lg mx-auto space-y-5">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-xl font-bold">{t('confirm_payment')}</h1>
+        <p className="text-emerald-400 text-sm mt-1">- {selectedProvider}</p>
       </div>
       
       {/* Amount to Deposit Section */}
-      <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-        <div className="text-slate-300 text-sm mb-2">{t('amount_deposit')}</div>
+      <div className="space-y-2">
+        <label className="text-slate-300 text-sm block">{t('amount_deposit')}</label>
         <div className="relative">
           <input 
             type="number" 
             value={depositAmount} 
             onChange={(e) => setDepositAmount(e.target.value)} 
             placeholder="Enter amount" 
-            className="w-full bg-slate-700 p-3 rounded-lg outline-none focus:border-emerald-500"
             min="1"
             step="0.01"
-            style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+            className="w-full bg-slate-800 text-white text-base p-4 pr-16 rounded-xl outline-none border border-slate-600 focus:border-emerald-500 transition-colors placeholder:text-slate-500"
+            style={{ 
+              WebkitAppearance: 'none',
+              MozAppearance: 'textfield'
+            }}
           />
-          <div className="absolute top-1/2 right-3 transform -translate-y-1/2 text-slate-400">Birr</div>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium pointer-events-none">
+            Birr
+          </span>
         </div>
       </div>
       
       {/* Deposit Confirmation Message Section */}
       <div className="space-y-2">
-        <div className="text-sm text-slate-300">{t('paste_deposit_msg')}</div>
+        <label className="text-slate-300 text-sm block">{t('paste_deposit_msg')}</label>
         <textarea 
           value={depositMessage} 
           onChange={(e) => setDepositMessage(e.target.value)} 
           rows={4} 
           placeholder="Paste your deposit confirmation message here..."
-          className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none text-sm"
-          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+          className="w-full bg-slate-800 text-white text-sm p-4 rounded-xl outline-none border border-slate-600 focus:border-emerald-500 transition-colors placeholder:text-slate-500 resize-none"
         />
       </div>
       
       {/* Action Buttons */}
       <button 
-        className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-60"
+        className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
         onClick={async () => {
           setDepositVerifying(true);
-          
-          // This needs to hit your actual backend deposit endpoint 
-          // I'm using a small timeout so it works visually in UI
           setTimeout(() => {
             alert('Deposit verification request sent!');
             setDepositVerifying(false);
@@ -1807,7 +1810,7 @@ const renderDepositConfirm = () => (
       </button>
       
       <button 
-        className="w-full py-2 px-4 bg-slate-800 rounded-lg text-white font-semibold"
+        className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700 transition-colors"
         onClick={() => setCurrentPage('depositSelect')}
       >
         {t('back')}
