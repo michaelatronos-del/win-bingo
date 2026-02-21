@@ -1747,78 +1747,125 @@ export default function App() {
     </div>
   )
 
-  // --- NEW MISSING PAGE: Deposit Confirmation ---
-  // --- FIXED: Deposit Confirmation Page ---
-const renderDepositConfirm = () => (
-  <div className="min-h-screen bg-slate-900 text-white flex flex-col p-4 pt-8">
-    <div className="w-full max-w-lg mx-auto space-y-5">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-xl font-bold">{t('confirm_payment')}</h1>
-        <p className="text-emerald-400 text-sm mt-1">- {selectedProvider}</p>
-      </div>
-      
-      {/* Amount to Deposit Section */}
-      <div className="space-y-2">
-        <label className="text-slate-300 text-sm block">{t('amount_deposit')}</label>
-        <div className="relative">
-          <input 
-            type="number" 
-            value={depositAmount} 
-            onChange={(e) => setDepositAmount(e.target.value)} 
-            placeholder="Enter amount" 
-            min="1"
-            step="0.01"
-            className="w-full bg-slate-800 text-white text-base p-4 pr-16 rounded-xl outline-none border border-slate-600 focus:border-emerald-500 transition-colors placeholder:text-slate-500"
-            style={{ 
-              WebkitAppearance: 'none',
-              MozAppearance: 'textfield'
-            }}
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium pointer-events-none">
-            Birr
-          </span>
+  const renderDepositConfirm = () => {
+    const info = providerToAccount[selectedProvider] || { account: '—', name: '—' }
+    return (
+      <div className="min-h-full bg-slate-900 text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-3xl space-y-4">
+          <div className="text-2xl font-bold">Confirm payment</div>
+          <div>
+            <div className="text-slate-300 text-sm mb-2">Deposit account</div>
+            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+              <div className="text-lg font-mono">{info.account}</div>
+              <div className="text-sm text-slate-400 mt-1">{info.name} ({selectedProvider === 'awash' ? 'Awash Bank' : ''})</div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <div className="text-slate-300 text-sm mb-2">Amount to deposit</div>
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="Enter amount in Birr"
+                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm text-slate-300">Paste your deposit confirmation message</div>
+              <textarea
+                value={depositMessage}
+                onChange={(e) => setDepositMessage(e.target.value)}
+                placeholder="Paste the SMS or confirmation message you received after depositing to the account above. The message should include: amount, account number, and transaction ID."
+                rows={6}
+                className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none"
+              />
+            </div>
+            <button
+              className="w-full py-3 rounded-xl bg-emerald-600 text-black font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={!depositAmount || !depositMessage.trim() || depositVerifying}
+              onClick={async () => {
+                const amountNum = Number(depositAmount)
+                if (!Number.isFinite(amountNum) || amountNum <= 0) {
+                  alert('Enter a valid amount')
+                  return
+                }
+                if (!depositMessage.trim()) {
+                  alert('Please paste your deposit confirmation message')
+                  return
+                }
+                
+                setDepositVerifying(true)
+                try {
+                  // Client-side verification
+                  const verification = await verifyDepositMessage(
+                    depositMessage,
+                    amountNum,
+                    info.account,
+                    info.name
+                  )
+                  
+                  if (!verification.valid) {
+                    alert(verification.reason || 'Verification failed')
+                    setDepositVerifying(false)
+                    return
+                  }
+                  
+                  // Send to server for final verification and processing
+                  const response = await fetch(`${getApiUrl()}/api/deposit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId,
+                      amount: amountNum,
+                      provider: selectedProvider,
+                      account: info.account,
+                      accountName: info.name,
+                      message: depositMessage,
+                      transactionId: verification.transactionId,
+                    }),
+                  })
+                  
+                  const result = await response.json()
+                  
+                  if (!result.success) {
+                    alert(result.error || 'Deposit verification failed')
+                    setDepositVerifying(false)
+                    return
+                  }
+                  
+                  // Success: balance will be updated via balance_update event from server
+                  setDepositAmount('')
+                  setDepositMessage('')
+                  setCurrentPage('welcome')
+                  alert('Deposit verified and processed successfully!')
+                } catch (e: any) {
+                  alert(e?.message || 'Failed to verify deposit. Please try again.')
+                } finally {
+                  setDepositVerifying(false)
+                }
+              }}
+            >
+              {depositVerifying ? 'Verifying…' : 'Verify & Submit Deposit'}
+            </button>
+          </div>
+          <div className="mt-6">
+            <div className="text-xl font-semibold mb-2">How to deposit</div>
+            <div className="bg-slate-800 rounded-xl p-4 text-slate-300 text-sm space-y-2">
+              <p>1. Send the exact amount ({depositAmount || '___'} Birr) to the account above using {selectedProvider}.</p>
+              <p>2. After the deposit is successful, you will receive a confirmation SMS/message.</p>
+              <p>3. Copy and paste the entire confirmation message in the text area above.</p>
+              <p>4. Click "Verify & Submit Deposit" to instantly verify and process your deposit.</p>
+              <p className="text-amber-400 mt-2">The system will automatically verify: amount, account number, and transaction ID. Account holder name is optional.</p>
+            </div>
+          </div>
+          <div>
+            <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('depositSelect')}>Back</button>
+          </div>
         </div>
       </div>
-      
-      {/* Deposit Confirmation Message Section */}
-      <div className="space-y-2">
-        <label className="text-slate-300 text-sm block">{t('paste_deposit_msg')}</label>
-        <textarea 
-          value={depositMessage} 
-          onChange={(e) => setDepositMessage(e.target.value)} 
-          rows={4} 
-          placeholder="Paste your deposit confirmation message here..."
-          className="w-full bg-slate-800 text-white text-sm p-4 rounded-xl outline-none border border-slate-600 focus:border-emerald-500 transition-colors placeholder:text-slate-500 resize-none"
-        />
-      </div>
-      
-      {/* Action Buttons */}
-      <button 
-        className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
-        onClick={async () => {
-          setDepositVerifying(true);
-          setTimeout(() => {
-            alert('Deposit verification request sent!');
-            setDepositVerifying(false);
-            setCurrentPage('welcome');
-          }, 1000);
-        }}
-      >
-        {depositVerifying ? t('verifying') : t('verify_submit')}
-      </button>
-      
-      <button 
-        className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700 transition-colors"
-        onClick={() => setCurrentPage('depositSelect')}
-      >
-        {t('back')}
-      </button>
-    </div>
-  </div>
-)
-
+    )
+  }
   // --- NEW MISSING PAGE: Instructions Page ---
   const renderInstructionsPage = () => (
     <div className="h-screen bg-slate-900 text-white p-4 overflow-y-auto">
