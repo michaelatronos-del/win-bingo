@@ -1750,6 +1750,7 @@ export default function App() {
   // --- NEW MISSING PAGE: Deposit Confirmation ---
   // --- NEW MISSING PAGE: Deposit Confirmation ---
 // --- NEW MISSING PAGE: Deposit Confirmation ---
+// --- NEW MISSING PAGE: Deposit Confirmation ---
 const renderDepositConfirm = () => (
   <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-4 overflow-y-auto">
     <div className="w-full max-w-lg space-y-4">
