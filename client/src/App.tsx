@@ -1749,24 +1749,33 @@ export default function App() {
 
   // --- NEW MISSING PAGE: Deposit Confirmation ---
   // --- NEW MISSING PAGE: Deposit Confirmation ---
+// --- NEW MISSING PAGE: Deposit Confirmation ---
 const renderDepositConfirm = () => (
   <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-4 overflow-y-auto">
     <div className="w-full max-w-lg space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-xl font-bold">{t('confirm_payment')} - {selectedProvider}</div>
       </div>
+      
+      {/* Amount to Deposit Section */}
       <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
         <div className="text-slate-300 text-sm mb-2">{t('amount_deposit')}</div>
-        <input 
-          type="number" 
-          value={depositAmount} 
-          onChange={(e) => setDepositAmount(e.target.value)} 
-          placeholder="Enter amount" 
-          className="w-full bg-slate-700 p-3 rounded-lg outline-none focus:border-emerald-500"
-          min="1"
-          step="0.01"
-        />
+        <div className="relative">
+          <input 
+            type="number" 
+            value={depositAmount} 
+            onChange={(e) => setDepositAmount(e.target.value)} 
+            placeholder="Enter amount" 
+            className="w-full bg-slate-700 p-3 rounded-lg outline-none focus:border-emerald-500"
+            min="1"
+            step="0.01"
+            style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+          />
+          <div className="absolute top-1/2 right-3 transform -translate-y-1/2 text-slate-400">Birr</div>
+        </div>
       </div>
+      
+      {/* Deposit Confirmation Message Section */}
       <div className="space-y-2">
         <div className="text-sm text-slate-300">{t('paste_deposit_msg')}</div>
         <textarea 
@@ -1775,8 +1784,11 @@ const renderDepositConfirm = () => (
           rows={4} 
           placeholder="Paste your deposit confirmation message here..."
           className="w-full bg-slate-800 rounded-xl p-3 border border-slate-700 outline-none resize-none text-sm"
+          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
         />
       </div>
+      
+      {/* Action Buttons */}
       <button 
         className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-60"
         disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
@@ -1794,6 +1806,7 @@ const renderDepositConfirm = () => (
       >
         {depositVerifying ? t('verifying') : t('verify_submit')}
       </button>
+      
       <button 
         className="w-full py-2 px-4 bg-slate-800 rounded-lg text-white font-semibold"
         onClick={() => setCurrentPage('depositSelect')}
