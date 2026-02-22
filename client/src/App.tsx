@@ -97,6 +97,9 @@ const translations = {
     go_lobby: 'Go to Lobby',
     join_wait: 'Join & Wait',
     insufficient_balance_msg: 'Insufficient balance to join this bet house.',
+    link_copied: 'Invite link copied!',
+    first_deposit_bonus: '🎉 First Deposit Bonus: 2X!',
+    referral_bonus: 'Referral Bonus',
   },
   am: {
     hello: 'ሰላም',
@@ -179,6 +182,9 @@ const translations = {
     go_lobby: 'ወደ ሎቢ',
     join_wait: 'ተቀላቀል & ጠብቅ',
     insufficient_balance_msg: 'ይህን ውርርድ ለመቀላቀል በቂ ሂሳብ የለዎትም።',
+    link_copied: 'የግብዣ ሊንክ ተቀድቷል!',
+    first_deposit_bonus: '🎉 የመጀመሪያ ገቢ ቦነስ: 2X!',
+    referral_bonus: 'የግብዣ ቦነስ',
   },
   ti: {
     hello: 'ሰላም',
@@ -261,24 +267,27 @@ const translations = {
     go_lobby: 'ናብ ሎቢ',
     join_wait: 'ተሓወስ & ተጸበ',
     insufficient_balance_msg: 'ነዚ ውርርድ ምሕዋስ ዘይምኸኣል',
+    link_copied: 'ናይ ዕድመ ሊንክ ተቐዲሑ!',
+    first_deposit_bonus: '🎉 ቀዳማይ ገንዘብ ቦነስ: 2X!',
+    referral_bonus: 'ናይ ዕድመ ቦነስ',
   },
   or: {
     hello: 'Akkam',
-    back: 'Deebi’i',
+    back: 'Deebi'i',
     close: 'Cufi',
     loading: 'Hojjechaa jira...',
     ok: 'Tole',
     signin: 'Seeni',
-    signup: 'Galmaa’i',
+    signup: 'Galmaa'i',
     username: 'Maqaa Fayyadamaa',
     password: 'Jecha Darbi',
     enter_username: 'Maqaa fayyadamaa galchi',
     enter_password: 'Jecha darbi galchi',
     create_account: 'Akkaawuntii Uumi',
-    welcome_login_msg: 'Baga nagaan dhuftan! Seenaa ykn galmaa’aa',
+    welcome_login_msg: 'Baga nagaan dhuftan! Seenaa ykn galmaa'aa',
     deposit: '+ Galchii',
     withdraw: 'Baasii',
-    logout: 'Ba’i',
+    logout: 'Ba'i',
     balance: 'Haftee',
     bonus: 'Boonasii',
     instructions: 'Qajeelfama',
@@ -293,7 +302,7 @@ const translations = {
     select_boards: 'Kaartii Filadhu',
     selected: 'Filatame',
     start_game: 'Tapha Jalqabi',
-    ready: 'Qophaa’aa!',
+    ready: 'Qophaa'aa!',
     switch_house: 'Mana Qabsiisaa Jijjiiri',
     game_in_progress: 'Tapha itti fufaa jira',
     current_call: 'LAKKOOFSA AMMAA',
@@ -304,8 +313,8 @@ const translations = {
     your_boards: 'Kaartii Kee',
     tap_mark_hint: 'Lakkoofsa tuquun mallatteessi. FREE ofiin.',
     next_call_in: 'Itti aanu',
-    winner: 'Mo’ataa',
-    winning_board: 'Kaartii Mo’ate',
+    winner: 'Mo'ataa',
+    winning_board: 'Kaartii Mo'ate',
     select_payment: 'Kaffaltii Filadhu',
     recommended: 'Kan Filatame',
     confirm_payment: 'Kaffaltii Mirkaneessi',
@@ -343,6 +352,9 @@ const translations = {
     go_lobby: 'Gara Lobby',
     join_wait: 'Seeni & Eegi',
     insufficient_balance_msg: 'Baalansiin kee xiqqaadha.',
+    link_copied: 'Linkiin afeerraa waraabame!',
+    first_deposit_bonus: '🎉 Galchii Jalqabaa Boonasii: 2X!',
+    referral_bonus: 'Boonasii Afeerraa',
   }
 }
 
@@ -419,6 +431,11 @@ export default function App() {
 
   // Welcome bonus banner
   const [showBonusClaimed, setShowBonusClaimed] = useState<boolean>(false)
+  
+  // NEW: First deposit tracking & referral
+  const [isFirstDeposit, setIsFirstDeposit] = useState<boolean>(true)
+  const [referralCode, setReferralCode] = useState<string>('')
+  const [showLinkCopied, setShowLinkCopied] = useState<boolean>(false)
 
   // Refs to avoid stale state inside socket listeners
   const playerIdRef = useRef<string>(playerId)
@@ -462,6 +479,23 @@ export default function App() {
     }
   }
 
+  // --- Capture referral code from URL ---
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      // Store in localStorage so it persists during registration
+      localStorage.setItem('referralCode', ref);
+    } else {
+      // Check if there's a stored referral code
+      const storedRef = localStorage.getItem('referralCode');
+      if (storedRef) {
+        setReferralCode(storedRef);
+      }
+    }
+  }, []);
+
   // FIXED: Telegram Auto-Login - Check FIRST before regular session check
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -487,6 +521,7 @@ export default function App() {
             setUsername(data.username);
             setIsAuthenticated(true);
             setBalance(data.balance || 0);
+            setIsFirstDeposit(data.isFirstDeposit !== false);
             setLoginLoading(false);
             
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -530,6 +565,7 @@ export default function App() {
               setUserId(savedUserId);
               setUsername(savedUsername);
               setIsAuthenticated(true);
+              setIsFirstDeposit(data.isFirstDeposit !== false);
               setCurrentPage('welcome');
             } else {
               localStorage.removeItem('userId');
@@ -702,6 +738,9 @@ export default function App() {
     
     s.on('balance_update', (d: any) => {
       setBalance(d.balance || 0)
+      if (d.isFirstDeposit !== undefined) {
+        setIsFirstDeposit(d.isFirstDeposit)
+      }
     })
     
     s.emit('get_bet_houses_status')
@@ -975,6 +1014,29 @@ export default function App() {
       lineIndices: win?.line,
     })
     autoBingoSentRef.current = true
+  }
+
+  // --- Generate unique invite link using userId ---
+  const getInviteLink = () => {
+    return `${window.location.origin}/?ref=${userId}`
+  }
+
+  const handleCopyInviteLink = () => {
+    const link = getInviteLink()
+    navigator.clipboard.writeText(link).then(() => {
+      setShowLinkCopied(true)
+      setTimeout(() => setShowLinkCopied(false), 2000)
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = link
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setShowLinkCopied(true)
+      setTimeout(() => setShowLinkCopied(false), 2000)
+    })
   }
 
   const renderCallerGrid = (currentNumber?: number) => {
@@ -1388,6 +1450,11 @@ export default function App() {
           <div className="text-center">
             <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
             <div className="text-slate-400 text-xs sm:text-sm">{t('welcome_login_msg')}</div>
+            {referralCode && (
+              <div className="mt-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-400 text-xs">
+                🎁 Invited by a friend! Sign up for bonus rewards!
+              </div>
+            )}
           </div>
           
           <div className="flex gap-2 mb-4">
@@ -1506,6 +1573,7 @@ export default function App() {
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
+      setIsFirstDeposit(result.isFirstDeposit !== false)
       setLoginUsername('')
       setLoginPassword('')
       setCurrentPage('welcome')
@@ -1536,13 +1604,17 @@ export default function App() {
     setLoginError('')
     
     try {
+      // Get referral code from state or localStorage
+      const refCode = referralCode || localStorage.getItem('referralCode') || ''
+      
       const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: loginUsername.trim(),
           password: loginPassword,
-          initialBalance: 100
+          initialBalance: 30, // CHANGED: Welcome bonus from 100 to 30 Birr
+          referralCode: refCode, // NEW: Send referral code for 20 Birr reward to inviter
         }),
       })
       
@@ -1558,13 +1630,17 @@ export default function App() {
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
       localStorage.setItem('isNewUser', 'true')
+      // Clear referral code after successful signup
+      localStorage.removeItem('referralCode')
       
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
-      setBalance(100)
+      setBalance(30) // CHANGED: Welcome bonus from 100 to 30 Birr
+      setIsFirstDeposit(true)
       setLoginUsername('')
       setLoginPassword('')
+      setReferralCode('')
       setCurrentPage('welcome')
     } catch (e: any) {
       setLoginError('Connection error. Please try again.')
@@ -1629,14 +1705,14 @@ export default function App() {
           </div>
         )}
 
-        {/* --- Welcome Bonus Notification --- */}
+        {/* --- Welcome Bonus Notification (30 Birr) --- */}
         {showBonusClaimed && !showLanguageModal && (
           <div className="bg-emerald-500 text-black p-4 rounded-xl flex items-center justify-between animate-bounce shadow-[0_0_15px_rgba(16,185,129,0.5)]">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🎁</span>
               <div>
                 <div className="font-black text-sm">Welcome Bonus!</div>
-                <div className="text-xs font-bold">100 Birr added to your account!</div>
+                <div className="text-xs font-bold">30 Birr added to your account!</div>
               </div>
             </div>
             <button 
@@ -1645,6 +1721,26 @@ export default function App() {
             >
               ✕
             </button>
+          </div>
+        )}
+
+        {/* --- First Deposit 2X Bonus Banner --- */}
+        {isFirstDeposit && (
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-black p-3 rounded-xl flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💰</span>
+              <div>
+                <div className="font-black text-sm">{t('first_deposit_bonus')}</div>
+                <div className="text-xs font-bold">Your first deposit will be doubled!</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- Link Copied Toast --- */}
+        {showLinkCopied && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-black px-6 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+            ✓ {t('link_copied')}
           </div>
         )}
 
@@ -1667,11 +1763,33 @@ export default function App() {
             {t('instructions')}
           </button>
           <button
-            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
-            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/?ref=${playerId}`)}
+            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-purple-600 hover:bg-purple-500 text-xs sm:text-sm flex-1 font-semibold"
+            onClick={handleCopyInviteLink}
           >
-            {t('invite')}
+            🔗 {t('invite')}
           </button>
+        </div>
+
+        {/* Invite Link Display */}
+        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+          <div className="text-xs text-slate-400 mb-1">Your unique invite link:</div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={getInviteLink()}
+              className="flex-1 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-600 outline-none"
+            />
+            <button
+              onClick={handleCopyInviteLink}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold"
+            >
+              Copy
+            </button>
+          </div>
+          <div className="text-xs text-amber-400 mt-2">
+            🎁 Earn 20 Birr for each friend who signs up using your link!
+          </div>
         </div>
 
         {/* Game Selection Buttons */}
@@ -1689,7 +1807,7 @@ export default function App() {
                     </div>
                 </div>
                 <button
-                    onClick={() => setCurrentPage('bingoHouseSelect')} // Navigates to new Bingo bet house selection page
+                    onClick={() => setCurrentPage('bingoHouseSelect')}
                     className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
                 >
                     {t('play_now')}
@@ -1700,10 +1818,10 @@ export default function App() {
             <div className="bg-red-700/80 rounded-xl p-4 shadow-lg border border-white/10">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_aviator')}</h3>
-                    <div className="text-5xl">✈️</div> {/* Icon for Aviator */}
+                    <div className="text-5xl">✈️</div>
                 </div>
                 <button
-                    onClick={() => alert('Aviator game is coming soon!')} // Placeholder action
+                    onClick={() => alert('Aviator game is coming soon!')}
                     className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
                 >
                     {t('play_now')}
@@ -1729,7 +1847,7 @@ export default function App() {
     </div>
   )
 
-  // --- NEW MISSING PAGE: Deposit Selection ---
+  // --- Deposit Selection ---
   const renderDepositSelect = () => (
     <div className="h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-lg space-y-4">
@@ -1737,6 +1855,15 @@ export default function App() {
           <div className="text-xl font-bold">{t('select_payment')}</div>
           <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
         </div>
+        
+        {/* First Deposit 2X Bonus Reminder */}
+        {isFirstDeposit && (
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-black p-4 rounded-xl mb-4">
+            <div className="font-black text-lg text-center">{t('first_deposit_bonus')}</div>
+            <div className="text-sm text-center mt-1">Deposit now and get 2X the amount!</div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
           <button onClick={() => { setSelectedProvider('CBE'); setCurrentPage('depositConfirm'); }} className="bg-slate-800 p-6 rounded-xl border border-blue-500 hover:bg-slate-700 transition">CBE Birr</button>
           <button onClick={() => { setSelectedProvider('Telebirr'); setCurrentPage('depositConfirm'); }} className="bg-slate-800 p-6 rounded-xl border border-green-500 hover:bg-slate-700 transition">Telebirr</button>
@@ -1747,92 +1874,142 @@ export default function App() {
     </div>
   )
 
-  // --- FIXED: Deposit Confirmation Page (Mobile Compatible) ---
-const renderDepositConfirm = () => (
-  <div className="min-h-screen bg-slate-900 text-white p-4 pt-8 overflow-y-auto">
-    <div className="w-full max-w-lg mx-auto">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-xl font-bold">{t('confirm_payment')}</h1>
-        <p className="text-emerald-400 text-sm mt-1">- {selectedProvider}</p>
-      </div>
-      
-      {/* Amount to Deposit Section */}
-      <div className="mb-5">
-        <label className="text-slate-300 text-sm block mb-2">{t('amount_deposit')}</label>
-        <div className="relative">
-          <input 
-            type="text"
-            inputMode="decimal"
-            value={depositAmount} 
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                setDepositAmount(val);
-              }
-            }}
-            placeholder="Enter amount" 
-            className="block w-full h-14 bg-slate-800 text-white text-base px-4 pr-16 rounded-xl border border-slate-600 focus:border-emerald-500 focus:outline-none"
+  // --- FIXED: Deposit Confirmation Page (Mobile Compatible) with 2X First Deposit ---
+  const renderDepositConfirm = () => (
+    <div className="min-h-screen bg-slate-900 text-white p-4 pt-8 overflow-y-auto">
+      <div className="w-full max-w-lg mx-auto">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-xl font-bold">{t('confirm_payment')}</h1>
+          <p className="text-emerald-400 text-sm mt-1">- {selectedProvider}</p>
+        </div>
+        
+        {/* First Deposit 2X Bonus Banner */}
+        {isFirstDeposit && (
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-black p-4 rounded-xl mb-5">
+            <div className="font-black text-center">{t('first_deposit_bonus')}</div>
+            <div className="text-sm text-center mt-1">
+              {depositAmount ? `You'll receive: ${Number(depositAmount) * 2} Birr!` : 'Your deposit will be doubled!'}
+            </div>
+          </div>
+        )}
+        
+        {/* Amount to Deposit Section */}
+        <div className="mb-5">
+          <label className="text-slate-300 text-sm block mb-2">{t('amount_deposit')}</label>
+          <div className="relative">
+            <input 
+              type="text"
+              inputMode="decimal"
+              value={depositAmount} 
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                  setDepositAmount(val);
+                }
+              }}
+              placeholder="Enter amount" 
+              className="block w-full h-14 bg-slate-800 text-white text-base px-4 pr-16 rounded-xl border border-slate-600 focus:border-emerald-500 focus:outline-none"
+              style={{ 
+                fontSize: '16px',
+                lineHeight: 'normal'
+              }}
+            />
+            <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 font-medium pointer-events-none">
+              Birr
+            </span>
+          </div>
+          {isFirstDeposit && depositAmount && Number(depositAmount) > 0 && (
+            <div className="mt-2 text-amber-400 text-sm font-bold text-center">
+              💰 You'll receive: {Number(depositAmount) * 2} Birr (2X Bonus!)
+            </div>
+          )}
+        </div>
+        
+        {/* Deposit Confirmation Message Section */}
+        <div className="mb-5">
+          <label className="text-slate-300 text-sm block mb-2">{t('paste_deposit_msg')}</label>
+          <textarea 
+            value={depositMessage} 
+            onChange={(e) => setDepositMessage(e.target.value)} 
+            rows={5} 
+            placeholder="Paste your deposit confirmation message here..."
+            className="block w-full bg-slate-800 text-white text-sm p-4 rounded-xl border border-slate-600 focus:border-emerald-500 focus:outline-none"
             style={{ 
-              fontSize: '16px',
-              lineHeight: 'normal'
+              resize: 'none',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              minHeight: '120px',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word'
             }}
           />
-          <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 font-medium pointer-events-none">
-            Birr
-          </span>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <button 
+            className="block w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
+            onClick={async () => {
+              setDepositVerifying(true);
+              
+              try {
+                const amountNum = Number(depositAmount);
+                // Calculate final amount (2X for first deposit)
+                const finalAmount = isFirstDeposit ? amountNum * 2 : amountNum;
+                
+                const response = await fetch(`${getApiUrl()}/api/deposit`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userId,
+                    amount: amountNum,
+                    finalAmount: finalAmount, // Server should use this for first deposit
+                    isFirstDeposit: isFirstDeposit,
+                    provider: selectedProvider,
+                    message: depositMessage,
+                  }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  if (isFirstDeposit) {
+                    setIsFirstDeposit(false);
+                    alert(`🎉 First Deposit Bonus Applied! You received ${finalAmount} Birr (2X your deposit)!`);
+                  } else {
+                    alert('Deposit verified successfully!');
+                  }
+                  setDepositAmount('');
+                  setDepositMessage('');
+                  setCurrentPage('welcome');
+                } else {
+                  alert(result.error || 'Deposit verification failed');
+                }
+              } catch (e) {
+                alert('Failed to process deposit. Please try again.');
+              } finally {
+                setDepositVerifying(false);
+              }
+            }}
+          >
+            {depositVerifying ? t('verifying') : t('verify_submit')}
+          </button>
+          
+          <button 
+            className="block w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700"
+            onClick={() => setCurrentPage('depositSelect')}
+          >
+            {t('back')}
+          </button>
         </div>
       </div>
-      
-      {/* Deposit Confirmation Message Section */}
-      <div className="mb-5">
-        <label className="text-slate-300 text-sm block mb-2">{t('paste_deposit_msg')}</label>
-        <textarea 
-          value={depositMessage} 
-          onChange={(e) => setDepositMessage(e.target.value)} 
-          rows={5} 
-          placeholder="Paste your deposit confirmation message here..."
-          className="block w-full bg-slate-800 text-white text-sm p-4 rounded-xl border border-slate-600 focus:border-emerald-500 focus:outline-none"
-          style={{ 
-            resize: 'none',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            minHeight: '120px',
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word'
-          }}
-        />
-      </div>
-      
-      {/* Action Buttons */}
-      <div className="space-y-3">
-        <button 
-          className="block w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
-          onClick={async () => {
-            setDepositVerifying(true);
-            setTimeout(() => {
-              alert('Deposit verification request sent!');
-              setDepositVerifying(false);
-              setCurrentPage('welcome');
-            }, 1000);
-          }}
-        >
-          {depositVerifying ? t('verifying') : t('verify_submit')}
-        </button>
-        
-        <button 
-          className="block w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold border border-slate-700"
-          onClick={() => setCurrentPage('depositSelect')}
-        >
-          {t('back')}
-        </button>
-      </div>
     </div>
-  </div>
-)
-  // --- NEW MISSING PAGE: Instructions Page ---
+  )
+
+  // --- Instructions Page ---
   const renderInstructionsPage = () => (
     <div className="h-screen bg-slate-900 text-white p-4 overflow-y-auto">
       <div className="max-w-3xl mx-auto space-y-6 mt-8">
@@ -1848,6 +2025,25 @@ const renderDepositConfirm = () => (
             <li>{t('rule_3')}</li>
             <li>{t('rule_4')}</li>
             <li>{t('rule_5')}</li>
+          </ul>
+        </div>
+        
+        {/* Bonuses Section */}
+        <div className="bg-emerald-800/50 p-6 rounded-xl space-y-4 text-slate-300 border border-emerald-500/30">
+          <h3 className="text-xl font-bold text-emerald-400">🎁 Bonuses & Rewards</h3>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-400">✓</span>
+              <span><b>Welcome Bonus:</b> Get 30 Birr free when you sign up!</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400">✓</span>
+              <span><b>First Deposit 2X:</b> Your first deposit is doubled!</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-purple-400">✓</span>
+              <span><b>Referral Bonus:</b> Earn 20 Birr for each friend you invite who signs up!</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -1909,7 +2105,6 @@ const renderDepositConfirm = () => (
             </div>
             )
           }) : (
-            // Fallback rendering for when betHouses data is not yet loaded or empty
             [10, 20, 50, 100, 200].map(amount => {
               const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
                 10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
