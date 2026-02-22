@@ -273,7 +273,7 @@ const translations = {
   },
   or: {
     hello: 'Akkam',
-    back: 'Deebi'i',
+    back: 'Deebi',
     close: 'Cufi',
     loading: 'Hojjechaa jira...',
     ok: 'Tole',
