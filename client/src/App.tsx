@@ -443,9 +443,6 @@ export default function App() {
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
   const autoBingoSentRef = useRef<boolean>(false)
 
-  // Welcome bonus banner
-  const [showBonusClaimed, setShowBonusClaimed] = useState<boolean>(false)
-  
   // NEW: First deposit tracking & referral
   const [isFirstDeposit, setIsFirstDeposit] = useState<boolean>(true)
   const [referralCode, setReferralCode] = useState<string>('')
@@ -489,7 +486,6 @@ export default function App() {
 
     if (localStorage.getItem('isNewUser') === 'true') {
       localStorage.removeItem('isNewUser')
-      setShowBonusClaimed(true)
     }
   }
 
@@ -1711,38 +1707,6 @@ export default function App() {
           </div>
         )}
 
-        {/* --- Welcome Bonus Notification (30 Birr) --- */}
-        {showBonusClaimed && !showLanguageModal && (
-          <div className="bg-emerald-500 text-black p-4 rounded-xl flex items-center justify-between animate-bounce shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🎁</span>
-              <div>
-                <div className="font-black text-sm">Welcome Bonus!</div>
-                <div className="text-xs font-bold">30 Birr added to your bonus balance!</div>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowBonusClaimed(false)}
-              className="bg-black/20 hover:bg-black/40 rounded-full w-8 h-8 font-bold"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* --- First Deposit 2X Bonus Banner --- */}
-        {isFirstDeposit && (
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-black p-3 rounded-xl flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">💰</span>
-              <div>
-                <div className="font-black text-sm">{t('first_deposit_bonus')}</div>
-                <div className="text-xs font-bold">Your first deposit will be doubled!</div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* --- Link Copied Toast --- */}
         {showLinkCopied && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-black px-6 py-3 rounded-xl font-bold shadow-lg animate-bounce">
@@ -1752,7 +1716,7 @@ export default function App() {
 
         {/* Dual Balance card */}
         <div className="grid grid-cols-2 gap-2 sm:gap-4">
-          <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col justify-between h-full">
+          <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
             <div>
               <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('balance')}</div>
               <div className="text-xs text-white/70 mb-1">{t('wallet_desc')}</div>
@@ -1761,7 +1725,7 @@ export default function App() {
             <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
           </div>
           
-          <div className="bg-purple-600/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col justify-between h-full">
+          <div className="bg-purple-600/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
             <div>
               <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('bonus')}</div>
               <div className="text-xs text-white/70 mb-1">{t('bonus_desc')}</div>
@@ -1815,51 +1779,51 @@ export default function App() {
         {/* Game Selection Buttons */}
         <div className="space-y-4">
             {/* BINGO Game Button */}
-            <div className="bg-emerald-700/80 rounded-xl p-4 shadow-lg border border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_bingo')}</h3>
-                    <div className="flex items-center gap-1">
-                        <span className="bg-blue-500 text-white rounded px-2 py-1 text-sm font-bold">B</span>
-                        <span className="bg-pink-500 text-white rounded px-2 py-1 text-sm font-bold">I</span>
-                        <span className="bg-purple-500 text-white rounded px-2 py-1 text-sm font-bold">N</span>
-                        <span className="bg-green-500 text-white rounded px-2 py-1 text-sm font-bold">G</span>
-                        <span className="bg-orange-500 text-white rounded px-2 py-1 text-sm font-bold">O</span>
-                    </div>
-                </div>
-                <button
-                    onClick={() => setCurrentPage('bingoHouseSelect')}
-                    className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                    {t('play_now')}
-                </button>
-            </div>
-
-            {/* Aviator Game Button (Placeholder) */}
-            <div className="bg-red-700/80 rounded-xl p-4 shadow-lg border border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_aviator')}</h3>
-                    <div className="text-5xl">✈️</div>
-                </div>
-                <button
-                    onClick={() => alert('Aviator game is coming soon!')}
-                    className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                    {t('play_now')}
-                </button>
-            </div>
+            <button
+              onClick={() => setCurrentPage('bingoHouseSelect')}
+              className="w-full bg-emerald-700/80 hover:bg-emerald-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group"
+            >
+              <div className="text-left">
+                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_bingo')}</h3>
+                <div className="text-[10px] text-emerald-200">Live Bingo Rooms</div>
+              </div>
+              <div className="flex gap-1 opacity-90 group-hover:opacity-100">
+                <span className="bg-blue-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">B</span>
+                <span className="bg-pink-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">I</span>
+                <span className="bg-purple-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">N</span>
+                <span className="bg-green-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">G</span>
+                <span className="bg-orange-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">O</span>
+              </div>
+            </button>
 
             {/* KENO Game Button */}
-            <div className="bg-purple-700/80 rounded-xl p-4 shadow-lg border border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-2xl sm:text-3xl font-black">{t('game_title_keno')}</h3>
-                    <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-xl font-black flex-shrink-0">80</div>
+            <a href="/prokeno.html" className="block w-full">
+              <button className="w-full bg-purple-700/80 hover:bg-purple-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group">
+                <div className="text-left">
+                  <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_keno')}</h3>
+                  <div className="text-[10px] text-purple-200">Instant Draw</div>
                 </div>
-                <a href="/prokeno.html" className="block w-full">
-                    <button className="w-full bg-slate-900/50 hover:bg-slate-900/70 text-white font-bold text-base sm:text-lg py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2">
-                        {t('play_now')}
-                    </button>
-                </a>
-            </div>
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-black shadow-md group-hover:scale-110 transition-transform">80</div>
+              </button>
+            </a>
+
+            {/* Aviator Game Button (Placeholder) */}
+            <button
+              onClick={() => alert('Aviator game is coming soon!')}
+              className="w-full bg-red-700/80 hover:bg-red-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all relative overflow-hidden"
+            >
+              <div className="text-left z-10">
+                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_aviator')}</h3>
+                <div className="text-[10px] text-red-200">Crash Game</div>
+              </div>
+              
+              <div className="flex items-center gap-2 z-10">
+                <div className="text-yellow-400 font-bold text-xs sm:text-sm animate-pulse border border-yellow-400/50 rounded px-2 py-1 bg-black/20">
+                  COMING SOON
+                </div>
+                <div className="text-2xl">✈️</div>
+              </div>
+            </button>
         </div>
 
         <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
@@ -2102,6 +2066,7 @@ export default function App() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
           {betHouses.length > 0 ? betHouses.map((house: any) => {
             const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
+              5: { label: 'Micro', tag: 10, color: 'bg-indigo-600' },
               10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
               20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
               50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
@@ -2141,8 +2106,9 @@ export default function App() {
             </div>
             )
           }) : (
-            [10, 20, 50, 100, 200].map(amount => {
+            [5, 10, 20, 50, 100, 200].map(amount => {
               const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
+                5: { label: 'Micro', tag: 10, color: 'bg-indigo-600' },
                 10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
                 20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
                 50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
