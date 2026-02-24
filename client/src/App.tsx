@@ -33,8 +33,9 @@ const translations = {
     deposit: '+ Deposit',
     withdraw: 'Withdraw',
     logout: 'Logout',
-    balance: 'BALANCE',
-    bonus: 'Bonus',
+    balance: 'WALLET',
+    bonus: 'BONUS',
+    total_playable: 'Total Playable',
     instructions: 'Instructions',
     invite: 'Invite Friends',
     game_title_bingo: 'BINGO',
@@ -70,7 +71,7 @@ const translations = {
     how_to_deposit: 'How to deposit',
     verifying: 'Verifying…',
     withdraw_funds: 'Withdraw Funds',
-    available_balance: 'Available Balance',
+    available_balance: 'Withdrawable Balance',
     withdraw_amount: 'Withdrawal Amount',
     your_account_num: 'Your Account Number',
     request_withdraw: 'Request Withdrawal',
@@ -96,10 +97,12 @@ const translations = {
     active: 'Active',
     go_lobby: 'Go to Lobby',
     join_wait: 'Join & Wait',
-    insufficient_balance_msg: 'Insufficient balance to join this bet house.',
+    insufficient_balance_msg: 'Insufficient total balance to join this bet house.',
     link_copied: 'Invite link copied!',
     first_deposit_bonus: '🎉 First Deposit Bonus: 2X!',
     referral_bonus: 'Referral Bonus',
+    wallet_desc: 'Deposits + Winnings',
+    bonus_desc: 'Promo + Referral'
   },
   am: {
     hello: 'ሰላም',
@@ -118,8 +121,9 @@ const translations = {
     deposit: '+ ገቢ አድርግ',
     withdraw: 'ወጪ አድርግ',
     logout: 'ውጣ',
-    balance: 'ቀሪ ሂሳብ',
+    balance: 'ዋሌት',
     bonus: 'ቦነስ',
+    total_playable: 'ጠቅላላ የሚጫወት',
     instructions: 'መመሪያዎች',
     invite: 'ጓደኛ ይጋብዙ',
     game_title_bingo: 'ቢንጎ',
@@ -155,7 +159,7 @@ const translations = {
     how_to_deposit: 'እንዴት ገቢ ማድረግ እንደሚቻል',
     verifying: 'በማረጋገጥ ላይ...',
     withdraw_funds: 'ገንዘብ ወጪ',
-    available_balance: 'ያለ ቀሪ ሂሳብ',
+    available_balance: 'ወጪ የሚደረግ ሂሳብ',
     withdraw_amount: 'የወጪ መጠን',
     your_account_num: 'የእርስዎ ሂሳብ ቁጥር',
     request_withdraw: 'ወጪ ጠይቅ',
@@ -185,6 +189,8 @@ const translations = {
     link_copied: 'የግብዣ ሊንክ ተቀድቷል!',
     first_deposit_bonus: '🎉 የመጀመሪያ ገቢ ቦነስ: 2X!',
     referral_bonus: 'የግብዣ ቦነስ',
+    wallet_desc: 'ገቢ + ያሸነፉት',
+    bonus_desc: 'ስጦታ + ግብዣ'
   },
   ti: {
     hello: 'ሰላም',
@@ -203,8 +209,9 @@ const translations = {
     deposit: '+ ተቀመጥ',
     withdraw: 'ውሰድ',
     logout: 'ውጻእ',
-    balance: 'ባላንስ',
+    balance: 'ዋሌት',
     bonus: 'ቦነስ',
+    total_playable: 'ጠቅላላ ዝውረድ',
     instructions: 'መምርሒ',
     invite: 'ዓርኪ ዓድም',
     game_title_bingo: 'ቢንጎ',
@@ -240,7 +247,7 @@ const translations = {
     how_to_deposit: 'ከመይ ጌርካ ገንዘብ ተእቱ',
     verifying: 'የረጋግጽ ኣሎ...',
     withdraw_funds: 'ገንዘብ ምውጻእ',
-    available_balance: 'ዘሎ ባላንስ',
+    available_balance: 'ዝወጽእ ባላንስ',
     withdraw_amount: 'ዝወጽእ መጠን',
     your_account_num: 'ናይ ሒሳብ ቁጽሪ',
     request_withdraw: 'ምውጻእ ሕተት',
@@ -270,6 +277,8 @@ const translations = {
     link_copied: 'ናይ ዕድመ ሊንክ ተቐዲሑ!',
     first_deposit_bonus: '🎉 ቀዳማይ ገንዘብ ቦነስ: 2X!',
     referral_bonus: 'ናይ ዕድመ ቦነስ',
+    wallet_desc: 'ዝኣተወ + ዝተዓወተ',
+    bonus_desc: 'ቦነስ + ዕድመ'
   },
   or: {
     hello: 'Akkam',
@@ -288,8 +297,9 @@ const translations = {
     deposit: '+ Galchii',
     withdraw: 'Baasii',
     logout: 'Baa',
-    balance: 'Haftee',
+    balance: 'Wallet',
     bonus: 'Boonasii',
+    total_playable: 'Taphaaf Kan Oolu',
     instructions: 'Qajeelfama',
     invite: 'Michuu Afferi',
     game_title_bingo: 'BINGO',
@@ -325,7 +335,7 @@ const translations = {
     how_to_deposit: 'Akkaataa galchii',
     verifying: 'Mirkaneessaa...',
     withdraw_funds: 'Maallaqa Baasuu',
-    available_balance: 'Haftee',
+    available_balance: 'Haftee Baasii',
     withdraw_amount: 'Hanga Baasii',
     your_account_num: 'Lakkoofsa Herregaa',
     request_withdraw: 'Baasii Gaafadhu',
@@ -355,6 +365,8 @@ const translations = {
     link_copied: 'Linkiin afeerraa waraabame!',
     first_deposit_bonus: '🎉 Galchii Jalqabaa Boonasii: 2X!',
     referral_bonus: 'Boonasii Afeerraa',
+    wallet_desc: 'Galchii + Bu aa',
+    bonus_desc: 'Boonasii + Affeerraa'
   }
 }
 
@@ -387,6 +399,8 @@ export default function App() {
   const [isWaiting, setIsWaiting] = useState<boolean>(false)
   const [betHouses, setBetHouses] = useState<any[]>([])
   const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
+  
+  // Balance State: Wallet (Deposits/Wins) vs Bonus (Promo/Referrals)
   const [balance, setBalance] = useState<number>(0)
   const [bonus, setBonus] = useState<number>(0)
   
@@ -485,10 +499,8 @@ export default function App() {
     const ref = urlParams.get('ref');
     if (ref) {
       setReferralCode(ref);
-      // Store in localStorage so it persists during registration
       localStorage.setItem('referralCode', ref);
     } else {
-      // Check if there's a stored referral code
       const storedRef = localStorage.getItem('referralCode');
       if (storedRef) {
         setReferralCode(storedRef);
@@ -496,7 +508,7 @@ export default function App() {
     }
   }, []);
 
-  // FIXED: Telegram Auto-Login - Check FIRST before regular session check
+  // Telegram Auto-Login
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tgToken = urlParams.get('tg_token');
@@ -521,6 +533,7 @@ export default function App() {
             setUsername(data.username);
             setIsAuthenticated(true);
             setBalance(data.balance || 0);
+            setBonus(data.bonus || 0);
             setIsFirstDeposit(data.isFirstDeposit !== false);
             setLoginLoading(false);
             
@@ -566,6 +579,8 @@ export default function App() {
               setUsername(savedUsername);
               setIsAuthenticated(true);
               setIsFirstDeposit(data.isFirstDeposit !== false);
+              setBalance(data.balance || 0);
+              setBonus(data.bonus || 0);
               setCurrentPage('welcome');
             } else {
               localStorage.removeItem('userId');
@@ -607,6 +622,10 @@ export default function App() {
       setPlayerId(d.playerId)
       setIsWaiting(d.isWaiting || false)
       setCurrentBetHouse(d.stake)
+      
+      // Update both balances
+      setBalance(d.balance || 0)
+      setBonus(d.bonus || 0)
     
       playerIdRef.current = d.playerId
       calledRef.current = d.called
@@ -737,7 +756,9 @@ export default function App() {
     })
     
     s.on('balance_update', (d: any) => {
-      setBalance(d.balance || 0)
+      // Update both balance (Wallet) and bonus (Referrals/Promos)
+      if (d.balance !== undefined) setBalance(d.balance)
+      if (d.bonus !== undefined) setBonus(d.bonus)
       if (d.isFirstDeposit !== undefined) {
         setIsFirstDeposit(d.isFirstDeposit)
       }
@@ -817,7 +838,9 @@ export default function App() {
   const handleJoinBetHouse = (stakeAmount: number) => {
     if (!socket) return
 
-    if (balance < stakeAmount) {
+    // Allow usage of both Wallet and Bonus for betting
+    const totalFunds = balance + bonus
+    if (totalFunds < stakeAmount) {
       alert(t('insufficient_balance_msg'));
       return; 
     }
@@ -1016,9 +1039,11 @@ export default function App() {
     autoBingoSentRef.current = true
   }
 
-  // --- Generate unique invite link using userId ---
+  // --- Generate Telegram Bot Deep Link ---
   const getInviteLink = () => {
-    return `${window.location.origin}/?ref=${userId}`
+    // This redirects the invited user to the Telegram Bot with the inviter's userId as the start parameter
+    // The Bot handles registration and awards the 20 Birr bonus to the inviter
+    return `https://t.me/WinBingoGamesBot?start=${userId}`
   }
 
   const handleCopyInviteLink = () => {
@@ -1160,41 +1185,6 @@ export default function App() {
       return sorted[0].toUpperCase()
     }
     return null
-  }
-
-  const verifyDepositMessage = async (
-    message: string,
-    expectedAmount: number,
-    expectedAccount: string,
-    expectedName: string
-  ): Promise<{ valid: boolean; reason?: string; transactionId?: string; detectedAmount?: number }> => {
-    const msgLower = message.toLowerCase()
-    const msgNoSpaces = message.replace(/\s+/g, '')
-    const accountNoSpaces = expectedAccount.replace(/\s+/g, '')
-    
-    if (!msgNoSpaces.includes(accountNoSpaces)) {
-      return { valid: false, reason: 'Account number not found in the message. Please ensure you deposited to the correct account.' }
-    }
-    
-    const detectedAmount = parseAmount(message)
-    if (!detectedAmount) {
-      return { valid: false, reason: 'Could not detect amount from the message. Please include the amount in your message.' }
-    }
-    
-    if (Math.abs(detectedAmount - expectedAmount) > 0.01) {
-      return { 
-        valid: false, 
-        reason: `Amount mismatch. Expected: ${expectedAmount} Birr, Found: ${detectedAmount} Birr. Please verify the amount.`,
-        detectedAmount 
-      }
-    }
-    
-    const transactionId = parseTransactionId(message)
-    if (!transactionId) {
-      return { valid: false, reason: 'Transaction ID not found in the message. Please include the transaction reference.' }
-    }
-    
-    return { valid: true, transactionId, detectedAmount }
   }
 
   const playCallSound = async (n: number) => {
@@ -1574,6 +1564,8 @@ export default function App() {
       setUsername(result.username)
       setIsAuthenticated(true)
       setIsFirstDeposit(result.isFirstDeposit !== false)
+      setBalance(result.balance || 0)
+      setBonus(result.bonus || 0)
       setLoginUsername('')
       setLoginPassword('')
       setCurrentPage('welcome')
@@ -1613,8 +1605,8 @@ export default function App() {
         body: JSON.stringify({
           username: loginUsername.trim(),
           password: loginPassword,
-          initialBalance: 30, // CHANGED: Welcome bonus from 100 to 30 Birr
-          referralCode: refCode, // NEW: Send referral code for 20 Birr reward to inviter
+          initialBonus: 30, // Changed from initialBalance to initialBonus
+          referralCode: refCode, // Send referral code for 20 Birr reward to inviter
         }),
       })
       
@@ -1636,7 +1628,8 @@ export default function App() {
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
-      setBalance(30) // CHANGED: Welcome bonus from 100 to 30 Birr
+      setBalance(0) // Start with 0 wallet balance
+      setBonus(30) // Start with 30 bonus
       setIsFirstDeposit(true)
       setLoginUsername('')
       setLoginPassword('')
@@ -1712,7 +1705,7 @@ export default function App() {
               <span className="text-2xl">🎁</span>
               <div>
                 <div className="font-black text-sm">Welcome Bonus!</div>
-                <div className="text-xs font-bold">30 Birr added to your account!</div>
+                <div className="text-xs font-bold">30 Birr added to your bonus balance!</div>
               </div>
             </div>
             <button 
@@ -1744,15 +1737,29 @@ export default function App() {
           </div>
         )}
 
-        {/* Balance card */}
-        <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex items-center justify-between">
-          <div>
-            <div className="uppercase text-[10px] sm:text-xs">{t('balance')}</div>
-            <div className="text-xl sm:text-3xl font-extrabold">{balance} Birr</div>
-            <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs opacity-90">{t('bonus')}</div>
-            <div className="text-sm sm:text-lg font-bold">{bonus} Birr</div>
+        {/* Dual Balance card */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+          <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col justify-between h-full">
+            <div>
+              <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('balance')}</div>
+              <div className="text-xs text-white/70 mb-1">{t('wallet_desc')}</div>
+              <div className="text-xl sm:text-3xl font-extrabold">{balance}</div>
+            </div>
+            <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
           </div>
-          <div className="text-4xl sm:text-6xl font-black opacity-60">ETB</div>
+          
+          <div className="bg-purple-600/80 rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col justify-between h-full">
+            <div>
+              <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('bonus')}</div>
+              <div className="text-xs text-white/70 mb-1">{t('bonus_desc')}</div>
+              <div className="text-xl sm:text-3xl font-extrabold">{bonus}</div>
+            </div>
+            <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
+          </div>
+        </div>
+        
+        <div className="bg-slate-800 rounded-lg p-2 text-center text-xs sm:text-sm text-emerald-400 font-bold border border-emerald-500/20">
+          {t('total_playable')}: {balance + bonus} Birr
         </div>
 
         <div className="flex items-center justify-between gap-2">
@@ -1788,7 +1795,7 @@ export default function App() {
             </button>
           </div>
           <div className="text-xs text-amber-400 mt-2">
-            🎁 Earn 20 Birr for each friend who signs up using your link!
+            🎁 Earn 20 Birr Bonus for each friend who joins via the bot!
           </div>
         </div>
 
@@ -1847,9 +1854,7 @@ export default function App() {
     </div>
   )
 
-  // --- Deposit Selection ---
-  // --- Deposit Selection (Style A) ---
-const renderDepositSelect = () => (
+  const renderDepositSelect = () => (
   <div className="h-screen bg-black text-white p-5">
     {/* Header */}
     <div className="flex items-center mb-6">
@@ -1904,9 +1909,8 @@ const renderDepositSelect = () => (
     </div>
   </div>
      )
-  // --- FIXED: Deposit Confirmation Page (Mobile Compatible) with 2X First Deposit ---
-  // --- Deposit Confirmation (Style B) ---
-const renderDepositConfirm = () => (
+  
+  const renderDepositConfirm = () => (
   <div className="min-h-screen bg-black text-white p-5">
 
     {/* Back */}
@@ -1978,6 +1982,7 @@ const renderDepositConfirm = () => (
 
         try {
           const baseAmount = Number(depositAmount);
+          // Backend handles the doubling logic for first deposit, we just send flag
           const finalAmount = isFirstDeposit ? baseAmount * 2 : baseAmount;
 
           const response = await fetch(`${getApiUrl()}/api/deposit`, {
@@ -1986,7 +1991,7 @@ const renderDepositConfirm = () => (
             body: JSON.stringify({
               userId,
               amount: baseAmount,
-              finalAmount,
+              // Note: finalAmount is calculated by backend usually, but passing here for context if needed
               provider: selectedProvider,
               message: depositMessage,
               isFirstDeposit,
@@ -2027,7 +2032,6 @@ const renderDepositConfirm = () => (
 
   </div>
 )
-
   // --- Instructions Page ---
   const renderInstructionsPage = () => (
     <div className="h-screen bg-slate-900 text-white p-4 overflow-y-auto">
@@ -2053,7 +2057,7 @@ const renderDepositConfirm = () => (
           <ul className="space-y-3">
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">✓</span>
-              <span><b>Welcome Bonus:</b> Get 30 Birr free when you sign up!</span>
+              <span><b>Welcome Bonus:</b> Get 30 Birr free (Bonus Balance) when you sign up!</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-amber-400">✓</span>
@@ -2061,7 +2065,7 @@ const renderDepositConfirm = () => (
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-400">✓</span>
-              <span><b>Referral Bonus:</b> Earn 20 Birr for each friend you invite who signs up!</span>
+              <span><b>Referral Bonus:</b> Earn 20 Birr (Bonus Balance) for each friend you invite via the Bot!</span>
             </li>
           </ul>
         </div>
@@ -2464,6 +2468,7 @@ const renderDepositConfirm = () => (
           <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
             <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('available_balance')}</div>
             <div className="text-2xl sm:text-3xl font-bold">{balance} Birr</div>
+            <div className="text-xs text-orange-400 mt-1">Note: Bonus balance ({bonus} Birr) is not withdrawable.</div>
           </div>
           <div className="space-y-2 sm:space-y-3">
             <div>
@@ -2496,7 +2501,7 @@ const renderDepositConfirm = () => (
                   return
                 }
                 if (amountNum > balance) {
-                  alert('Insufficient balance')
+                  alert('Insufficient withdrawable balance')
                   return
                 }
                 if (!withdrawalAccount.trim()) {
