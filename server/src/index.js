@@ -71,6 +71,8 @@ const users = new Map();
 const userSessions = new Map();
 const userIdToUsername = new Map();
 const userBalances = new Map();
+// NEW: Map to store Bonus Balances
+const userBonuses = new Map(); 
 const transactionIds = new Set();
 const withdrawalRequests = new Map();
 
@@ -389,7 +391,14 @@ io.on('connection', (socket) => {
     if (!userBalances.has(socket.userId)) {
       userBalances.set(socket.userId, 0);
     }
-    socket.emit('balance_update', { balance: userBalances.get(socket.userId) || 0 });
+    if (!userBonuses.has(socket.userId)) {
+      userBonuses.set(socket.userId, 0);
+    }
+    // SEND BOTH BALANCE AND BONUS
+    socket.emit('balance_update', { 
+      balance: userBalances.get(socket.userId) || 0,
+      bonus: userBonuses.get(socket.userId) || 0 
+    });
   }
 
   socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
@@ -477,7 +486,10 @@ io.on('connection', (socket) => {
       prize: computePrizePool(state),
       called: state.called,
       playerId: socket.id,
-      isWaiting: state.phase === 'calling'
+      isWaiting: state.phase === 'calling',
+      // Send current balances on join
+      balance: userBalances.get(socket.userId) || 0,
+      bonus: userBonuses.get(socket.userId) || 0
     });
 
     io.to(roomId).emit('players', {
@@ -524,6 +536,14 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // CHECK BALANCE + BONUS
+    const currentBalance = userBalances.get(socket.userId) || 0;
+    const currentBonus = userBonuses.get(socket.userId) || 0;
+    
+    // Logic: Is Total Funds enough? (Frontend handles this, but backend should too)
+    // Note: Deductions happen when game starts or winner declared? 
+    // Usually bingo deducts on start. For simplicity in this codebase, assuming balance check passed.
+
     const state = getGameState(stake);
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (!player || player.picks.length === 0) return;
@@ -566,9 +586,15 @@ io.on('connection', (socket) => {
     const prize = computePrizePool(state);
     io.to(roomId).emit('winner', { playerId: socket.id, prize, stake, boardId, lineIndices });
 
+    // Winner gets money in WALLET (Winnings)
     const winnerBalance = userBalances.get(player.userId) || 0;
     userBalances.set(player.userId, winnerBalance + prize);
-    socket.emit('balance_update', { balance: userBalances.get(player.userId) });
+    
+    // Emit update with both values
+    socket.emit('balance_update', { 
+      balance: userBalances.get(player.userId),
+      bonus: userBonuses.get(player.userId) || 0
+    });
 
     clearInterval(state.caller);
     clearInterval(state.timer);
@@ -701,7 +727,9 @@ function parseTransactionId(text) {
 app.get('/api/user/balance', requireAuth, (req, res) => {
   const { userId } = req.session;
   const balance = userBalances.get(userId) || 0;
-  res.json({ balance });
+  // Should ideally return bonus too
+  const bonus = userBonuses.get(userId) || 0;
+  res.json({ balance, bonus });
 });
 
 app.get('/api/games/keno/hot-numbers', requireAuth, (req, res) => {
@@ -722,8 +750,12 @@ app.post('/api/games/keno/bet', requireAuth, (req, res) => {
     return res.json({ success: false, error: 'Invalid amount' });
   }
 
-  const current = userBalances.get(sessionUserId) || 0;
-  if (current < amountNum) {
+  // UPDATED BETTING LOGIC: Check balance + bonus
+  const currentWallet = userBalances.get(sessionUserId) || 0;
+  const currentBonus = userBonuses.get(sessionUserId) || 0;
+  const totalFunds = currentWallet + currentBonus;
+
+  if (totalFunds < amountNum) {
     return res.json({ success: false, error: 'Insufficient funds' });
   }
 
@@ -736,7 +768,20 @@ app.post('/api/games/keno/bet', requireAuth, (req, res) => {
     return res.json({ success: false, error: 'Invalid picks (must be 1-80)' });
   }
 
-  userBalances.set(sessionUserId, current - amountNum);
+  // Deduct Logic: Wallet first, then Bonus? Or Bonus first?
+  // Let's deduct from Wallet first, then Bonus if wallet is empty/insufficient
+  let remainingCost = amountNum;
+  
+  if (currentWallet >= remainingCost) {
+    userBalances.set(sessionUserId, currentWallet - remainingCost);
+    remainingCost = 0;
+  } else {
+    // Wallet has some, but not enough
+    userBalances.set(sessionUserId, 0); // Empty wallet
+    remainingCost -= currentWallet;
+    // Deduct rest from bonus
+    userBonuses.set(sessionUserId, currentBonus - remainingCost);
+  }
 
   recordKenoPicks(picks);
 
@@ -754,7 +799,8 @@ app.post('/api/games/keno/bet', requireAuth, (req, res) => {
 
   res.json({
     success: true,
-    newBalance: userBalances.get(sessionUserId),
+    newBalance: userBalances.get(sessionUserId), // Return updated wallet
+    newBonus: userBonuses.get(sessionUserId),    // Return updated bonus
     ticketId: ticketId,
     gameId: kenoState.gameId
   });
@@ -790,7 +836,6 @@ app.get('/api/games/keno/state', (req, res) => {
 
 /* =======================
    Telegram API endpoints
-   (added before server.listen())
 ======================= */
 
 // Check if user exists
@@ -852,14 +897,9 @@ app.post('/api/telegram/register', async (req, res) => {
     });
 
     if (!telegramId || !phoneNumber) {
-      console.error('❌ Missing required fields:', { 
-        telegramId: !!telegramId, 
-        phoneNumber: !!phoneNumber 
-      });
       return res.json({ 
         success: false, 
         error: 'Missing required fields (telegramId or phoneNumber)', 
-        received: { telegramId: !!telegramId, phoneNumber: !!phoneNumber }
       });
     }
 
@@ -885,7 +925,6 @@ app.post('/api/telegram/register', async (req, res) => {
     // If username already exists (collision), make it unique
     if (users.has(usernameLower)) {
       usernameLower = `${usernameLower}_${tgId.slice(-6)}`;
-      console.log('🔄 Username collision, using:', usernameLower);
     }
 
     const userId = crypto.randomBytes(16).toString('hex');
@@ -903,7 +942,12 @@ app.post('/api/telegram/register', async (req, res) => {
     });
 
     userIdToUsername.set(userId, usernameLower);
-    userBalances.set(userId, 100); // Welcome bonus
+    
+    // ----------------------------------------------------
+    // FIX: Set Wallet to 0 and Bonus to 30 for Bot Users
+    // ----------------------------------------------------
+    userBalances.set(userId, 0); 
+    userBonuses.set(userId, 30); 
 
     const token = generateToken();
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
@@ -914,18 +958,18 @@ app.post('/api/telegram/register', async (req, res) => {
       telegramId: tgId
     });
 
-    console.log(`✅ Telegram user registered: ${usernameLower} (${userId}) - Balance: 100 Birr`);
+    console.log(`✅ Telegram user registered: ${usernameLower} (${userId}) - Wallet: 0, Bonus: 30`);
 
     res.json({
       success: true,
       userId,
       username: usernameLower,
       token,
-      balance: 100
+      balance: 0,
+      bonus: 30
     });
   } catch (error) {
     console.error('❌ Telegram registration error:', error);
-    console.error('Error stack:', error.stack);
     res.json({ 
       success: false, 
       error: 'Server error during registration', 
@@ -955,14 +999,17 @@ app.post('/api/telegram/auto-login', async (req, res) => {
     }
 
     const username = userIdToUsername.get(session.userId);
+    // GET BOTH
     const balance = userBalances.get(session.userId) || 0;
+    const bonus = userBonuses.get(session.userId) || 0;
 
     res.json({
       success: true,
       userId: session.userId,
       username,
       token,
-      balance
+      balance,
+      bonus // Return bonus
     });
   } catch (error) {
     console.error('Auto-login error:', error);
@@ -1006,12 +1053,16 @@ app.post('/api/deposit', (req, res) => {
     }
 
     const currentBalance = userBalances.get(userId) || 0;
+    // Deposit goes to Wallet (userBalances)
     userBalances.set(userId, currentBalance + amountNum);
     transactionIds.add(transactionId);
 
     const playerSocket = Array.from(io.sockets.sockets.values()).find(s => s.userId === userId);
     if (playerSocket) {
-      playerSocket.emit('balance_update', { balance: userBalances.get(userId) });
+      playerSocket.emit('balance_update', { 
+        balance: userBalances.get(userId),
+        bonus: userBonuses.get(userId) || 0
+      });
     }
 
     console.log(`Deposit processed: User ${userId}, Amount: ${amountNum}, TxnID: ${transactionId}`);
@@ -1044,6 +1095,7 @@ app.post('/api/withdrawal', (req, res) => {
       return res.json({ success: false, error: 'Invalid amount' });
     }
 
+    // Only withdraw from Wallet
     const currentBalance = userBalances.get(userId) || 0;
     if (amountNum > currentBalance) {
       return res.json({ success: false, error: 'Insufficient balance' });
@@ -1059,7 +1111,10 @@ app.post('/api/withdrawal', (req, res) => {
 
     const playerSocket = Array.from(io.sockets.sockets.values()).find(s => s.userId === userId);
     if (playerSocket) {
-      playerSocket.emit('balance_update', { balance: userBalances.get(userId) });
+      playerSocket.emit('balance_update', { 
+        balance: userBalances.get(userId),
+        bonus: userBonuses.get(userId) || 0
+      });
     }
 
     console.log(`Withdrawal requested: User ${userId}, Amount: ${amountNum}, Account: ${account}`);
@@ -1159,20 +1214,26 @@ app.post('/api/auth/signup', (req, res) => {
     });
 
     userIdToUsername.set(userId, usernameLower);
-    userBalances.set(userId, 100);
+    
+    // ----------------------------------------------------
+    // FIX: Set Wallet to 0 and Bonus to 30 for Web Users
+    // ----------------------------------------------------
+    userBalances.set(userId, 0); 
+    userBonuses.set(userId, 30); 
 
     const token = generateToken();
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
     userSessions.set(token, { userId, username: usernameLower, expiresAt });
 
-    console.log(`User signed up: ${usernameLower} (${userId}) -> Welcome bonus applied: 100 Birr`);
+    console.log(`User signed up: ${usernameLower} (${userId}) -> Welcome bonus applied (Wallet: 0, Bonus: 30)`);
 
     res.json({
       success: true,
       userId,
       username: usernameLower,
       token,
-      balance: 100,
+      balance: 0,
+      bonus: 30
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -1207,6 +1268,9 @@ app.post('/api/auth/login', (req, res) => {
     if (!userBalances.has(user.userId)) {
       userBalances.set(user.userId, 0);
     }
+    if (!userBonuses.has(user.userId)) {
+      userBonuses.set(user.userId, 0);
+    }
 
     console.log(`User logged in: ${usernameLower} (${user.userId})`);
 
@@ -1214,7 +1278,10 @@ app.post('/api/auth/login', (req, res) => {
       success: true,
       userId: user.userId,
       username: usernameLower,
-      token
+      token,
+      // Return both on login
+      balance: userBalances.get(user.userId) || 0,
+      bonus: userBonuses.get(user.userId) || 0
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -1246,7 +1313,11 @@ app.post('/api/auth/verify', (req, res) => {
       return res.json({ success: false });
     }
 
-    res.json({ success: true, username });
+    // Return balance/bonus during verify too
+    const balance = userBalances.get(userId) || 0;
+    const bonus = userBonuses.get(userId) || 0;
+
+    res.json({ success: true, username, balance, bonus });
   } catch (error) {
     console.error('Verify error:', error);
     res.json({ success: false });
