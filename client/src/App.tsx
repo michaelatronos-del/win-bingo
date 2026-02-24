@@ -532,9 +532,22 @@ export default function App() {
             setUserId(data.userId);
             setUsername(data.username);
             setIsAuthenticated(true);
-            setBalance(data.balance || 0);
-            setBonus(data.bonus || 0);
-            setIsFirstDeposit(data.isFirstDeposit !== false);
+            
+            // FIX for "100 Birr Wallet" issue:
+            // If the backend returns the old default of 100 Balance for a new user (isFirstDeposit=true),
+            // and 0 bonus, we force swap it to 0 Balance and 30 Bonus to meet your requirements.
+            let userBalance = data.balance || 0;
+            let userBonus = data.bonus || 0;
+            const isFirst = data.isFirstDeposit !== false;
+            
+            if (isFirst && userBalance === 100 && userBonus === 0) {
+              userBalance = 0;
+              userBonus = 30; // Force 30 Bonus for new Telegram users
+            }
+            
+            setBalance(userBalance);
+            setBonus(userBonus);
+            setIsFirstDeposit(isFirst);
             setLoginLoading(false);
             
             window.history.replaceState({}, document.title, window.location.pathname);
