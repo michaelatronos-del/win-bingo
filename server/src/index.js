@@ -30,7 +30,8 @@ const io = new Server(server, { cors: { origin: '*' } });
 const BOARD_SIZE = 75;
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
-const AVAILABLE_STAKES = [10, 20, 50, 100, 200, 500];
+// UPDATED: Added 5 to available stakes
+const AVAILABLE_STAKES = [5, 10, 20, 50, 100, 200, 500];
 
 const gameStates = new Map();
 
@@ -71,7 +72,7 @@ const users = new Map();
 const userSessions = new Map();
 const userIdToUsername = new Map();
 const userBalances = new Map();
-// NEW: Map to store Bonus Balances
+// Map to store Bonus Balances
 const userBonuses = new Map(); 
 const transactionIds = new Set();
 const withdrawalRequests = new Map();
