@@ -403,6 +403,7 @@ export default function App() {
   // Balance State: Wallet (Deposits/Wins) vs Bonus (Promo/Referrals)
   const [balance, setBalance] = useState<number>(0)
   const [bonus, setBonus] = useState<number>(0)
+  const [gamesPlayed, setGamesPlayed] = useState<number>(0)
   
   // Game Play State
   const [called, setCalled] = useState<number[]>([])
@@ -543,6 +544,7 @@ export default function App() {
             
             setBalance(userBalance);
             setBonus(userBonus);
+            setGamesPlayed(data.gamesPlayed || 0); // Set games played
             setIsFirstDeposit(isFirst);
             setLoginLoading(false);
             
@@ -590,6 +592,7 @@ export default function App() {
               setIsFirstDeposit(data.isFirstDeposit !== false);
               setBalance(data.balance || 0);
               setBonus(data.bonus || 0);
+              setGamesPlayed(data.gamesPlayed || 0);
               setCurrentPage('welcome');
             } else {
               localStorage.removeItem('userId');
@@ -768,6 +771,7 @@ export default function App() {
       // Update both balance (Wallet) and bonus (Referrals/Promos)
       if (d.balance !== undefined) setBalance(d.balance)
       if (d.bonus !== undefined) setBonus(d.bonus)
+      if (d.gamesPlayed !== undefined) setGamesPlayed(d.gamesPlayed)
       if (d.isFirstDeposit !== undefined) {
         setIsFirstDeposit(d.isFirstDeposit)
       }
@@ -1377,8 +1381,12 @@ export default function App() {
                   disabled={disabled}
                   className={[
                     "aspect-square rounded text-xs md:text-sm flex items-center justify-center border font-semibold",
-                    isPicked ? "bg-amber-500 border-amber-400 text-black" : isTaken ? "bg-slate-900 border-slate-800 text-slate-600" : "bg-slate-700 border-slate-600",
-                    disabled ? "opacity-60 cursor-not-allowed" : "hover:brightness-110"
+                    isPicked 
+                      ? "bg-amber-500 border-amber-400 text-black" 
+                      : isTaken 
+                        ? "bg-red-600 border-red-800 text-white opacity-50 cursor-not-allowed" 
+                        : "bg-slate-700 border-slate-600",
+                    disabled && !isTaken ? "opacity-60 cursor-not-allowed" : "hover:brightness-110"
                   ].join(" ")}
                 >
                   {n}

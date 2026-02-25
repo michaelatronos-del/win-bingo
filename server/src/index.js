@@ -225,6 +225,27 @@ function startCalling(stake) {
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('game_start', { stake });
 
+  // INCREMENT GAMES PLAYED FOR ACTIVE PLAYERS
+  state.players.forEach(player => {
+    const userId = player.oderId; // This is the user ID
+    const username = userIdToUsername.get(userId);
+    if (username) {
+        const user = users.get(username);
+        if (user) {
+            user.gamesPlayed = (user.gamesPlayed || 0) + 1;
+            // Optionally emit updated stats to this specific player
+            const socket = io.sockets.sockets.get(player.id);
+            if (socket) {
+                socket.emit('balance_update', { 
+                    balance: userBalances.get(userId), 
+                    bonus: userBonuses.get(userId),
+                    gamesPlayed: user.gamesPlayed 
+                });
+            }
+        }
+    }
+  });
+
   const numbers = [];
   for (let i = 1; i <= 75; i++) numbers.push(i);
 
@@ -395,10 +416,17 @@ io.on('connection', (socket) => {
     if (!userBonuses.has(socket.userId)) {
       userBonuses.set(socket.userId, 0);
     }
-    // SEND BOTH BALANCE AND BONUS
+    
+    // Get gamesPlayed from user object
+    const uName = userIdToUsername.get(socket.userId);
+    const user = uName ? users.get(uName) : null;
+    const gamesPlayed = user ? (user.gamesPlayed || 0) : 0;
+
+    // SEND BALANCE, BONUS and GAMES PLAYED
     socket.emit('balance_update', { 
       balance: userBalances.get(socket.userId) || 0,
-      bonus: userBonuses.get(socket.userId) || 0 
+      bonus: userBonuses.get(socket.userId) || 0,
+      gamesPlayed: gamesPlayed
     });
   }
 
@@ -728,9 +756,13 @@ function parseTransactionId(text) {
 app.get('/api/user/balance', requireAuth, (req, res) => {
   const { userId } = req.session;
   const balance = userBalances.get(userId) || 0;
-  // Should ideally return bonus too
   const bonus = userBonuses.get(userId) || 0;
-  res.json({ balance, bonus });
+  
+  const username = userIdToUsername.get(userId);
+  const user = username ? users.get(username) : null;
+  const gamesPlayed = user ? (user.gamesPlayed || 0) : 0;
+
+  res.json({ balance, bonus, gamesPlayed });
 });
 
 app.get('/api/games/keno/hot-numbers', requireAuth, (req, res) => {
@@ -931,6 +963,7 @@ app.post('/api/telegram/register', async (req, res) => {
     const userId = crypto.randomBytes(16).toString('hex');
     const passwordHash = hashPassword(phoneNumber); // Use phone as password
 
+    // Initialize gamesPlayed to 0
     users.set(usernameLower, {
       userId,
       passwordHash,
@@ -939,7 +972,8 @@ app.post('/api/telegram/register', async (req, res) => {
       phoneNumber,
       firstName,
       lastName,
-      language: language || 'en'
+      language: language || 'en',
+      gamesPlayed: 0
     });
 
     userIdToUsername.set(userId, usernameLower);
@@ -1096,6 +1130,20 @@ app.post('/api/withdrawal', (req, res) => {
       return res.json({ success: false, error: 'Invalid amount' });
     }
 
+    // CHECK 1: Minimum 100 Birr
+    if (amountNum < 100) {
+      return res.json({ success: false, error: 'Minimum withdrawal amount is 100 Birr.' });
+    }
+
+    // CHECK 2: Minimum 10 Games Played
+    const username = userIdToUsername.get(userId);
+    const user = users.get(username);
+    const gamesPlayed = user ? (user.gamesPlayed || 0) : 0;
+
+    if (gamesPlayed < 10) {
+      return res.json({ success: false, error: `You must play at least 10 games to withdraw. Played: ${gamesPlayed}` });
+    }
+
     // Only withdraw from Wallet
     const currentBalance = userBalances.get(userId) || 0;
     if (amountNum > currentBalance) {
@@ -1208,10 +1256,12 @@ app.post('/api/auth/signup', (req, res) => {
     const userId = crypto.randomBytes(16).toString('hex');
     const passwordHash = hashPassword(password);
 
+    // Initialize gamesPlayed to 0
     users.set(usernameLower, {
       userId,
       passwordHash,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      gamesPlayed: 0
     });
 
     userIdToUsername.set(userId, usernameLower);
