@@ -1840,184 +1840,202 @@ export default function App() {
   )
 
   const renderDepositSelect = () => (
-  <div className="h-screen bg-black text-white p-5">
-    {/* Header */}
-    <div className="flex items-center mb-6">
-      <button
-        className="text-white text-xl mr-4"
-        onClick={() => setCurrentPage('welcome')}
-      >
-        ←
-      </button>
-      <h1 className="text-xl font-bold">{t('select_payment')}</h1>
-    </div>
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between py-1 sm:py-2">
+          <button
+            className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
+            onClick={() => setCurrentPage('welcome')}
+          >
+            {t('back')}
+          </button>
+          <div className="text-lg sm:text-2xl font-bold">{t('select_payment')}</div>
+          <div className="w-16"></div> {/* Spacer for centering */}
+        </div>
 
-    {/* Banner: First Deposit Bonus */}
-    {isFirstDeposit && (
-      <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-6 rounded-2xl mb-6 shadow-xl">
-        <div className="text-2xl font-black mb-1">🎉 First Deposit Bonus: 2X!</div>
-        <div className="">Your deposit will be doubled!</div>
-      </div>
-    )}
+        {/* Banner: First Deposit Bonus */}
+        {isFirstDeposit && (
+          <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
+             <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
+             <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">Your deposit will be doubled!</div>
+          </div>
+        )}
 
-    {/* Recommended label */}
-    <div className="text-green-400 font-bold text-sm mb-2">Recommended</div>
+        {/* Recommended label */}
+        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">Recommended</div>
 
-    {/* Telebirr Option */}
-    <div
-      onClick={() => {
-        setSelectedProvider('Telebirr');
-        setCurrentPage('depositConfirm');
-      }}
-      className="bg-[#111] p-4 rounded-xl border border-green-600 flex items-center justify-between mb-4"
-    >
-      <div className="flex items-center gap-3">
-        <img src="/icons/telebirr.png" className="w-10 h-10" />
-        <div className="text-lg font-semibold">Telebirr</div>
-      </div>
-      <div className="text-white text-xl">›</div>
-    </div>
+        <div className="space-y-3">
+          {/* Telebirr Option */}
+          <div
+            onClick={() => {
+              setSelectedProvider('Telebirr');
+              setCurrentPage('depositConfirm');
+            }}
+            className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <img src="/icons/telebirr.png" className="w-8 h-8 rounded-lg object-cover bg-white" alt="Telebirr" />
+              <div>
+                <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Telebirr</h3>
+              </div>
+            </div>
+            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
+          </div>
 
-    {/* Ebirr Option */}
-    <div
-      onClick={() => {
-        setSelectedProvider('Ebirr');
-        setCurrentPage('depositConfirm');
-      }}
-      className="bg-[#111] p-4 rounded-xl border border-[#1dd75f] flex items-center justify-between"
-    >
-      <div className="flex items-center gap-3">
-        <img src="/icons/ebirr.png" className="w-10 h-10" />
-        <div className="text-lg font-semibold">Ebirr (KAAFI)</div>
-      </div>
-      <div className="text-white text-xl">›</div>
-    </div>
-  </div>
-     )
-  
-  const renderDepositConfirm = () => (
-  <div className="min-h-screen bg-black text-white p-5">
-
-    {/* Back */}
-    <div className="flex items-center mb-6">
-      <button
-        className="text-white text-xl mr-4"
-        onClick={() => setCurrentPage('depositSelect')}
-      >
-        ←
-      </button>
-      <h1 className="text-xl font-bold">{t('confirm_payment')}</h1>
-    </div>
-
-    {/* Provider */}
-    <div className="text-green-400 text-sm mb-4">
-      - {selectedProvider}
-    </div>
-
-    {/* First deposit bonus banner */}
-    {isFirstDeposit && (
-      <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-6 rounded-2xl mb-6 shadow-xl">
-        <div className="text-2xl font-black mb-1">🎉 First Deposit Bonus: 2X!</div>
-        <div className="font-semibold">
-          {depositAmount
-            ? `Your deposit will be doubled to ${Number(depositAmount) * 2} Birr!`
-            : 'Your deposit will be doubled!'
-          }
+          {/* Ebirr Option */}
+          <div
+            onClick={() => {
+              setSelectedProvider('Ebirr');
+              setCurrentPage('depositConfirm');
+            }}
+            className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <img src="/icons/ebirr.png" className="w-8 h-8 rounded-lg object-cover bg-white" alt="Ebirr" />
+              <div>
+                <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Ebirr (KAAFI)</h3>
+              </div>
+            </div>
+            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
+          </div>
         </div>
       </div>
-    )}
-
-    {/* Deposit Account Box */}
-    <div className="bg-[#111] p-4 rounded-xl border border-gray-700 mb-6">
-      <div className="text-gray-400 text-sm mb-1">Deposit accounts</div>
-      <div className="text-lg font-bold">0999282572</div>
-      <div className="text-gray-400 text-sm">Abeje Dita Debele</div>
     </div>
+  )
 
-    {/* Amount Input */}
-    <div className="mb-5">
-      <input
-        type="text"
-        inputMode="numeric"
-        value={depositAmount}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === '' || /^\d+$/.test(v)) setDepositAmount(v);
-        }}
-        placeholder="Amount"
-        className="w-full h-14 bg-[#111] px-4 rounded-xl border border-gray-700 text-white text-base"
-      />
-    </div>
+  const renderDepositConfirm = () => (
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between py-1 sm:py-2">
+          <button
+            className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
+            onClick={() => setCurrentPage('depositSelect')}
+          >
+            {t('back')}
+          </button>
+          <div className="text-lg sm:text-2xl font-bold">{t('confirm_payment')}</div>
+          <div className="w-16"></div> {/* Spacer for centering */}
+        </div>
 
-    {/* Paste SMS Input */}
-    <div className="mb-5">
-      <textarea
-        value={depositMessage}
-        onChange={(e) => setDepositMessage(e.target.value)}
-        className="w-full bg-[#111] p-4 rounded-xl border border-gray-700 text-white text-sm h-32"
-        placeholder="Paste SMS here"
-      />
-    </div>
+        {/* Provider */}
+        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide">
+          Payment via {selectedProvider}
+        </div>
 
-    {/* Submit Button */}
-    <button
-      disabled={!depositMessage.trim() || !depositAmount}
-      onClick={async () => {
-        setDepositVerifying(true);
+        {/* First deposit bonus banner */}
+        {isFirstDeposit && (
+          <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
+             <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
+             <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">
+                {depositAmount
+                  ? `Your deposit will be doubled to ${Number(depositAmount) * 2} Birr!`
+                  : 'Your deposit will be doubled!'}
+             </div>
+          </div>
+        )}
 
-        try {
-          const baseAmount = Number(depositAmount);
-          // Backend handles the doubling logic for first deposit, we just send flag
-          const finalAmount = isFirstDeposit ? baseAmount * 2 : baseAmount;
+        <div className="space-y-4">
+          {/* Deposit Account Box */}
+          <div className="bg-slate-800 p-3 rounded-xl border border-white/5 flex items-center justify-between shadow-lg">
+            <div>
+              <div className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">{t('deposit_account')}</div>
+              <div className="text-base sm:text-lg font-bold text-emerald-400">0999282572</div>
+              <div className="text-slate-400 text-[10px] sm:text-xs">Abeje Dita Debele</div>
+            </div>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText('0999282572');
+              }}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-semibold text-white transition-colors"
+            >
+              Copy
+            </button>
+          </div>
 
-          const response = await fetch(`${getApiUrl()}/api/deposit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              amount: baseAmount,
-              // Note: finalAmount is calculated by backend usually, but passing here for context if needed
-              provider: selectedProvider,
-              message: depositMessage,
-              isFirstDeposit,
-            }),
-          });
+          {/* Amount Input */}
+          <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
+            <div className="text-slate-300 text-xs sm:text-sm">{t('amount_deposit')}</div>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={depositAmount}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '' || /^\d+$/.test(v)) setDepositAmount(v);
+              }}
+              placeholder="0.00 ETB"
+              className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-sm sm:text-base text-white"
+            />
+          </div>
 
-          const result = await response.json();
+          {/* Paste SMS Input */}
+          <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
+            <div className="text-slate-300 text-xs sm:text-sm">{t('paste_deposit_msg')}</div>
+            <textarea
+              value={depositMessage}
+              onChange={(e) => setDepositMessage(e.target.value)}
+              className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-white text-xs sm:text-sm h-24 resize-none"
+              placeholder="Paste the SMS confirmation from your provider here..."
+            />
+            
+            {/* Submit Button */}
+            <button
+              disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
+              onClick={async () => {
+                setDepositVerifying(true);
+                try {
+                  const baseAmount = Number(depositAmount);
+                  const response = await fetch(`${getApiUrl()}/api/deposit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId,
+                      amount: baseAmount,
+                      provider: selectedProvider,
+                      message: depositMessage,
+                      isFirstDeposit,
+                    }),
+                  });
 
-          if (result.success) {
-            if (isFirstDeposit) setIsFirstDeposit(false);
-            alert('Deposit submitted successfully!');
-            setDepositAmount('');
-            setDepositMessage('');
-            setCurrentPage('welcome');
-          } else {
-            alert(result.error || 'Deposit failed');
-          }
-        } catch {
-          alert('Network error, please try again');
-        }
+                  const result = await response.json();
 
-        setDepositVerifying(false);
-      }}
-      className="w-full h-14 bg-green-600 rounded-xl font-bold disabled:opacity-40"
-    >
-      {depositVerifying ? 'Verifying…' : 'Submit Deposit'}
-    </button>
+                  if (result.success) {
+                    if (isFirstDeposit) setIsFirstDeposit(false);
+                    alert('Deposit submitted successfully!');
+                    setDepositAmount('');
+                    setDepositMessage('');
+                    setCurrentPage('welcome');
+                  } else {
+                    alert(result.error || 'Deposit failed');
+                  }
+                } catch {
+                  alert('Network error, please try again');
+                }
+                setDepositVerifying(false);
+              }}
+              className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            >
+              {depositVerifying ? t('verifying') : t('verify_submit')}
+            </button>
+          </div>
+        </div>
 
-    {/* How to Deposit Section */}
-    <div className="mt-10">
-      <div className="text-lg font-bold mb-3">How to deposit</div>
-
-      {/* Placeholder for video thumbnail */}
-      <div className="bg-[#111] h-48 rounded-xl border border-gray-700 flex items-center justify-center">
-        <div className="text-gray-500">Video tutorial</div>
+        {/* How to Deposit Section */}
+        <div className="mt-4">
+          <div className="text-sm font-bold mb-2 text-slate-200">{t('how_to_deposit')}</div>
+          <div className="bg-slate-800 h-32 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-700/80 transition-colors group shadow-lg">
+            <svg className="w-8 h-8 text-slate-400 group-hover:text-emerald-400 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+            </svg>
+            <div className="text-slate-400 group-hover:text-slate-300 text-xs">Video tutorial</div>
+          </div>
+        </div>
       </div>
     </div>
+  )
 
-  </div>
-)
-  // --- Instructions Page ---
   const renderInstructionsPage = () => (
     <div className="h-screen bg-slate-900 text-white p-4 overflow-y-auto">
       <div className="max-w-3xl mx-auto space-y-6 mt-8">
