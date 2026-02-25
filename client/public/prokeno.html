@@ -714,7 +714,7 @@
             <div class="header-top">
                 <div class="timer-box">
                     <div class="timer-label" id="timerLabel">NEXT DRAW IN</div>
-                    <div id="timer">00:30</div>
+                    <div id="timer">00:40</div>
                     <div class="online-players">
                         <span class="online-dot"></span>
                         <span id="onlineCount">0 players online</span>
@@ -795,12 +795,14 @@
 
     let socket = null;
     let userBalance = 0.00;
+    // UPDATED: Added userBonus variable
+    let userBonus = 0.00;
     const MAX_PICK = 10;
     const MIN_BET = 2; // Changed from 10 to 2
 
     let gameState = 'BETTING';
     let currentGameId = 0;
-    let timeLeft = 30;
+    let timeLeft = 40; // Default UI timer
     let selectedNumbers = new Set();
     let liveTickets = [];
     let otherPlayersTickets = [];
@@ -878,6 +880,8 @@
 
         socket.on('balance_update', (data) => {
             userBalance = parseFloat(data.balance) || 0;
+            // UPDATED: Capture bonus from socket update
+            userBonus = parseFloat(data.bonus) || 0;
             updateBalanceDisplay();
         });
 
@@ -1153,6 +1157,8 @@
             const data = await response.json();
             if (data.balance !== undefined) {
                 userBalance = parseFloat(data.balance);
+                // UPDATED: Fetch bonus too
+                userBonus = parseFloat(data.bonus) || 0;
                 updateBalanceDisplay();
             }
         } catch (error) {
@@ -1188,7 +1194,9 @@
     function updateBalanceDisplay() {
         const balEl = document.getElementById('userBalanceDisplay');
         if (balEl) {
-            balEl.innerHTML = `${userBalance.toFixed(2)} <span class="currency">Birr</span>`;
+            // UPDATED: Show total playable (Wallet + Bonus)
+            const total = userBalance + userBonus;
+            balEl.innerHTML = `${total.toFixed(2)} <span class="currency">Birr</span>`;
         }
     }
 
@@ -1210,11 +1218,12 @@
     document.getElementById('plusBtn').onclick = () => {
         let val = parseFloat(betInput.value);
         let newBet = val + 1; // Increment by 1 Birr
-        // Ensure new bet doesn't exceed balance
-        if (newBet <= userBalance) { 
+        const totalFunds = userBalance + userBonus;
+        // Ensure new bet doesn't exceed total funds
+        if (newBet <= totalFunds) { 
             betInput.value = newBet.toFixed(2);
         } else {
-            betInput.value = userBalance.toFixed(2); // Set to max available if balance is less
+            betInput.value = totalFunds.toFixed(2); // Set to max available if balance is less
         }
     };
 
@@ -1260,7 +1269,9 @@
             return alert(`Minimum bet is ${MIN_BET} Birr!`);
         }
         
-        if (betVal > userBalance) {
+        // UPDATED: Check Total Playable Funds
+        const totalPlayable = userBalance + userBonus;
+        if (betVal > totalPlayable) {
             return alert("Insufficient Balance!");
         }
 
@@ -1290,6 +1301,9 @@
             }
             
             userBalance = result.newBalance;
+            // UPDATED: Update Bonus from response if available (needs backend support, otherwise fetch)
+            if(result.newBonus !== undefined) userBonus = result.newBonus;
+            
             updateBalanceDisplay();
 
             const ticket = {
@@ -1305,11 +1319,10 @@
             };
             liveTickets.push(ticket);
             
-            // --- MODIFICATION: Clear selections after successful bet ---
+            // Clear selections after successful bet
             selectedNumbers.clear();
             Object.values(cells).forEach(c => c.classList.remove('selected'));
             pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
-            // --- END MODIFICATION ---
 
             if (currentTab === 'LIVE') renderContent();
             

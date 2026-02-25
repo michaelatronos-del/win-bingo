@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import { Server } from 'socket.io';
@@ -30,7 +30,6 @@ const io = new Server(server, { cors: { origin: '*' } });
 const BOARD_SIZE = 75;
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
-// UPDATED: Added 5 to available stakes
 const AVAILABLE_STAKES = [5, 10, 20, 50, 100, 200, 500];
 
 const gameStates = new Map();
@@ -299,7 +298,8 @@ function getAllBetHousesStatus() {
 
 /* =========  KENO STATE (SERVER-DRIVEN)  ========= */
 
-const KENO_BET_DURATION = 30;
+// UPDATED: Changed from 30 to 40 seconds
+const KENO_BET_DURATION = 40;
 const KENO_DRAW_INTERVAL = 1000;
 const KENO_POST_DRAW_DELAY = 5000;
 
