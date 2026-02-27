@@ -444,6 +444,153 @@ function getAllBetHousesStatus() {
   return statuses;
 }
 
+/* =========  KENO STATE (SERVER-DRIVEN)  ========= */
+
+// UPDATED: Changed from 30 to 40 seconds
+const KENO_BET_DURATION = 40;
+const KENO_DRAW_INTERVAL = 1000;
+const KENO_POST_DRAW_DELAY = 5000;
+
+let kenoState = {
+  phase: 'BETTING',
+  countdown: KENO_BET_DURATION,
+  drawResult: [],
+  currentBallIndex: 0,
+  drawInterval: null,
+  gameId: 1
+};
+
+function generateKenoDraw() {
+  const pool = Array.from({ length: 80 }, (_, i) => i + 1);
+  const result = [];
+  for (let i = 0; i < 20; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+  return result;
+}
+
+function startKenoLoop() {
+  setInterval(() => {
+    if (kenoState.phase === 'BETTING') {
+      kenoState.countdown--;
+
+      io.emit('keno_tick', {
+        phase: kenoState.phase,
+        seconds: kenoState.countdown,
+        gameId: kenoState.gameId
+      });
+
+      if (kenoState.countdown <= 0) {
+        kenoState.phase = 'DRAWING';
+        kenoState.drawResult = generateKenoDraw();
+        kenoState.currentBallIndex = 0;
+
+        io.emit('keno_draw_start', {
+          phase: 'DRAWING',
+          gameId: kenoState.gameId,
+          totalBalls: 20
+        });
+
+        runKenoDrawing();
+      }
+    }
+  }, 1000);
+}
+
+function runKenoDrawing() {
+  kenoState.drawInterval = setInterval(() => {
+    if (kenoState.currentBallIndex < 20) {
+      const ball = kenoState.drawResult[kenoState.currentBallIndex];
+      io.emit('keno_ball', {
+        ball,
+        index: kenoState.currentBallIndex,
+        gameId: kenoState.gameId
+      });
+      kenoState.currentBallIndex++;
+    } else {
+      clearInterval(kenoState.drawInterval);
+      kenoState.drawInterval = null;
+
+      io.emit('keno_draw_complete', {
+        gameId: kenoState.gameId,
+        allBalls: kenoState.drawResult
+      });
+
+      setTimeout(() => {
+        kenoState.gameId++;
+        kenoState.phase = 'BETTING';
+        kenoState.countdown = KENO_BET_DURATION;
+        kenoState.drawResult = [];
+        kenoState.currentBallIndex = 0;
+
+        io.emit('keno_new_round', {
+          phase: 'BETTING',
+          seconds: kenoState.countdown,
+          gameId: kenoState.gameId
+        });
+      }, KENO_POST_DRAW_DELAY);
+    }
+  }, KENO_DRAW_INTERVAL);
+}
+
+startKenoLoop();
+
+const socketRooms = new Map();
+
+io.on('connection', (socket) => {
+  const auth = socket.handshake.auth;
+  const userId = auth?.userId;
+  const username = auth?.username;
+  const token = auth?.token;
+
+  if (token) {
+    const session = userSessions.get(token);
+    if (session && session.expiresAt > Date.now()) {
+      socket.userId = session.userId;
+      socket.username = session.username;
+    }
+  }
+
+  if (!socket.userId && userId && username) {
+    socket.userId = userId;
+    socket.username = username;
+  }
+
+  if (socket.userId) {
+    if (!userBalances.has(socket.userId)) {
+      userBalances.set(socket.userId, 0);
+    }
+    if (!userBonuses.has(socket.userId)) {
+      userBonuses.set(socket.userId, 0);
+    }
+    
+    // Get gamesPlayed from user object
+    const uName = userIdToUsername.get(socket.userId);
+    const user = uName ? users.get(uName) : null;
+    const gamesPlayed = user ? (user.gamesPlayed || 0) : 0;
+
+    // SEND BALANCE, BONUS and GAMES PLAYED
+    socket.emit('balance_update', { 
+      balance: userBalances.get(socket.userId) || 0,
+      bonus: userBonuses.get(socket.userId) || 0,
+      gamesPlayed: gamesPlayed
+    });
+  }
+
+  socket.emit('bet_houses_status', { betHouses: getAllBetHousesStatus() });
+
+  socket.emit('keno_init', {
+    phase: kenoState.phase,
+    seconds: kenoState.countdown,
+    gameId: kenoState.gameId,
+    currentBallIndex: kenoState.currentBallIndex,
+    drawnBalls: kenoState.drawResult.slice(0, kenoState.currentBallIndex),
+    isDrawing: kenoState.phase === 'DRAWING',
+    hotNumbers: getHotNumbers().slice(0, 20),
+    onlinePlayers: kenoOnlinePlayers.size
+  });
+
   socket.on('join_keno', () => {
     socket.join('keno_room');
     kenoOnlinePlayers.add(socket.id);
@@ -713,6 +860,8 @@ function getAllBetHousesStatus() {
       });
     }
   });
+});
+
 function parseAmount(message) {
   const patterns = [
     /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
