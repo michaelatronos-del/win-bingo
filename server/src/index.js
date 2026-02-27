@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import { Server } from 'socket.io';
@@ -25,7 +25,7 @@ app.use('/audio', express.static(audioDir));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-const BOARD_SIZE = 100; // your UI uses 1..100 board IDs
+const BOARD_SIZE = 100;
 const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
 const AVAILABLE_STAKES = [5, 10, 20, 50, 100, 200, 500];
@@ -55,7 +55,6 @@ const SYSTEM_PLAYERS_TEMPLATE = SYSTEM_PLAYER_NAMES.map((name, idx) => ({
 const BOARD_GRIDS = {};
 function getBoard(boardId) {
   if (!BOARD_GRIDS[boardId]) {
-    // deterministic pseudo-board (25 cells), center free
     const numbers = Array.from({ length: 75 }, (_, i) => i + 1);
     const offset = ((boardId - 1) * 7) % numbers.length;
     const grid = [];
@@ -69,14 +68,17 @@ function getBoard(boardId) {
 }
 
 function didBingo(board, marks, lastCall) {
+  // Check rows
   for (let r = 0; r < 5; r++) {
     const row = [0, 1, 2, 3, 4].map(c => board[r * 5 + c]);
     if (row.includes(lastCall) && row.every(n => n === -1 || marks.has(n))) return true;
   }
+  // Check columns
   for (let c = 0; c < 5; c++) {
     const col = [0, 1, 2, 3, 4].map(r => board[r * 5 + c]);
     if (col.includes(lastCall) && col.every(n => n === -1 || marks.has(n))) return true;
   }
+  // Check diagonals
   const d1 = [0, 6, 12, 18, 24].map(i => board[i]);
   const d2 = [4, 8, 12, 16, 20].map(i => board[i]);
   if ((d1.includes(lastCall) && d1.every(n => n === -1 || marks.has(n))) ||
@@ -85,16 +87,19 @@ function didBingo(board, marks, lastCall) {
 }
 
 function getWinningLine(board, marks, lastCall) {
+  // Check rows
   for (let r = 0; r < 5; r++) {
     const idxs = [0,1,2,3,4].map(c => r * 5 + c);
     const vals = idxs.map(i => board[i]);
     if (vals.includes(lastCall) && vals.every(n => n === -1 || marks.has(n))) return idxs;
   }
+  // Check columns
   for (let c = 0; c < 5; c++) {
     const idxs = [0,1,2,3,4].map(r => r * 5 + c);
     const vals = idxs.map(i => board[i]);
     if (vals.includes(lastCall) && vals.every(n => n === -1 || marks.has(n))) return idxs;
   }
+  // Check diagonals
   const d1 = [0,6,12,18,24];
   const d1Vals = d1.map(i => board[i]);
   if (d1Vals.includes(lastCall) && d1Vals.every(n => n === -1 || marks.has(n))) return d1;
@@ -275,7 +280,7 @@ function resetSystemPlayers(state) {
 function activateSystemPlayersIfNeeded(state, stake) {
   if (state.phase === 'calling') return;
 
-  // ✅ Trigger condition: at least 2 BOARDS chosen by real players
+  // Trigger condition: at least 2 BOARDS chosen by real players
   const humanBoardCount = getHumanSelectedBoardCount(state);
 
   if (humanBoardCount < 2) {
@@ -334,7 +339,7 @@ function emitRoomState(stake, state) {
     takenBoards: Array.from(state.takenBoards),
   });
   io.to(roomId).emit('players', {
-    count: getActiveParticipantsCount(state), // ✅ participants, not board count
+    count: getActiveParticipantsCount(state),
     waitingCount: state.waitingPlayers.size,
     stake
   });
@@ -402,7 +407,7 @@ function startCountdown(stake) {
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('tick', {
     seconds: state.countdown,
-    players: getActiveParticipantsCount(state), // ✅ participants
+    players: getActiveParticipantsCount(state),
     prize: computePrizePool(state),
     stake: state.stake
   });
@@ -411,7 +416,7 @@ function startCountdown(stake) {
     state.countdown -= 1;
     io.to(roomId).emit('tick', {
       seconds: state.countdown,
-      players: getActiveParticipantsCount(state), // ✅ participants
+      players: getActiveParticipantsCount(state),
       prize: computePrizePool(state),
       stake: state.stake
     });
@@ -481,30 +486,33 @@ function startCalling(stake) {
     const n = numbers[idx++];
     state.called.push(n);
 
-    // bots mark called number
-    state.systemPlayers.forEach(sp => {
-      if (!sp.ready || !sp.picks.length) return;
-      sp.markedNumbers.add(n);
+    // All players mark called number
+    Array.from(state.players.values()).forEach(player => {
+      if (!player.ready || !player.picks.length) return;
+      player.markedNumbers.add(n);
     });
 
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
 
-    // system winner check
-    for (const sp of state.systemPlayers) {
-      if (!sp.ready || !sp.picks.length) continue;
-      for (const boardId of sp.picks) {
+    // Check for winners among all players (including system players)
+    const allPlayers = Array.from(state.players.values());
+    for (const player of allPlayers) {
+      if (!player.ready || !Array.isArray(player.picks) || player.picks.length === 0) continue;
+
+      for (const boardId of player.picks) {
         const board = getBoard(boardId);
         if (!board) continue;
-        if (didBingo(board, sp.markedNumbers, n)) {
+
+        if (didBingo(board, player.markedNumbers, n)) {
           const prize = computePrizePool(state);
           io.to(roomId).emit('winner', {
-            playerId: sp.id,
+            playerId: player.id,
             prize,
             stake,
             boardId,
-            lineIndices: getWinningLine(board, sp.markedNumbers, n),
-            systemPlayer: true,
-            name: sp.name
+            lineIndices: getWinningLine(board, player.markedNumbers, n),
+            systemPlayer: player.isSystemPlayer || false,
+            name: player.isSystemPlayer ? player.name : undefined
           });
           finalizeRoundToLobby(stake);
           return;
@@ -523,7 +531,7 @@ function getAllBetHousesStatus() {
     statuses.push({
       stake,
       phase: state.phase,
-      activePlayers: activeParticipants, // ✅ participants
+      activePlayers: activeParticipants,
       waitingPlayers,
       totalPlayers: activeParticipants + waitingPlayers,
       prize: computePrizePool(state),
@@ -736,7 +744,8 @@ io.on('connection', (socket) => {
       stake,
       picks: [],
       ready: false,
-      isSystemPlayer: false
+      isSystemPlayer: false,
+      markedNumbers: new Set()
     };
 
     if (state.phase === 'calling') {
@@ -836,7 +845,13 @@ io.on('connection', (socket) => {
     const lineIndices = Array.isArray(data?.lineIndices) ? data.lineIndices : undefined;
 
     const prize = computePrizePool(state);
-    io.to(roomId).emit('winner', { playerId: socket.id, prize, stake, boardId, lineIndices });
+    io.to(roomId).emit('winner', {
+      playerId: socket.id,
+      prize,
+      stake,
+      boardId,
+      lineIndices
+    });
 
     // payout only real users
     if (!player.isSystemPlayer && player.userId) {
