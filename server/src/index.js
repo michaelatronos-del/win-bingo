@@ -32,15 +32,46 @@ const COUNTDOWN_SECONDS = 60;
 const CALL_INTERVAL_MS = 5000;
 const AVAILABLE_STAKES = [5, 10, 20, 50, 100, 200, 500];
 
+// --- AI PLAYER CONFIGURATION ---
+const AI_PLAYER_NAMES = [
+  'Sami', 'Yoni', 'Nahome', 'Mekdes', 'Kaleb', 'Tigist', 'Abraham', 'Sara', 
+  'Daniel', 'Hana', 'Solomon', ' Bethlehem', 'Dawit', 'Tsion', 'Eyob', 
+  'Kidist', 'Yared', 'Liya', 'Michael', 'Fana'
+];
+
+const AI_PLAYER_COUNT = 20;
+
+// Helper to generate AI player IDs
+function generateAIPlayerId(index) {
+  return `ai-player-${index}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
 const gameStates = new Map();
 
 function createEmptyGameState(stake, roomIdOverride) {
   const roomId = roomIdOverride || `room-${stake}`;
+  
+  // Create AI players
+  const aiPlayers = new Map();
+  for (let i = 0; i < AI_PLAYER_COUNT; i++) {
+    const aiPlayer = {
+      id: generateAIPlayerId(i),
+      oderId: `ai-${i}`,
+      name: AI_PLAYER_NAMES[i],
+      stake: stake,
+      picks: [],
+      ready: false,
+      isAI: true
+    };
+    aiPlayers.set(aiPlayer.id, aiPlayer);
+  }
+  
   return {
     roomId,
     phase: 'lobby',
     countdown: COUNTDOWN_SECONDS,
-    players: new Map(),
+    players: new Map(), // Real players only
+    aiPlayers: aiPlayers, // AI players separate map
     waitingPlayers: new Map(),
     takenBoards: new Set(),
     stake,
@@ -144,14 +175,25 @@ function requireAuth(req, res, next) {
 }
 
 function getOnlinePlayers(state) {
-  return Array.from(state.players.values());
+  // Combine real and AI players for display
+  const allPlayers = [];
+  state.players.forEach(player => allPlayers.push(player));
+  state.aiPlayers.forEach(aiPlayer => allPlayers.push(aiPlayer));
+  return allPlayers;
 }
 
 function getTotalSelectedBoards(state) {
   let totalBoards = 0;
+  // Count real players
   state.players.forEach(player => {
     if (Array.isArray(player.picks)) {
       totalBoards += player.picks.length;
+    }
+  });
+  // Count AI players
+  state.aiPlayers.forEach(aiPlayer => {
+    if (Array.isArray(aiPlayer.picks)) {
+      totalBoards += aiPlayer.picks.length;
     }
   });
   return totalBoards;
@@ -161,6 +203,79 @@ function computePrizePool(state) {
   const totalBetAmount = getTotalSelectedBoards(state) * state.stake;
   return Math.floor(totalBetAmount * 0.8);
 }
+
+// --- AI PLAYER LOGIC ---
+function activateAIPlayers(state) {
+  // Only activate AI if there are at least 2 real players with boards
+  const realPlayersWithBoards = Array.from(state.players.values()).filter(
+    p => Array.isArray(p.picks) && p.picks.length > 0
+  );
+  
+  if (realPlayersWithBoards.length < 2) return;
+  
+  // AI players select random boards
+  state.aiPlayers.forEach(aiPlayer => {
+    // Each AI player selects 1-2 random boards
+    const numBoards = Math.random() > 0.5 ? 2 : 1;
+    const availableBoards = [];
+    
+    // Find available boards
+    for (let i = 1; i <= 75; i++) {
+      if (!state.takenBoards.has(i)) {
+        availableBoards.push(i);
+      }
+    }
+    
+    // Select random boards
+    const selectedBoards = [];
+    for (let i = 0; i < numBoards && availableBoards.length > 0; i++) {
+      const randomIndex = Math.floor(Math.random() * availableBoards.length);
+      const boardId = availableBoards.splice(randomIndex, 1)[0];
+      selectedBoards.push(boardId);
+      state.takenBoards.add(boardId);
+    }
+    
+    aiPlayer.picks = selectedBoards;
+    aiPlayer.ready = true;
+  });
+  
+  // Emit updated board status
+  io.to(state.roomId).emit('boards_taken', {
+    stake: state.stake,
+    takenBoards: Array.from(state.takenBoards),
+  });
+}
+
+function checkAIWinner(state, calledNumbers) {
+  const calledSet = new Set(calledNumbers);
+  
+  for (const aiPlayer of state.aiPlayers.values()) {
+    if (!aiPlayer.ready || aiPlayer.picks.length === 0) continue;
+    
+    // Check each board for the AI player
+    for (const boardId of aiPlayer.picks) {
+      // Simple win check: if all numbers on the board are called
+      // In a real implementation, you'd check for lines
+      const board = getBoard(boardId); // Assuming getBoard function exists
+      if (!board) continue;
+      
+      const isWin = board.every(num => num === -1 || calledSet.has(num));
+      
+      if (isWin) {
+        return {
+          playerId: aiPlayer.oderId,
+          playerName: aiPlayer.name,
+          boardId: boardId,
+          prize: computePrizePool(state)
+        };
+      }
+    }
+  }
+  
+  return null;
+}
+
+// --- END AI PLAYER LOGIC ---
 
 function startCountdown(stake) {
   const state = getGameState(stake);
@@ -177,6 +292,14 @@ function startCountdown(stake) {
   });
 
   state.takenBoards = new Set();
+  
+  // Reset AI players
+  state.aiPlayers.forEach(aiPlayer => {
+    aiPlayer.picks = [];
+    aiPlayer.ready = false;
+  });
+
+  // Add real player boards to taken boards
   state.players.forEach(player => {
     if (Array.isArray(player.picks)) {
       player.picks.forEach(boardId => state.takenBoards.add(boardId));
@@ -191,6 +314,13 @@ function startCountdown(stake) {
     stake: state.stake
   });
 
+  // AI activation timer - activate after 10 seconds if conditions met
+  const aiActivationTimer = setTimeout(() => {
+    if (state.phase === 'countdown') {
+      activateAIPlayers(state);
+    }
+  }, 10000);
+
   state.timer = setInterval(() => {
     state.countdown -= 1;
     io.to(roomId).emit('tick', {
@@ -202,6 +332,8 @@ function startCountdown(stake) {
 
     if (state.countdown <= 0) {
       clearInterval(state.timer);
+      clearTimeout(aiActivationTimer);
+      
       const playersWithBoards = getOnlinePlayers(state).filter(
         p => Array.isArray(p.picks) && p.picks.length > 0
       );
@@ -267,12 +399,53 @@ function startCalling(stake) {
         state.waitingPlayers.delete(socketId);
       });
 
+      // Reset AI players
+      state.aiPlayers.forEach(aiPlayer => {
+        aiPlayer.picks = [];
+        aiPlayer.ready = false;
+      });
+      state.takenBoards = new Set();
+
       startCountdown(stake);
       return;
     }
     const n = numbers[idx++];
     state.called.push(n);
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
+    
+    // Check for AI winner after each call
+    const aiWinner = checkAIWinner(state, state.called);
+    if (aiWinner) {
+      clearInterval(state.caller);
+      io.to(roomId).emit('winner', { 
+        playerId: aiWinner.playerId, 
+        playerName: aiWinner.playerName,
+        prize: aiWinner.prize, 
+        stake: state.stake,
+        boardId: aiWinner.boardId,
+        isAI: true
+      });
+      
+      // Reset game state
+      state.phase = 'lobby';
+      io.to(roomId).emit('phase', { phase: state.phase, stake });
+      
+      state.players.clear();
+      state.waitingPlayers.forEach((player, socketId) => {
+        state.players.set(socketId, player);
+        state.waitingPlayers.delete(socketId);
+      });
+      
+      // Reset AI players
+      state.aiPlayers.forEach(aiPlayer => {
+        aiPlayer.picks = [];
+        aiPlayer.ready = false;
+      });
+      state.takenBoards = new Set();
+      
+      startCountdown(stake);
+      return;
+    }
   }, CALL_INTERVAL_MS);
 }
 
@@ -282,11 +455,13 @@ function getAllBetHousesStatus() {
     const state = getGameState(stake);
     const activePlayers = getTotalSelectedBoards(state);
     const waitingPlayers = state.waitingPlayers.size;
+    const realPlayers = Array.from(state.players.values()).filter(p => !p.isAI).length;
+    
     statuses.push({
       stake,
       phase: state.phase,
-      activePlayers,
-      waitingPlayers,
+      activePlayers: realPlayers, // Only count real players for display
+      waitingPlayers: state.waitingPlayers.size,
       totalPlayers: activePlayers + waitingPlayers,
       prize: computePrizePool(state),
       countdown: state.countdown,
@@ -499,7 +674,8 @@ io.on('connection', (socket) => {
       name: socket.username,
       stake: stake,
       picks: [],
-      ready: false
+      ready: false,
+      isAI: false
     };
 
     if (state.phase === 'calling') {
@@ -541,7 +717,7 @@ io.on('connection', (socket) => {
 
     const state = getGameState(stake);
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
-    if (!player) return;
+    if (!player || player.isAI) return; // Prevent AI from being modified
 
     if (Array.isArray(player.picks)) {
       player.picks.forEach(boardId => state.takenBoards.delete(boardId));
@@ -575,7 +751,7 @@ io.on('connection', (socket) => {
 
     const state = getGameState(stake);
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
-    if (!player || player.picks.length === 0) return;
+    if (!player || player.isAI) return; // Prevent AI from starting
 
     player.ready = true;
 
@@ -636,6 +812,12 @@ io.on('connection', (socket) => {
     });
     state.waitingPlayers.clear();
     state.takenBoards = new Set();
+
+    // Reset AI players
+    state.aiPlayers.forEach(aiPlayer => {
+      aiPlayer.picks = [];
+      aiPlayer.ready = false;
+    });
 
     state.phase = 'lobby';
     io.to(roomId).emit('phase', { phase: state.phase, stake });
