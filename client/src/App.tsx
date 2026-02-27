@@ -117,7 +117,7 @@ const translations = {
     enter_username: 'የተጠቃሚ ስም ያስገቡ',
     enter_password: 'የይለፍ ቃል ያስገቡ',
     create_account: 'መለያ ፍጠር',
-    welcome_login_msg: 'እንኳን ደህና መጡ! እባክዎ ይግቡ ወይም መለያ ይፍጠሩ',
+    welcome_login_msg: 'እንኳን ደህና መጻእኩም! በይዘኦም ይእተዉ',
     deposit: '+ ገቢ አድርግ',
     withdraw: 'ወጪ አድርግ',
     logout: 'ውጣ',
@@ -161,7 +161,7 @@ const translations = {
     withdraw_funds: 'ገንዘብ ወጪ',
     available_balance: 'ወጪ የሚደረግ ሂሳብ',
     withdraw_amount: 'የወጪ መጠን',
-    your_account_num: 'የእርስዎ ሂሳብ ቁጥር',
+    your_account_num: 'የእርስዎ ሂሳብ 1ጥር',
     request_withdraw: 'ወጪ ጠይቅ',
     how_to_withdraw: 'እንዴት ወጪ ማድረግ እንደሚቻል',
     confirm_withdraw: 'ወጪ ማረጋገጫ',
@@ -173,9 +173,9 @@ const translations = {
     rule_2: 'እስከ 2 ካርቶዎችን ይምረጡ።',
     rule_3: 'ጨዋታ ጀምር የሚለውን ይጫኑ።',
     rule_4: 'ቁጥሮች ሲጠሩ ምልክት ያድርጉ።',
-    rule_5: 'ቢንጎ የሚለውን የሚጫኑት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
+    rule_5: 'ቢንጎ የሚለውን የሚጫኑት መስመር ሲያገኙ ብቻ ነው።',
     dep_with_title: 'ገቢ እና ወጪ',
-    dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
+    dep_with_desc: 'በመነሻ ገጽ ዘሎ ተቀመጥ ዝብል ተጠቐም።',
     audio: 'ድምፅ',
     auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
     auto_algo: 'ራስ-ሰር አልጎሪዝም',
@@ -229,56 +229,56 @@ const translations = {
     game_in_progress: 'ጸወታ ይካየድ ኣሎ',
     current_call: 'ህሉው ጻውዒት',
     last_5: 'ናይ መወዳእታ 5',
-    live_caller: 'ቀጥታ ጻውዒት',
+    live_caller: 'ቀጥታ ጠሪ',
     auto_bingo: 'ኦቶ ቢንጎ',
     bingo_btn: 'ቢንጎ!',
     your_boards: 'ናካ ካርቶታት',
-    tap_mark_hint: 'ቁጽሪ ንምምልካት ጠውቕ። FREE ባዕሉ ይምላእ።',
+    tap_mark_hint: 'ቁጽሪ ንምምልካት ጠውቕ። FREE ofiin.',
     next_call_in: 'ቀጻሊ ጻውዒት ኣብ',
     winner: 'ተዓዋቲ',
     winning_board: 'ዝተዓወተ ካርቶ',
     select_payment: 'ናይ ክፍሊት መገዲ ምረጽ',
     recommended: 'ዝተመከረ',
     confirm_payment: 'ክፍሊት ኣረጋግጽ',
-    deposit_account: 'ገንዘብ ዝኣትወሉ ሒሳብ',
+    deposit_account: 'ገቢ የሚደረግበት ሒሳብ',
     amount_deposit: 'ዝኣቱ መጠን',
-    paste_deposit_msg: 'ናይ ክፍሊት መልእኽቲ ለጥፍ',
-    verify_submit: 'ኣረጋግጽን ስደድን',
+    paste_deposit_msg: 'የገቢ ማረጋገጫ መልእክት ይለጥፉ',
+    verify_submit: 'አረጋግጽን ስደድን',
     how_to_deposit: 'ከመይ ጌርካ ገንዘብ ተእቱ',
-    verifying: 'የረጋግጽ ኣሎ...',
+    verifying: 'በማረጋገጥ ላይ...',
     withdraw_funds: 'ገንዘብ ምውጻእ',
     available_balance: 'ዝወጽእ ባላንስ',
-    withdraw_amount: 'ዝወጽእ መጠን',
+    withdraw_amount: 'የወጪ መጠን',
     your_account_num: 'ናይ ሒሳብ ቁጽሪ',
-    request_withdraw: 'ምውጻእ ሕተት',
+    request_withdraw: 'ወጪ ጠይቅ',
     how_to_withdraw: 'ከመይ ጌርካ ገንዘብ ተውጽእ',
-    confirm_withdraw: 'ምውጻእ ኣረጋግጽ',
+    confirm_withdraw: 'ወጪ ማረጋገጽ',
     your_account: 'ናካ ሒሳብ',
-    paste_withdraw_msg: 'ናይ ምውጻእ መልእኽቲ ለጥፍ',
-    verify_withdraw: 'ምውጻእ ኣረጋግጽ',
+    paste_withdraw_msg: 'የወጪ ማረጋገጫ መልእክት ይለጥፉ',
+    verify_withdraw: 'ወጪ አረጋግጥ',
     how_to_play: 'ከመይ ትጻወት',
-    rule_1: 'ናይ ውርርድ ገዛ ምረጽ።',
-    rule_2: 'ክሳብ 2 ካርቶን ምረጽ።',
-    rule_3: 'ጸወታ ጀምር ጠውቕ።',
-    rule_4: 'ቁጽሪ ክጽዋዕ ከሎ ምልክት ግበር።',
-    rule_5: 'ቢንጎ እትብሎ ሙሉእ መስመር ምስ ዝመልእ ጥራይ እዩ።',
-    dep_with_title: 'ምእታውን ምውጻእን',
-    dep_with_desc: 'ኣብ መእተዊ ገጽ ዘሎ ተቀመጥ ዝብል ተጠቐም።',
-    audio: 'ድምጺ',
-    auto_mark_me: 'ኦቶ ምልክት (ኣነ)',
-    auto_algo: 'ኦቶ ኣልጎሪዝም',
-    players_label: 'ተጫወቲ',
-    waiting: 'ዝጽበዩ',
-    prize: 'ሽልማት',
-    active: 'ተጫወቲ',
-    go_lobby: 'ናብ ሎቢ',
-    join_wait: 'ተሓወስ & ተጸበ',
-    insufficient_balance_msg: 'ነዚ ውርርድ ምሕዋስ ዘይምኸኣል',
-    link_copied: 'ናይ ዕድመ ሊንክ ተቐዲሑ!',
-    first_deposit_bonus: '🎉 ቀዳማይ ገንዘብ ቦነስ: 2X!',
-    referral_bonus: 'ናይ ዕድመ ቦነስ',
-    wallet_desc: 'ዝኣተወ + ዝተዓወተ',
-    bonus_desc: 'ቦነስ + ዕድመ'
+    rule_1: 'Mana qabsiisaa filadhu.',
+    rule_2: 'Kaartii hanga 2 filadhu.',
+    rule_3: 'Tapha Jalqabi kan jedhu tuqi.',
+    rule_4: 'Lakkoofsa waamame mallatteessi.',
+    rule_5: 'BINGO kan jedhu yeroo sararri guutu qofa tuqi.',
+    dep_with_title: 'Galchii fi Baasii',
+    dep_with_desc: 'Fuula duraa irratti button galchii fayyadami.',
+    audio: 'Sagalee',
+    auto_mark_me: 'Ofiin Mallatteessi (Ana)',
+    auto_algo: 'Algoorizimii Ofiin',
+    players_label: 'Taphataa',
+    waiting: 'Eegaa jira',
+    prize: 'Badhaasa',
+    active: 'Taphataa',
+    go_lobby: 'Gara Lobby',
+    join_wait: 'Seeni & Eegi',
+    insufficient_balance_msg: 'Baalansiin kee xiqqaadha.',
+    link_copied: 'Linkiin afeerraa waraabame!',
+    first_deposit_bonus: '🎉 Galchii Jalqabaa Boonasii: 2X!',
+    referral_bonus: 'Boonasii Afeerraa',
+    wallet_desc: 'Galchii + Bu aa',
+    bonus_desc: 'Boonasii + Affeerraa'
   },
   or: {
     hello: 'Akkam',
@@ -396,7 +396,6 @@ export default function App() {
   const [players, setPlayers] = useState<number>(0)
   const [takenBoards, setTakenBoards] = useState<number[]>([])
   const [waitingPlayers, setWaitingPlayers] = useState<number>(0)
-  const [isWaiting, setIsWaiting] = useState<boolean>(false)
   const [betHouses, setBetHouses] = useState<any[]>([])
   const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
   
@@ -709,7 +708,7 @@ export default function App() {
           s.emit('bingo', {
             stake: stakeToUse,
             boardId: win.boardId,
-            lineIndices: win.line,
+            lineIndices: win.lineIndices,
           })
         }
       }
@@ -1323,54 +1322,15 @@ export default function App() {
               )}
             </div>
             {!isWaiting && (
-            <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
-              {String(seconds).padStart(2,"0")}s
-            </div>
+              <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
+                {String(seconds).padStart(2,"0")}s
+              </div>
             )}
             {isWaiting && (
               <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-xs sm:text-sm">
                 {t('game_in_progress')}
               </div>
             )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
-            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <span className="text-slate-300">{t('audio')}:</span>
-              <select
-                className="bg-slate-700 text-slate-100 rounded px-1 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm"
-                value={audioPack}
-                onChange={(e) => setAudioPack(e.target.value)}
-              >
-                <option value="amharic">Amharic</option>
-                <option value="modern-amharic">Modern Amharic</option>
-              </select>
-              <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />
-              <button
-                className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-slate-700 hover:brightness-110 text-xs sm:text-sm"
-                onClick={() => playCallSound(1)}
-              >
-                Test
-              </button>
-            </label>
-            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <input
-                type="checkbox"
-                checked={autoMark}
-                onChange={(e) => setAutoMark(e.target.checked)}
-                className="w-3 h-3 sm:w-4 sm:h-4"
-              />
-              <span className="text-slate-300">{t('auto_mark_me')}</span>
-            </label>
-            <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <input
-                type="checkbox"
-                checked={autoAlgoMark}
-                onChange={(e) => setAutoAlgoMark(e.target.checked)}
-                className="w-3 h-3 sm:w-4 sm:h-4"
-              />
-              <span className="text-slate-300">{t('auto_algo')}</span>
-            </label>
           </div>
           
           <div className="grid grid-cols-10 gap-1 sm:gap-2 mb-3 sm:mb-6">
@@ -1815,7 +1775,7 @@ export default function App() {
                   <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_keno')}</h3>
                   <div className="text-[10px] text-purple-200">Instant Draw</div>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-black shadow-md group-hover:scale-110 transition-transform">80</div>
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm sm:text-xl font-black shadow-md group-hover:scale-110 transition-transform">80</div>
               </button>
             </a>
 
@@ -2122,18 +2082,18 @@ export default function App() {
                   {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players')}</div>}
                   <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
-              <div className="mt-auto flex items-center justify-between gap-2">
-                <button
+                <div className="mt-auto flex items-center justify-between gap-2">
+                  <button
                     className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
                   onClick={() => {
                       handleJoinBetHouse(house.stake)
                   }}
-                >
+                  >
                     {isSelected ? t('go_lobby') : isLive ? t('join_wait') : t('play_now')}
-                </button>
+                  </button>
                   <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+                </div>
               </div>
-            </div>
             )
           }) : (
             [5, 10, 20, 50, 100, 200].map(amount => {
@@ -2143,7 +2103,6 @@ export default function App() {
                 20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
                 50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
                 100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
-                200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
               }
               const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
               return (
@@ -2169,7 +2128,6 @@ export default function App() {
       </div>
     </div>
   )
-
 
   const renderGamePage = () => {
     const recentlyCalled = called.slice(-6).reverse()
@@ -2607,16 +2565,12 @@ export default function App() {
               {t('bingo_btn')}
             </div>
             <div className="text-xs sm:text-sm text-slate-300 space-y-1">
-              <div>
-                <span className="text-slate-500">{t('winner')}:</span>{' '}
-                {winnerInfo.systemPlayer ? (
-                  <span className="font-semibold text-emerald-300">
-                    {winnerInfo.winnerName || 'System Player'} (Bot)
-                  </span>
-                ) : (
+              {winnerInfo.playerId && (
+                <div>
+                  <span className="text-slate-500">{t('winner')}:</span>{' '}
                   <span className="font-mono break-all">{winnerInfo.playerId}</span>
-                )}
-              </div>
+                </div>
+              )}
               {typeof winnerInfo.prize === 'number' && (
                 <div>
                   <span className="text-slate-500">{t('prize')}:</span>{' '}
