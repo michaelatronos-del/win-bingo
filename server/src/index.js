@@ -222,6 +222,23 @@ function getOnlinePlayers(state) {
   return Array.from(state.players.values());
 }
 
+function getHumanSelectedBoardCount(state) {
+  let count = 0;
+  state.players.forEach(p => {
+    if (!p.isSystemPlayer && Array.isArray(p.picks)) count += p.picks.length;
+  });
+  return count;
+}
+
+// Active participants (human + bot) that actually hold >= 1 board
+function getActiveParticipantsCount(state) {
+  let count = 0;
+  state.players.forEach(p => {
+    if (Array.isArray(p.picks) && p.picks.length > 0) count += 1;
+  });
+  return count;
+}
+
 function getTotalSelectedBoards(state) {
   let totalBoards = 0;
   state.players.forEach(player => {
@@ -256,15 +273,12 @@ function resetSystemPlayers(state) {
 }
 
 function activateSystemPlayersIfNeeded(state, stake) {
-  // Do not activate bots during active calling phase.
   if (state.phase === 'calling') return;
 
-  const realPlayersWithBoards = Array.from(state.players.values()).filter(
-    p => !p.isSystemPlayer && Array.isArray(p.picks) && p.picks.length > 0
-  );
+  // ✅ Trigger condition: at least 2 BOARDS chosen by real players
+  const humanBoardCount = getHumanSelectedBoardCount(state);
 
-  if (realPlayersWithBoards.length < 2) {
-    // if previously active and condition no longer met, remove bots
+  if (humanBoardCount < 2) {
     if (state.botsActivated) {
       resetSystemPlayers(state);
     }
@@ -320,7 +334,7 @@ function emitRoomState(stake, state) {
     takenBoards: Array.from(state.takenBoards),
   });
   io.to(roomId).emit('players', {
-    count: getTotalSelectedBoards(state),
+    count: getActiveParticipantsCount(state), // ✅ participants, not board count
     waitingCount: state.waitingPlayers.size,
     stake
   });
@@ -388,7 +402,7 @@ function startCountdown(stake) {
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('tick', {
     seconds: state.countdown,
-    players: getTotalSelectedBoards(state),
+    players: getActiveParticipantsCount(state), // ✅ participants
     prize: computePrizePool(state),
     stake: state.stake
   });
@@ -397,7 +411,7 @@ function startCountdown(stake) {
     state.countdown -= 1;
     io.to(roomId).emit('tick', {
       seconds: state.countdown,
-      players: getTotalSelectedBoards(state),
+      players: getActiveParticipantsCount(state), // ✅ participants
       prize: computePrizePool(state),
       stake: state.stake
     });
@@ -504,12 +518,14 @@ function getAllBetHousesStatus() {
   const statuses = [];
   AVAILABLE_STAKES.forEach(stake => {
     const state = getGameState(stake);
+    const activeParticipants = getActiveParticipantsCount(state);
+    const waitingPlayers = state.waitingPlayers.size;
     statuses.push({
       stake,
       phase: state.phase,
-      activePlayers: getTotalSelectedBoards(state),
-      waitingPlayers: state.waitingPlayers.size,
-      totalPlayers: getTotalSelectedBoards(state) + state.waitingPlayers.size,
+      activePlayers: activeParticipants, // ✅ participants
+      waitingPlayers,
+      totalPlayers: activeParticipants + waitingPlayers,
       prize: computePrizePool(state),
       countdown: state.countdown,
       called: state.called.length

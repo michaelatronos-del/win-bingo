@@ -426,6 +426,8 @@ export default function App() {
     playerId?: string
     prize?: number
     stake?: number
+    systemPlayer?: boolean
+    winnerName?: string
   } | null>(null)
   
   const [audioPack, setAudioPack] = useState<string>('amharic') 
@@ -740,6 +742,8 @@ export default function App() {
           playerId: d.playerId,
           prize: d.prize,
           stake: d.stake,
+          systemPlayer: d.systemPlayer === true,
+          winnerName: typeof d.name === 'string' ? d.name : undefined,
         })
       } else {
         setWinnerInfo(null)
@@ -2603,12 +2607,16 @@ export default function App() {
               {t('bingo_btn')}
             </div>
             <div className="text-xs sm:text-sm text-slate-300 space-y-1">
-              {winnerInfo.playerId && (
-                <div>
-                  <span className="text-slate-500">{t('winner')}:</span>{' '}
+              <div>
+                <span className="text-slate-500">{t('winner')}:</span>{' '}
+                {winnerInfo.systemPlayer ? (
+                  <span className="font-semibold text-emerald-300">
+                    {winnerInfo.winnerName || 'System Player'} (Bot)
+                  </span>
+                ) : (
                   <span className="font-mono break-all">{winnerInfo.playerId}</span>
-                </div>
-              )}
+                )}
+              </div>
               {typeof winnerInfo.prize === 'number' && (
                 <div>
                   <span className="text-slate-500">{t('prize')}:</span>{' '}
