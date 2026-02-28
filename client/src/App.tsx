@@ -1051,7 +1051,7 @@ export default function App() {
     const effectiveCalled = overrideCalled ?? called
     const marks = new Set<number>(
       autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
-    )
+    );
     return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
   }
 
@@ -1066,7 +1066,7 @@ export default function App() {
     const effectiveCalled = overrideCalled ?? called
     const marks = new Set<number>(
       autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
-    )
+    );
     const win = findBingoWinIncludingLast(marks, effectiveLastCalled, picks)
     socket?.emit('bingo', {
       stake: currentBetHouse,
@@ -2192,198 +2192,197 @@ export default function App() {
 
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col p-2 sm:p-4 overflow-hidden">
-        <div className="w-full max-w-7xl mx-auto h-full flex flex-col">
+      <div className="w-full max-w-7xl mx-auto h-full flex flex-col">
 
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => {
-                const previousStake = currentBetHouse
-                socket?.emit('leave_current_game')
-                setPicks([])
-                setMarkedNumbers(new Set())
-                setIsReady(false)
-                setIsWaiting(false)
-                setTakenBoards([])
-                setPhase('lobby')
-                if (previousStake) {
-                  setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('bingoHouseSelect')
-                } else {
-                  setCurrentPage('welcome')
-                }
-              }}
-              className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
-            >
-              {t('close')}
-            </button>
+        <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => {
+          const previousStake = currentBetHouse
+          socket?.emit('leave_current_game')
+          setPicks([])
+          setMarkedNumbers(new Set())
+          setIsReady(false)
+          setIsWaiting(false)
+          setTakenBoards([])
+          setPhase('lobby')
+          if (previousStake) {
+            setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('bingoHouseSelect')
+          } else {
+            setCurrentPage('welcome')
+          }
+          }}
+          className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
+        >
+          {t('close')}
+        </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="bg-orange-500 rounded-lg p-2 sm:p-4">
+          <div className="text-[10px] opacity-90">{t('stake')}</div>
+          <div className="text-sm sm:text-2xl font-bold">{stake} Birr</div>
+        </div>
+        <div className="bg-blue-600 rounded-lg p-2 sm:p-4">
+          <div className="text-[10px] opacity-90">{t('players_label')}</div>
+          <div className="text-sm sm:text-2xl font-bold">{players}</div>
+        </div>
+        <div className="bg-green-600 rounded-lg p-2 sm:p-4">
+          <div className="text-[10px] opacity-90">{t('prize')}</div>
+          <div className="text-sm sm:text-2xl font-bold">{prize} Birr</div>
+        </div>
+        </div>
+
+        {lastCalled && (
+        <div className="mb-3">
+          <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
+          <div className="flex-1 text-[10px] sm:text-xs text-slate-200 uppercase tracking-wide">
+            {t('current_call')}
+            <div className="mt-0.5 text-[9px] sm:text-xs text-slate-400">
+            {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
+            </div>
+            {phase === 'calling' && (
+            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] sm:text-xs text-emerald-300 border border-emerald-500/40">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{t('next_call_in')} {String(callCountdown).padStart(2, '0')}s</span>
+            </div>
+            )}
           </div>
-
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-orange-500 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">{t('stake')}</div>
-              <div className="text-sm sm:text-2xl font-bold">{stake} Birr</div>
+          <div className="flex items-center justify-center">
+            <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
+            <div className="text-[10px] sm:text-xs tracking-wide">
+              {numberToLetter(lastCalled)}
             </div>
-            <div className="bg-blue-600 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">{t('players_label')}</div>
-              <div className="text-sm sm:text-2xl font-bold">{players}</div>
-            </div>
-            <div className="bg-green-600 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">{t('prize')}</div>
-              <div className="text-sm sm:text-2xl font-bold">{prize} Birr</div>
-            </div>
-          </div>
-
-          {lastCalled && (
-            <div className="mb-3">
-              <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
-                <div className="flex-1 text-[10px] sm:text-xs text-slate-200 uppercase tracking-wide">
-                  {t('current_call')}
-                  <div className="mt-0.5 text-[9px] sm:text-xs text-slate-400">
-                    {numberToLetter(lastCalled)} {numberToWord(lastCalled)}
-                  </div>
-                  {phase === 'calling' && (
-                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] sm:text-xs text-emerald-300 border border-emerald-500/40">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>{t('next_call_in')} {String(callCountdown).padStart(2, '0')}s</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-center">
-                  <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
-                    <div className="text-[10px] sm:text-xs tracking-wide">
-                      {numberToLetter(lastCalled)}
-                    </div>
-                    <div>{lastCalled}</div>
-                  </div>
-                </div>
-                <div className="flex-1 flex flex-col items-end">
-                  <div className="text-[9px] sm:text-xs text-slate-300 uppercase tracking-wide mb-1">
-                    {t('last_5')}
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-1">
-                    {previousFive.map(n => {
-                      const letter = numberToLetter(n)
-                      const color = lastCallColors[letter] ?? 'bg-slate-900/80'
-                      return (
-                        <div
-                          key={n}
-                          className={`${color} px-1.5 py-0.5 rounded-full border border-white/20 text-[9px] sm:text-xs text-white shadow-sm`}
-                        >
-                          {letter} {n}
-                        </div>
-                      )
-                    })}
-                    {previousFive.length === 0 && (
-                      <div className="px-1.5 py-0.5 rounded-full bg-slate-900/40 border border-white/5 text-[9px] sm:text-xs text-slate-500">
-                        {t('waiting')}…
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
-
-            <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
-              <div className="flex items-center justify-between mb-4 gap-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-xl font-black text-white tracking-tight">{t('live_caller')}</h2>
-                  <button
-                    type="button"
-                    onClick={() => setAudioOn(prev => !prev)}
-                    className="h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm"
-                    aria-label={audioOn ? 'Turn sound off' : 'Turn sound on'}
-                  >
-                    {audioOn ? '🔊' : '🔈'}
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  {phase !== 'calling' && (
-                    <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
-                      {String(seconds).padStart(2, '0')}s
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto">
-                <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
-                {renderCallerGrid(lastCalled ?? undefined)}
-              </div>
-
-              <div className="hidden lg:flex items-center gap-3 mt-4">
-                <button
-                  onClick={() => setAutoBingo(prev => !prev)}
-                  className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                    autoBingo
-                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
-                      : 'bg-slate-700 border-slate-500 text-slate-200'
-                  }`}
-                >
-                  {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
-                </button>
-                <button
-                  onClick={() => onPressBingo()}
-                  disabled={autoAlgoMark ? false : !canBingo}
-                  className={`flex-1 py-3 rounded text-lg font-bold ${
-                    autoAlgoMark || canBingo ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400'
-                  }`}
-                >
-                  {t('bingo_btn')}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs sm:text-sm font-semibold">{t('your_boards')}</div>
-                <div className="text-[10px] text-slate-400">{picks.length}/2</div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {picks.map((boardId) => (
-                  <div key={boardId} className="bg-slate-700 rounded-lg p-2">
-                    <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Board {boardId}</div>
-                    {renderCard(boardId, true)}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-2 hidden sm:block text-[10px] text-slate-400 leading-tight">
-                {t('tap_mark_hint')}
-              </div>
+            <div>{lastCalled}</div>
             </div>
           </div>
-
-          <div className="lg:hidden pb-1 space-y-2">
-            <button
-              onClick={() => setAutoBingo(prev => !prev)}
-              className={`w-full py-2 rounded-lg text-sm font-semibold border ${
-                autoBingo
-                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
-                  : 'bg-slate-800 border-slate-500 text-slate-200'
-              }`}
-            >
-              {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
-            </button>
-            <button
-              onClick={() => onPressBingo()}
-              disabled={autoAlgoMark ? false : !canBingo}
-              className={`w-full py-4 rounded-xl text-lg font-black shadow-2xl transition-transform active:scale-95 ${
-                autoAlgoMark || canBingo
-                  ? 'bg-fuchsia-500 text-black animate-pulse'
-                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              {t('bingo_btn')}
-            </button>
+          <div className="flex-1 flex flex-col items-end">
+            <div className="text-[9px] sm:text-xs text-slate-300 uppercase tracking-wide mb-1">
+            {t('last_5')}
+            </div>
+            <div className="flex flex-wrap justify-end gap-1">
+            {previousFive.map(n => {
+              const letter = numberToLetter(n)
+              const color = lastCallColors[letter] ?? 'bg-slate-900/80'
+              return (
+              <div
+                key={n}
+                className={`${color} px-1.5 py-0.5 rounded-full border border-white/20 text-[9px] sm:text-xs text-white shadow-sm`}
+              >
+                {letter} {n}
+              </div>
+              )
+            })}
+            {previousFive.length === 0 && (
+              <div className="px-1.5 py-0.5 rounded-full bg-slate-900/40 border border-white/5 text-[9px] sm:text-xs text-slate-500">
+              {t('waiting')}…
+              </div>
+            )}
+            </div>
+          </div>
           </div>
         </div>
+        )}
+
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
+
+        <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
+          <div className="flex items-center justify-between mb-4 gap-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-black text-white tracking-tight">{t('live_caller')}</h2>
+            <button
+            type="button"
+            onClick={() => setAudioOn(prev => !prev)}
+            className="h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-xs sm:text-sm"
+            aria-label={audioOn ? 'Turn sound off' : 'Turn sound on'}
+            >
+            {audioOn ? '🔊' : '🔈'}
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            {phase !== 'calling' && (
+            <div className="px-2 py-1 rounded bg-slate-700 font-mono text-[10px] sm:text-sm">
+              {String(seconds).padStart(2, '0')}s
+            </div>
+            )}
+          </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+          <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
+          {renderCallerGrid(lastCalled ?? undefined)}
+          </div>
+
+          <div className="hidden lg:flex items-center gap-3 mt-4">
+          <button
+            onClick={() => setAutoBingo(prev => !prev)}
+            className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+            autoBingo
+              ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
+              : 'bg-slate-700 border-slate-500 text-slate-200'
+            }`}
+          >
+            {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
+          </button>
+          <button
+            onClick={() => onPressBingo()}
+            disabled={autoAlgoMark ? false : !canBingo}
+            className={`flex-1 py-3 rounded text-lg font-bold ${
+            autoAlgoMark || canBingo ? 'bg-fuchsia-500 text-black' : 'bg-slate-700 text-slate-400'
+            }`}
+          >
+            {t('bingo_btn')}
+          </button>
+          </div>
+        </div>
+
+        <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-2">
+          <div className="text-xs sm:text-sm font-semibold">{t('your_boards')}</div>
+          <div className="text-[10px] text-slate-400">{picks.length}/2</div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {picks.map((boardId) => (
+            <div key={boardId} className="bg-slate-700 rounded-lg p-2">
+            <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Board {boardId}</div>
+            {renderCard(boardId, true)}
+            </div>
+          ))}
+          </div>
+
+          <div className="mt-2 hidden sm:block text-[10px] text-slate-400 leading-tight">
+          {t('tap_mark_hint')}
+          </div>
+        </div>
+        </div>
+
+        <div className="lg:hidden pb-1 space-y-2">
+        <button
+          onClick={() => setAutoBingo(prev => !prev)}
+          className={`w-full py-2 rounded-lg text-sm font-semibold border ${
+          autoBingo
+            ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
+            : 'bg-slate-800 border-slate-500 text-slate-200'
+          }`}
+        >
+          {t('auto_bingo')}: {autoBingo ? 'ON' : 'OFF'}
+        </button>
+        <button
+          onClick={() => onPressBingo()}
+          disabled={autoAlgoMark ? false : !canBingo}
+          className={`w-full py-4 rounded-xl text-lg font-black shadow-2xl transition-transform active:scale-95 ${
+          autoAlgoMark || canBingo
+            ? 'bg-fuchsia-500 text-black animate-pulse'
+            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+          }`}
+        >
+          {t('bingo_btn')}
+        </button>
+        </div>
+      </div>
       </div>
     </div>
-  )
-
+    )
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
       return (
@@ -2656,7 +2655,7 @@ export default function App() {
         </div>
       )}
     </>
-  );
+  )
 }
 
                  
