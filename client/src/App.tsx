@@ -1562,18 +1562,18 @@ export default function App() {
             <div>
               <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('password')}</label>
               <input
-                type="password'
-                value={loginPassword}
-                onChange={e => setLoginPassword(e.target.value)}
-                placeholder={t('enter_password')}
-                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !loginLoading) {
-                    if (loginMode === 'login') handleLogin()
-                    else handleSignup()
-                  }
-                }}
-              />
+                  type="password"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                  placeholder={t('enter_password')}
+                  className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !loginLoading) {
+                      if (loginMode === 'login') handleLogin()
+                      else handleSignup()
+                    }
+                  }}
+                />
             </div>
             <button
               onClick={loginMode === 'login' ? handleLogin : handleSignup}
