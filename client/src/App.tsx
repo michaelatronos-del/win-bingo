@@ -1,17 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { getBoard, loadBoards, type BoardGrid } from './boards'
 
 // Get API base URL
 const getApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
+  if (import.meta.env?.VITE_API_URL) {
     return import.meta.env.VITE_API_URL
   }
-  return process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001'
+  return import.meta.env?.PROD ? window.location.origin : 'http://localhost:3001'
 }
 
 type Phase = 'lobby' | 'countdown' | 'calling'
-type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game' | 'bingoHouseSelect' | 'aviatorGamePage'
+type Page =
+  | 'login'
+  | 'welcome'
+  | 'instructions'
+  | 'depositSelect'
+  | 'depositConfirm'
+  | 'withdrawal'
+  | 'lobby'
+  | 'game'
+  | 'bingoHouseSelect'
+  | 'aviatorGamePage'
 type Language = 'en' | 'am' | 'ti' | 'or'
 
 // --- TRANSLATIONS CONFIGURATION ---
@@ -102,7 +112,8 @@ const translations = {
     first_deposit_bonus: '🎉 First Deposit Bonus: 2X!',
     referral_bonus: 'Referral Bonus',
     wallet_desc: 'Deposits + Winnings',
-    bonus_desc: 'Promo + Referral'
+    bonus_desc: 'Promo + Referral',
+    select_lang: 'Select Language'
   },
   am: {
     hello: 'ሰላም',
@@ -190,7 +201,8 @@ const translations = {
     first_deposit_bonus: '🎉 የመጀመሪያ ገቢ ቦነስ: 2X!',
     referral_bonus: 'የግብዣ ቦነስ',
     wallet_desc: 'ገቢ + ያሸነፉት',
-    bonus_desc: 'ስጦታ + ግብዣ'
+    bonus_desc: 'ስጦታ + ግብዣ',
+    select_lang: 'ቋንቋ ይምረጡ'
   },
   ti: {
     hello: 'ሰላም',
@@ -278,7 +290,8 @@ const translations = {
     first_deposit_bonus: '🎉 ቀዳማይ ገንዘብ ቦነስ: 2X!',
     referral_bonus: 'ናይ ዕድመ ቦነስ',
     wallet_desc: 'ዝኣተወ + ዝተዓወተ',
-    bonus_desc: 'ቦነስ + ዕድመ'
+    bonus_desc: 'ቦነስ + ዕድመ',
+    select_lang: 'ቋንቋ ምረጽ'
   },
   or: {
     hello: 'Akkam',
@@ -366,7 +379,8 @@ const translations = {
     first_deposit_bonus: '🎉 Galchii Jalqabaa Boonasii: 2X!',
     referral_bonus: 'Boonasii Afeerraa',
     wallet_desc: 'Galchii + Bu aa',
-    bonus_desc: 'Boonasii + Affeerraa'
+    bonus_desc: 'Boonasii + Affeerraa',
+    select_lang: 'Afaan Filadhu'
   }
 }
 
@@ -376,7 +390,7 @@ export default function App() {
   const [userId, setUserId] = useState<string>('')
   const [username, setUsername] = useState<string>('')
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
-  
+
   // Auth state
   const [loginMode, setLoginMode] = useState<'login' | 'signup'>('login')
   const [loginUsername, setLoginUsername] = useState<string>('')
@@ -399,12 +413,12 @@ export default function App() {
   const [isWaiting, setIsWaiting] = useState<boolean>(false)
   const [betHouses, setBetHouses] = useState<any[]>([])
   const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
-  
+
   // Balance State: Wallet (Deposits/Wins) vs Bonus (Promo/Referrals)
   const [balance, setBalance] = useState<number>(0)
   const [bonus, setBonus] = useState<number>(0)
   const [gamesPlayed, setGamesPlayed] = useState<number>(0)
-  
+
   // Game Play State
   const [called, setCalled] = useState<number[]>([])
   const [picks, setPicks] = useState<number[]>([])
@@ -415,7 +429,7 @@ export default function App() {
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set())
   const [callCountdown, setCallCountdown] = useState<number>(0)
   const [lastCalled, setLastCalled] = useState<number | null>(null)
-  
+
   // Options / Automation
   const [autoMark, setAutoMark] = useState<boolean>(false)
   const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
@@ -429,11 +443,11 @@ export default function App() {
     systemPlayer?: boolean
     winnerName?: string
   } | null>(null)
-  
-  const [audioPack, setAudioPack] = useState<string>('amharic') 
+
+  const [audioPack, setAudioPack] = useState<string>('amharic')
   const [audioOn, setAudioOn] = useState<boolean>(true)
   const callTimerRef = useRef<number | null>(null)
-  
+
   // Deposit / Withdraw State
   const [selectedProvider, setSelectedProvider] = useState<string>('')
   const [depositAmount, setDepositAmount] = useState<string>('')
@@ -451,16 +465,48 @@ export default function App() {
   const [referralCode, setReferralCode] = useState<string>('')
   const [showLinkCopied, setShowLinkCopied] = useState<boolean>(false)
 
+  // Invalid bingo feedback
+  const [bingoError, setBingoError] = useState<string | null>(null)
+  const bingoErrorTimeoutRef = useRef<number | null>(null)
+
   // Refs to avoid stale state inside socket listeners
   const playerIdRef = useRef<string>(playerId)
   const calledRef = useRef<number[]>(called)
   const lastCalledRef = useRef<number | null>(lastCalled)
   const currentBetHouseRef = useRef<number | null>(currentBetHouse)
+  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
+  const audioOnRef = useRef<boolean>(audioOn)
+  const isWaitingRef = useRef<boolean>(isWaiting)
+  const phaseRef = useRef<Phase>(phase)
+  const picksRef = useRef<number[]>(picks)
+  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
+  const autoBingoRef = useRef<boolean>(autoBingo)
 
   useEffect(() => { playerIdRef.current = playerId }, [playerId])
   useEffect(() => { calledRef.current = called }, [called])
   useEffect(() => { lastCalledRef.current = lastCalled }, [lastCalled])
   useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHouse])
+  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
+  useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { picksRef.current = picks }, [picks])
+  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
+  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
+
+  // helper to display invalid bingo feedback
+  const showBingoError = useCallback((message: string) => {
+    if (bingoErrorTimeoutRef.current) window.clearTimeout(bingoErrorTimeoutRef.current)
+    setBingoError(message)
+    bingoErrorTimeoutRef.current = window.setTimeout(() => setBingoError(null), 4000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (bingoErrorTimeoutRef.current) {
+        window.clearTimeout(bingoErrorTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // --- Helper: Get Translation ---
   const t = (key: keyof typeof translations['en']) => {
@@ -494,28 +540,28 @@ export default function App() {
 
   // --- Capture referral code from URL ---
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const ref = urlParams.get('ref');
+    const urlParams = new URLSearchParams(window.location.search)
+    const ref = urlParams.get('ref')
     if (ref) {
-      setReferralCode(ref);
-      localStorage.setItem('referralCode', ref);
+      setReferralCode(ref)
+      localStorage.setItem('referralCode', ref)
     } else {
-      const storedRef = localStorage.getItem('referralCode');
+      const storedRef = localStorage.getItem('referralCode')
       if (storedRef) {
-        setReferralCode(storedRef);
+        setReferralCode(storedRef)
       }
     }
-  }, []);
+  }, [])
 
   // Telegram Auto-Login
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tgToken = urlParams.get('tg_token');
-    
+    const urlParams = new URLSearchParams(window.location.search)
+    const tgToken = urlParams.get('tg_token')
+
     if (tgToken) {
-      setLoginLoading(true);
-      setCurrentPage('login');
-      
+      setLoginLoading(true)
+      setCurrentPage('login')
+
       fetch(`${getApiUrl()}/api/telegram/auto-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -524,109 +570,106 @@ export default function App() {
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            localStorage.setItem('userId', data.userId);
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('authToken', data.token);
-            
-            setUserId(data.userId);
-            setUsername(data.username);
-            setIsAuthenticated(true);
-            
-            // FIX for "100 Birr Wallet" issue:
-            // If the backend returns the old default of 100 Balance for a new user (isFirstDeposit=true),
-            // and 0 bonus, we force swap it to 0 Balance and 30 Bonus to meet your requirements.
-            let userBalance = data.balance || 0;
-            let userBonus = data.bonus || 0;
-            const isFirst = data.isFirstDeposit !== false;
-            
+            localStorage.setItem('userId', data.userId)
+            localStorage.setItem('username', data.username)
+            localStorage.setItem('authToken', data.token)
+
+            setUserId(data.userId)
+            setUsername(data.username)
+            setIsAuthenticated(true)
+
+            let userBalance = data.balance || 0
+            let userBonus = data.bonus || 0
+            const isFirst = data.isFirstDeposit !== false
+
             if (isFirst && userBalance === 100 && userBonus === 0) {
-              userBalance = 0;
-              userBonus = 30; // Force 30 Bonus for new Telegram users
+              userBalance = 0
+              userBonus = 30
             }
-            
-            setBalance(userBalance);
-            setBonus(userBonus);
-            setGamesPlayed(data.gamesPlayed || 0); // Set games played
-            setIsFirstDeposit(isFirst);
-            setLoginLoading(false);
-            
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
+
+            setBalance(userBalance)
+            setBonus(userBonus)
+            setGamesPlayed(data.gamesPlayed || 0)
+            setIsFirstDeposit(isFirst)
+            setLoginLoading(false)
+
+            window.history.replaceState({}, document.title, window.location.pathname)
+
             setTimeout(() => {
-              setCurrentPage('welcome');
-            }, 100);
+              setCurrentPage('welcome')
+            }, 100)
           } else {
-            setLoginError(data.error || 'Auto-login failed');
-            setLoginLoading(false);
-            setCurrentPage('login');
+            setLoginError(data.error || 'Auto-login failed')
+            setLoginLoading(false)
+            setCurrentPage('login')
           }
         })
-        .catch(err => {
-          setLoginError('Connection error during auto-login');
-          setLoginLoading(false);
-          setCurrentPage('login');
-        });
-      
-      return;
+        .catch(() => {
+          setLoginError('Connection error during auto-login')
+          setLoginLoading(false)
+          setCurrentPage('login')
+        })
+
+      return
     }
-    
-    checkExistingSession();
-  }, []);
+
+    checkExistingSession()
+  }, [])
 
   const checkExistingSession = () => {
     try {
-      const savedUserId = localStorage.getItem('userId');
-      const savedUsername = localStorage.getItem('username');
-      const savedToken = localStorage.getItem('authToken');
-      
+      const savedUserId = localStorage.getItem('userId')
+      const savedUsername = localStorage.getItem('username')
+      const savedToken = localStorage.getItem('authToken')
+
       if (savedUserId && savedUsername && savedToken) {
         fetch(`${getApiUrl()}/api/auth/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: savedUserId, token: savedToken }),
+          body: JSON.stringify({ userId: savedUserId, token: savedToken })
         })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              setUserId(savedUserId);
-              setUsername(savedUsername);
-              setIsAuthenticated(true);
-              setIsFirstDeposit(data.isFirstDeposit !== false);
-              setBalance(data.balance || 0);
-              setBonus(data.bonus || 0);
-              setGamesPlayed(data.gamesPlayed || 0);
-              setCurrentPage('welcome');
+              setUserId(savedUserId)
+              setUsername(savedUsername)
+              setIsAuthenticated(true)
+              setIsFirstDeposit(data.isFirstDeposit !== false)
+              setBalance(data.balance || 0)
+              setBonus(data.bonus || 0)
+              setGamesPlayed(data.gamesPlayed || 0)
+              setCurrentPage('welcome')
             } else {
-              localStorage.removeItem('userId');
-              localStorage.removeItem('username');
-              localStorage.removeItem('authToken');
-              setCurrentPage('login');
+              localStorage.removeItem('userId')
+              localStorage.removeItem('username')
+              localStorage.removeItem('authToken')
+              setCurrentPage('login')
             }
           })
           .catch(() => {
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-            localStorage.removeItem('authToken');
-            setCurrentPage('login');
-          });
+            localStorage.removeItem('userId')
+            localStorage.removeItem('username')
+            localStorage.removeItem('authToken')
+            setCurrentPage('login')
+          })
       } else {
-        setCurrentPage('login');
+        setCurrentPage('login')
       }
-    } catch (error) {
-      setCurrentPage('login');
+    } catch {
+      setCurrentPage('login')
     }
-  };
+  }
 
   useEffect(() => {
     if (!isAuthenticated) return
-    
-    const s = io(getApiUrl(), { 
+
+    const s = io(getApiUrl(), {
       transports: ['websocket', 'polling'],
       reconnection: true,
       auth: { userId, username }
     })
     setSocket(s)
-    
+
     s.on('init', (d: any) => {
       setPhase(d.phase)
       setSeconds(d.seconds)
@@ -636,27 +679,26 @@ export default function App() {
       setPlayerId(d.playerId)
       setIsWaiting(d.isWaiting || false)
       setCurrentBetHouse(d.stake)
-      
-      // Update both balances
+
       setBalance(d.balance || 0)
       setBonus(d.bonus || 0)
-    
+
       playerIdRef.current = d.playerId
       calledRef.current = d.called
       currentBetHouseRef.current = d.stake
-    
+
       if (d.phase === 'calling' && !d.isWaiting && currentPage === 'lobby') {
         setCurrentPage('game')
       }
     })
-    
-    s.on('tick', (d: any) => { 
+
+    s.on('tick', (d: any) => {
       setSeconds(d.seconds)
       setPlayers(d.players)
       setPrize(d.prize)
       setStake(d.stake)
     })
-    
+
     s.on('phase', (d: any) => {
       setPhase(d.phase)
       if (d.phase === 'calling' && currentPage === 'lobby' && !isWaiting) {
@@ -671,12 +713,12 @@ export default function App() {
         autoBingoSentRef.current = false
       }
     })
-    
+
     s.on('players', (d: any) => {
       setPlayers(d.count || 0)
       setWaitingPlayers(d.waitingCount || 0)
     })
-    
+
     s.on('bet_houses_status', (d: any) => {
       if (d.betHouses) setBetHouses(d.betHouses)
     })
@@ -691,7 +733,7 @@ export default function App() {
       setCalled(d.called)
       setLastCalled(d.number)
       setCallCountdown(5)
-    
+
       if (autoMark || autoAlgoMark) {
         setMarkedNumbers(prev => {
           const next = new Set(prev)
@@ -699,7 +741,7 @@ export default function App() {
           return next
         })
       }
-    
+
       if (autoBingoRef.current && !autoBingoSentRef.current) {
         const marks = new Set<number>(d.called)
         const win = findBingoWinIncludingLast(marks, d.number, picksRef.current)
@@ -709,32 +751,36 @@ export default function App() {
           s.emit('bingo', {
             stake: stakeToUse,
             boardId: win.boardId,
-            lineIndices: win.line,
+            lineIndices: win.line
           })
         }
       }
-    
-      if (audioOnRef.current && !isWaitingRef.current && phaseRef.current === 'calling') {
+
+      if (
+        audioOnRef.current &&
+        !isWaitingRef.current &&
+        phaseRef.current === 'calling'
+      ) {
         playCallSound(d.number)
       }
     })
-    
+
     s.on('winner', (d: any) => {
-      let boardId: number | undefined = typeof d.boardId === 'number' ? d.boardId : undefined
-      let lineIndices: number[] | undefined = Array.isArray(d.lineIndices) ? d.lineIndices : undefined
-    
+      let boardId = typeof d.boardId === 'number' ? d.boardId : undefined
+      let lineIndices = Array.isArray(d.lineIndices) ? d.lineIndices : undefined
+
       if ((!boardId || !lineIndices) && d.playerId === playerIdRef.current) {
         const marks = new Set<number>(calledRef.current)
         const win =
           findBingoWinIncludingLast(marks, lastCalledRef.current, picksRef.current) ||
           findAnyBingoWin(marks, picksRef.current)
-    
+
         if (win) {
           boardId = win.boardId
           lineIndices = win.line
         }
       }
-    
+
       if (boardId && lineIndices && lineIndices.length > 0) {
         setWinnerInfo({
           boardId,
@@ -743,25 +789,29 @@ export default function App() {
           prize: d.prize,
           stake: d.stake,
           systemPlayer: d.systemPlayer === true,
-          winnerName: typeof d.name === 'string' ? d.name : undefined,
+          winnerName: typeof d.name === 'string' ? d.name : undefined
         })
       } else {
         setWinnerInfo(null)
       }
-    
+
       setPicks([])
       setMarkedNumbers(new Set())
-      setCurrentPage('bingoHouseSelect') 
+      setCurrentPage('bingoHouseSelect')
       setIsReady(false)
       setIsWaiting(false)
       autoBingoSentRef.current = false
     })
-    
+
+    s.on('bingo_invalid', (payload: any) => {
+      showBingoError(payload?.reason || 'Invalid BINGO. Please include the last call in your pattern.')
+    })
+
     s.on('game_start', () => {
       if (!isWaiting) setCurrentPage('game')
       autoBingoSentRef.current = false
     })
-    
+
     s.on('start_game_confirm', (d: any) => {
       if (d.isWaiting) {
         setIsWaiting(true)
@@ -770,22 +820,21 @@ export default function App() {
         setIsWaiting(false)
       }
     })
-    
+
     s.on('balance_update', (d: any) => {
-      // Update both balance (Wallet) and bonus (Referrals/Promos)
       if (d.balance !== undefined) setBalance(d.balance)
       if (d.bonus !== undefined) setBonus(d.bonus)
       if (d.gamesPlayed !== undefined) setGamesPlayed(d.gamesPlayed)
-      if (d.isFirstDeposit !== undefined) {
-        setIsFirstDeposit(d.isFirstDeposit)
-      }
+      if (d.isFirstDeposit !== undefined) setIsFirstDeposit(d.isFirstDeposit)
     })
-    
+
     s.emit('get_bet_houses_status')
-    
-    return () => { s.disconnect() }
-  }, [isAuthenticated, userId, username])
-  
+
+    return () => {
+      s.disconnect()
+    }
+  }, [isAuthenticated, userId, username, currentPage, isWaiting, autoMark, autoAlgoMark, showBingoError])
+
   useEffect(() => {
     if (currentPage !== 'game') return
     setActiveGameBoardId(prev => {
@@ -812,17 +861,17 @@ export default function App() {
 
   useEffect(() => {
     fetch('/boards.html')
-      .then((r) => r.text())
-      .then((html) => { 
+      .then(r => r.text())
+      .then(html => {
         loadBoards(html)
-        setBoardHtmlProvided(true) 
+        setBoardHtmlProvided(true)
       })
       .catch(() => setBoardHtmlProvided(false))
   }, [])
 
-  useEffect(() => { 
+  useEffect(() => {
     if (socket && currentBetHouse) {
-      socket.emit('select_numbers', { picks, stake: currentBetHouse }) 
+      socket.emit('select_numbers', { picks, stake: currentBetHouse })
     }
   }, [socket, picks, currentBetHouse])
 
@@ -838,7 +887,7 @@ export default function App() {
     return () => window.clearInterval(id)
   }, [phase, callCountdown])
 
-  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), []);
+  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
 
   const togglePick = (n: number) => {
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
@@ -855,11 +904,10 @@ export default function App() {
   const handleJoinBetHouse = (stakeAmount: number) => {
     if (!socket) return
 
-    // Allow usage of both Wallet and Bonus for betting
     const totalFunds = balance + bonus
     if (totalFunds < stakeAmount) {
-      alert(t('insufficient_balance_msg'));
-      return; 
+      showBingoError(t('insufficient_balance_msg'))
+      return
     }
 
     setCurrentBetHouse(stakeAmount)
@@ -868,16 +916,16 @@ export default function App() {
     setIsReady(false)
     setIsWaiting(false)
     socket.emit('join_bet_house', stakeAmount)
-    setCurrentPage('lobby') 
+    setCurrentPage('lobby')
   }
 
   const handleStartGame = () => {
     if (picks.length === 0) {
-      alert('Please select at least one board before starting!')
+      showBingoError('Please select at least one board before starting!')
       return
     }
     if (!currentBetHouse) {
-      alert('Please select a bet house first!')
+      showBingoError('Please select a bet house first!')
       return
     }
     setIsReady(true)
@@ -889,7 +937,7 @@ export default function App() {
 
   const toggleMark = (number: number) => {
     if (phase !== 'calling') return
-    if (autoAlgoMark) return 
+    if (autoAlgoMark) return
     setMarkedNumbers(prev => {
       const newSet = new Set(prev)
       if (newSet.has(number)) {
@@ -920,7 +968,8 @@ export default function App() {
       }
       if (count === 5) return true
     }
-    let count1 = 0, count2 = 0
+    let count1 = 0
+    let count2 = 0
     for (let i = 0; i < 5; i++) {
       const num1 = board[i * 5 + i]
       const num2 = board[i * 5 + (4 - i)]
@@ -946,16 +995,15 @@ export default function App() {
       const grid = getBoard(boardId)
       if (!grid) continue
       const lines: number[][] = []
-      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
-      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
-      lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
-      lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
+      for (let r = 0; r < 5; r++) lines.push([0, 1, 2, 3, 4].map(c => grid[r * 5 + c]))
+      for (let c = 0; c < 5; c++) lines.push([0, 1, 2, 3, 4].map(r => grid[r * 5 + c]))
+      lines.push([0, 1, 2, 3, 4].map(i => grid[i * 5 + i]))
+      lines.push([0, 1, 2, 3, 4].map(i => grid[i * 5 + (4 - i)]))
 
       for (const line of lines) {
-        const containsLast = line.includes(last)
-        if (!containsLast) continue
-        const complete = line.every(n => n === -1 || marks.has(n))
-        if (complete) return true
+        const vals = line.map(idx => grid[idx])
+        if (!vals.includes(last)) continue
+        if (vals.every(n => n === -1 || marks.has(n))) return true
       }
     }
     return false
@@ -970,19 +1018,17 @@ export default function App() {
       const grid = getBoard(boardId)
       if (!grid) continue
       const lines: number[][] = []
-      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
-      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      lines.push([0,1,2,3,4].map(i => i * 5 + i))
-      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+      for (let r = 0; r < 5; r++) lines.push([0, 1, 2, 3, 4].map(c => r * 5 + c))
+      for (let c = 0; c < 5; c++) lines.push([0, 1, 2, 3, 4].map(r => r * 5 + c))
+      lines.push([0, 1, 2, 3, 4].map(i => i * 5 + i))
+      lines.push([0, 1, 2, 3, 4].map(i => i * 5 + (4 - i)))
 
       for (const idxLine of lines) {
         const complete = idxLine.every(idx => {
           const num = grid[idx]
           return num === -1 || marks.has(num)
         })
-        if (complete) {
-          return { boardId, line: idxLine }
-        }
+        if (complete) return { boardId, line: idxLine }
       }
     }
     return null
@@ -1001,20 +1047,15 @@ export default function App() {
       if (!grid) continue
 
       const lines: number[][] = []
-      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
-      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      lines.push([0,1,2,3,4].map(i => i * 5 + i))
-      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+      for (let r = 0; r < 5; r++) lines.push([0, 1, 2, 3, 4].map(c => r * 5 + c))
+      for (let c = 0; c < 5; c++) lines.push([0, 1, 2, 3, 4].map(r => r * 5 + c))
+      lines.push([0, 1, 2, 3, 4].map(i => i * 5 + i))
+      lines.push([0, 1, 2, 3, 4].map(i => i * 5 + (4 - i)))
 
       for (const idxLine of lines) {
         const nums = idxLine.map(idx => grid[idx])
         if (!nums.includes(last)) continue
-
-        const complete = idxLine.every(idx => {
-          const num = grid[idx]
-          return num === -1 || marks.has(num)
-        })
-
+        const complete = nums.every(n => n === -1 || marks.has(n))
         if (complete) return { boardId, line: idxLine }
       }
     }
@@ -1035,10 +1076,13 @@ export default function App() {
     return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
   }
 
-  const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
+  const onPressBingo = (
+    overrideCalled?: number[],
+    overrideLastCalled?: number | null
+  ) => {
     if (phase !== 'calling' || isWaiting) return
     if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
-      alert('No valid BINGO found that includes the last called number. Keep marking!')
+      showBingoError('No valid BINGO found that includes the last called number. Keep marking!')
       return
     }
     if (!currentBetHouse) return
@@ -1051,34 +1095,32 @@ export default function App() {
     socket?.emit('bingo', {
       stake: currentBetHouse,
       boardId: win?.boardId,
-      lineIndices: win?.line,
+      lineIndices: win?.line
     })
     autoBingoSentRef.current = true
   }
 
-  // --- Generate Telegram Bot Deep Link ---
-  const getInviteLink = () => {
-    // This redirects the invited user to the Telegram Bot with the inviter's userId as the start parameter
-    // The Bot handles registration and awards the 20 Birr bonus to the inviter
-    return `https://t.me/WinBingoGamesBot?start=${userId}`
-  }
+  const getInviteLink = () =>
+    `https://t.me/WinBingoGamesBot?start=${userId}`
 
   const handleCopyInviteLink = () => {
     const link = getInviteLink()
-    navigator.clipboard.writeText(link).then(() => {
-      setShowLinkCopied(true)
-      setTimeout(() => setShowLinkCopied(false), 2000)
-    }).catch(() => {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea')
-      textArea.value = link
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textArea)
-      setShowLinkCopied(true)
-      setTimeout(() => setShowLinkCopied(false), 2000)
-    })
+    navigator.clipboard
+      .writeText(link)
+      .then(() => {
+        setShowLinkCopied(true)
+        setTimeout(() => setShowLinkCopied(false), 2000)
+      })
+      .catch(() => {
+        const textArea = document.createElement('textarea')
+        textArea.value = link
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        setShowLinkCopied(true)
+        setTimeout(() => setShowLinkCopied(false), 2000)
+      })
   }
 
   const renderCallerGrid = (currentNumber?: number) => {
@@ -1087,14 +1129,18 @@ export default function App() {
       Array.from({ length: 15 }, (_, i) => i + 16),
       Array.from({ length: 15 }, (_, i) => i + 31),
       Array.from({ length: 15 }, (_, i) => i + 46),
-      Array.from({ length: 15 }, (_, i) => i + 61),
-    ];
-  
-    const headers = ['B', 'I', 'N', 'G', 'O'];
+      Array.from({ length: 15 }, (_, i) => i + 61)
+    ]
+
+    const headers = ['B', 'I', 'N', 'G', 'O']
     const headerColors = [
-      'bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'
-    ];
-  
+      'bg-blue-500',
+      'bg-pink-500',
+      'bg-purple-500',
+      'bg-green-500',
+      'bg-orange-500'
+    ]
+
     return (
       <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
         <div className="grid grid-cols-5 gap-1.5 mb-2">
@@ -1107,13 +1153,16 @@ export default function App() {
             </div>
           ))}
         </div>
-  
+
         <div className="grid grid-cols-5 gap-1.5 flex-1">
           {columns.map((col, colIndex) => (
-            <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
-              {col.map((num) => {
-                const isCalled = called.includes(num);
-                const isCurrent = currentNumber === num;
+            <div
+              key={colIndex}
+              className="grid grid-rows-[repeat(15,minmax(0,1fr))] gap-1 h-full"
+            >
+              {col.map(num => {
+                const isCalled = called.includes(num)
+                const isCurrent = currentNumber === num
                 return (
                   <div
                     key={num}
@@ -1128,19 +1177,41 @@ export default function App() {
                   >
                     {num}
                   </div>
-                );
+                )
               })}
             </div>
           ))}
         </div>
       </div>
-    );
-  };
+    )
+  }
 
-  const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
+  const numberToLetter = (n: number) =>
+    n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O'
 
   const numberToWord = (n: number): string => {
-    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN']
+    const ones = [
+      '',
+      'ONE',
+      'TWO',
+      'THREE',
+      'FOUR',
+      'FIVE',
+      'SIX',
+      'SEVEN',
+      'EIGHT',
+      'NINE',
+      'TEN',
+      'ELEVEN',
+      'TWELVE',
+      'THIRTEEN',
+      'FOURTEEN',
+      'FIFTEEN',
+      'SIXTEEN',
+      'SEVENTEEN',
+      'EIGHTEEN',
+      'NINETEEN'
+    ]
     const tens = ['', 'TEN', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY']
     if (n === 0) return 'ZERO'
     if (n < 20) return ones[n]
@@ -1148,60 +1219,6 @@ export default function App() {
     const o = n % 10
     if (o === 0) return tens[t]
     return `${tens[t]}-${ones[o]}`
-  }
-
-  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const audioOnRef = useRef<boolean>(audioOn)
-  const isWaitingRef = useRef<boolean>(isWaiting)
-  const phaseRef = useRef<Phase>(phase)
-  const picksRef = useRef<number[]>(picks)
-  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
-  const autoBingoRef = useRef<boolean>(autoBingo)
-
-  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
-  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
-  useEffect(() => { phaseRef.current = phase }, [phase])
-  useEffect(() => { picksRef.current = picks }, [picks])
-  useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
-  useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
-
-  const parseAmount = (message: string): number | null => {
-    const patterns = [
-      /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
-      /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
-      /amount[:\s]*(\d+\.?\d*)/i,
-      /(\d+\.?\d*)\s*(?:sent|transferred|deposited|credited)/i,
-    ]
-    for (const pattern of patterns) {
-      const match = message.match(pattern)
-      if (match) {
-        const amount = parseFloat(match[1])
-        if (!isNaN(amount) && amount > 0) return amount
-      }
-    }
-    const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
-    if (numbers && numbers.length > 0) {
-      const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
-      if (amounts.length > 0) return Math.max(...amounts)
-    }
-    return null
-  }
-
-  const parseTransactionId = (text: string): string | null => {
-    const patterns = [
-      /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
-      /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i,
-    ]
-    for (const pattern of patterns) {
-      const match = text.match(pattern)
-      if (match) return match[1].trim().toUpperCase()
-    }
-    const tokens = text.match(/[A-Z0-9]{8,20}/gi)
-    if (tokens) {
-      const sorted = tokens.sort((a,b)=>b.length-a.length)
-      return sorted[0].toUpperCase()
-    }
-    return null
   }
 
   const playCallSound = async (n: number) => {
@@ -1212,7 +1229,7 @@ export default function App() {
       `${base}/${letter}_${n}.mp3`,
       `${base}/${letter}/${n}.mp3`,
       `${base}/${n}.mp3`,
-      `${base}/${letter}${n}.mp3`,
+      `${base}/${letter}${n}.mp3`
     ]
     for (const src of candidates) {
       try {
@@ -1222,13 +1239,13 @@ export default function App() {
           audioCacheRef.current.set(src, audio)
           await new Promise<void>((resolve, reject) => {
             audio!.oncanplaythrough = () => resolve()
-            audio!.onerror = reject
+            audio!.onerror = () => reject(new Error('audio load fail'))
           })
         }
         audio.currentTime = 0
         await audio.play()
         break
-      } catch (_) {
+      } catch {
         continue
       }
     }
@@ -1239,14 +1256,14 @@ export default function App() {
     isGamePage: boolean = false,
     highlightLineIndices: number[] = []
   ) => {
-    if (!boardId) return null;
-    const grid: BoardGrid | null = getBoard(boardId);
-    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
-  
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
-    const headers = ['B', 'I', 'N', 'G', 'O'];
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
-  
+    if (!boardId) return null
+    const grid: BoardGrid | null = getBoard(boardId)
+    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>
+
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false
+    const headers = ['B', 'I', 'N', 'G', 'O']
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
+
     return (
       <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
         <div className="grid grid-cols-5 gap-1.5 mb-3">
@@ -1259,15 +1276,15 @@ export default function App() {
             </div>
           ))}
         </div>
-  
+
         <div className="grid grid-cols-5 gap-1.5">
           {grid.map((val, idx) => {
-            const isFree = val === -1;
-            const isCalled = called.includes(val);
-            const isMarked = isFree || markedNumbers.has(val);
-            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
-            const isHighlight = highlightLineIndices.includes(idx);
-  
+            const isFree = val === -1
+            const isCalled = called.includes(val)
+            const isMarked = isFree || markedNumbers.has(val)
+            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled
+            const isHighlight = highlightLineIndices.includes(idx)
+
             return (
               <div
                 key={idx}
@@ -1292,27 +1309,39 @@ export default function App() {
                   <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
                 )}
               </div>
-            );
+            )
           })}
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
         <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
-            <div className="text-slate-300 text-xs sm:text-sm">ID: <span className="font-mono">{playerId.slice(0,8)}</span></div>
+            <div className="text-slate-300 text-xs sm:text-sm">
+              ID: <span className="font-mono">{playerId.slice(0, 8)}</span>
+            </div>
             <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
-              <span>{t('stake')}: <b>{stake} Birr</b></span>
-              <span>{t('active')}: <b>{players}</b></span>
-              {waitingPlayers > 0 && <span>{t('waiting')}: <b>{waitingPlayers}</b></span>}
-              <span>{t('prize')}: <b>{prize} Birr</b></span>
+              <span>
+                {t('stake')}: <b>{stake} Birr</b>
+              </span>
+              <span>
+                {t('players_label')}: <b>{players}</b>
+              </span>
+              {waitingPlayers > 0 && (
+                <span>
+                  {t('waiting')}: <b>{waitingPlayers}</b>
+                </span>
+              )}
+              <span>
+                {t('prize')}: <b>{prize} Birr</b>
+              </span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-6">
             <div className="text-lg sm:text-2xl font-bold flex items-center flex-wrap gap-2">
               {t('select_boards')}
@@ -1323,9 +1352,9 @@ export default function App() {
               )}
             </div>
             {!isWaiting && (
-            <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
-              {String(seconds).padStart(2,"0")}s
-            </div>
+              <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
+                {String(seconds).padStart(2, '0')}s
+              </div>
             )}
             {isWaiting && (
               <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-xs sm:text-sm">
@@ -1340,12 +1369,17 @@ export default function App() {
               <select
                 className="bg-slate-700 text-slate-100 rounded px-1 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm"
                 value={audioPack}
-                onChange={(e) => setAudioPack(e.target.value)}
+                onChange={e => setAudioPack(e.target.value)}
               >
                 <option value="amharic">Amharic</option>
                 <option value="modern-amharic">Modern Amharic</option>
               </select>
-              <input type="checkbox" checked={audioOn} onChange={(e) => setAudioOn(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />
+              <input
+                type="checkbox"
+                checked={audioOn}
+                onChange={e => setAudioOn(e.target.checked)}
+                className="w-3 h-3 sm:w-4 sm:h-4"
+              />
               <button
                 className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-slate-700 hover:brightness-110 text-xs sm:text-sm"
                 onClick={() => playCallSound(1)}
@@ -1357,7 +1391,7 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={autoMark}
-                onChange={(e) => setAutoMark(e.target.checked)}
+                onChange={e => setAutoMark(e.target.checked)}
                 className="w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-slate-300">{t('auto_mark_me')}</span>
@@ -1366,44 +1400,48 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={autoAlgoMark}
-                onChange={(e) => setAutoAlgoMark(e.target.checked)}
+                onChange={e => setAutoAlgoMark(e.target.checked)}
                 className="w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-slate-300">{t('auto_algo')}</span>
             </label>
           </div>
-          
+
           <div className="grid grid-cols-10 gap-1 sm:gap-2 mb-3 sm:mb-6">
             {board.map(n => {
               const isPicked = picks.includes(n)
               const isTaken = takenBoards.includes(n)
-              const disabled = (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) || (isTaken && !isPicked)
+              const disabled =
+                (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) ||
+                (isTaken && !isPicked)
               return (
                 <button
                   key={n}
                   onClick={() => togglePick(n)}
                   disabled={disabled}
                   className={[
-                    "aspect-square rounded text-xs md:text-sm flex items-center justify-center border font-semibold",
-                    isPicked 
-                      ? "bg-amber-500 border-amber-400 text-black" 
-                      : isTaken 
-                        ? "bg-red-600 border-red-800 text-white opacity-50 cursor-not-allowed" 
-                        : "bg-slate-700 border-slate-600",
-                    disabled && !isTaken ? "opacity-60 cursor-not-allowed" : "hover:brightness-110"
-                  ].join(" ")}
+                    'aspect-square rounded text-xs md:text-sm flex items-center justify-center border font-semibold',
+                    isPicked
+                      ? 'bg-amber-500 border-amber-400 text-black'
+                      : isTaken
+                      ? 'bg-red-600 border-red-800 text-white opacity-50 cursor-not-allowed'
+                      : 'bg-slate-700 border-slate-600',
+                    disabled && !isTaken ? 'opacity-60 cursor-not-allowed' : 'hover:brightness-110'
+                  ].join(' ')}
                 >
                   {n}
                 </button>
               )
             })}
           </div>
-          
+
           {picks.length > 0 && (
             <div className="mb-3 sm:mb-6">
-              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">{t('selected')} ({picks.length}/2):</div>
+              <div className="text-slate-300 mb-2 sm:mb-4 text-xs sm:text-sm">
+                {t('selected')} ({picks.length}/2):
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-                {picks.map((boardId) => (
+                {picks.map(boardId => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2 sm:p-4">
                     <div className="text-xs sm:text-sm text-slate-400 mb-1 sm:mb-2">Board {boardId}</div>
                     {renderCard(boardId, false)}
@@ -1412,7 +1450,7 @@ export default function App() {
               </div>
             </div>
           )}
-          
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <div className="text-slate-300 text-xs sm:text-sm">
               {t('selected')}: {picks.length}/2 boards
@@ -1424,7 +1462,12 @@ export default function App() {
               {picks.length > 0 && !isWaiting && (
                 <div className="flex gap-1 sm:gap-2 mt-1 sm:mt-2">
                   {picks.map(n => (
-                    <span key={n} className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 text-black rounded text-xs sm:text-sm">Board {n}</span>
+                    <span
+                      key={n}
+                      className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 text-black rounded text-xs sm:text-sm"
+                    >
+                      Board {n}
+                    </span>
                   ))}
                 </div>
               )}
@@ -1440,8 +1483,8 @@ export default function App() {
                 onClick={handleStartGame}
                 disabled={picks.length === 0 || isReady}
                 className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-lg flex-1 sm:flex-none ${
-                  picks.length > 0 && !isReady 
-                    ? 'bg-green-500 hover:bg-green-600 text-black' 
+                  picks.length > 0 && !isReady
+                    ? 'bg-green-500 hover:bg-green-600 text-black'
                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                 }`}
               >
@@ -1467,7 +1510,7 @@ export default function App() {
               </div>
             )}
           </div>
-          
+
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => {
@@ -1475,9 +1518,7 @@ export default function App() {
                 setLoginError('')
               }}
               className={`flex-1 py-2 rounded-lg font-semibold ${
-                loginMode === 'login' 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-slate-700 text-slate-300'
+                loginMode === 'login' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'
               }`}
             >
               {t('signin')}
@@ -1488,9 +1529,7 @@ export default function App() {
                 setLoginError('')
               }}
               className={`flex-1 py-2 rounded-lg font-semibold ${
-                loginMode === 'signup' 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-slate-700 text-slate-300'
+                loginMode === 'signup' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'
               }`}
             >
               {t('signup')}
@@ -1509,10 +1548,10 @@ export default function App() {
               <input
                 type="text"
                 value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
+                onChange={e => setLoginUsername(e.target.value)}
                 placeholder={t('enter_username')}
                 className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyPress={(e) => {
+                onKeyDown={e => {
                   if (e.key === 'Enter' && !loginLoading) {
                     if (loginMode === 'login') handleLogin()
                     else handleSignup()
@@ -1523,12 +1562,12 @@ export default function App() {
             <div>
               <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('password')}</label>
               <input
-                type="password"
+                type="password'
                 value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
+                onChange={e => setLoginPassword(e.target.value)}
                 placeholder={t('enter_password')}
                 className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyPress={(e) => {
+                onKeyDown={e => {
                   if (e.key === 'Enter' && !loginLoading) {
                     if (loginMode === 'login') handleLogin()
                     else handleSignup()
@@ -1554,33 +1593,32 @@ export default function App() {
       setLoginError('Please enter username and password')
       return
     }
-    
+
     setLoginLoading(true)
     setLoginError('')
-    
+
     try {
       const response = await fetch(`${getApiUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: loginUsername.trim(),
-          password: loginPassword,
-        }),
+          password: loginPassword
+        })
       })
-      
+
       const result = await response.json()
-      
+
       if (!result.success) {
         setLoginError(result.error || 'Login failed')
         setLoginLoading(false)
         return
       }
-      
-      // Save session
+
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
-      
+
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
@@ -1590,7 +1628,7 @@ export default function App() {
       setLoginUsername('')
       setLoginPassword('')
       setCurrentPage('welcome')
-    } catch (e: any) {
+    } catch {
       setLoginError('Connection error. Please try again.')
     } finally {
       setLoginLoading(false)
@@ -1602,61 +1640,59 @@ export default function App() {
       setLoginError('Please enter username and password')
       return
     }
-    
+
     if (loginUsername.trim().length < 3) {
       setLoginError('Username must be at least 3 characters')
       return
     }
-    
+
     if (loginPassword.length < 6) {
       setLoginError('Password must be at least 6 characters')
       return
     }
-    
+
     setLoginLoading(true)
     setLoginError('')
-    
+
     try {
-      // Get referral code from state or localStorage
       const refCode = referralCode || localStorage.getItem('referralCode') || ''
-      
+
       const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: loginUsername.trim(),
           password: loginPassword,
-          initialBonus: 30, // Changed from initialBalance to initialBonus
-          referralCode: refCode, // Send referral code for 20 Birr reward to inviter
-        }),
+          initialBonus: 30,
+          referralCode: refCode
+        })
       })
-      
+
       const result = await response.json()
-      
+
       if (!result.success) {
         setLoginError(result.error || 'Signup failed')
         setLoginLoading(false)
         return
       }
-      
+
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
       localStorage.setItem('isNewUser', 'true')
-      // Clear referral code after successful signup
       localStorage.removeItem('referralCode')
-      
+
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
-      setBalance(0) // Start with 0 wallet balance
-      setBonus(30) // Start with 30 bonus
+      setBalance(0)
+      setBonus(30)
       setIsFirstDeposit(true)
       setLoginUsername('')
       setLoginPassword('')
       setReferralCode('')
       setCurrentPage('welcome')
-    } catch (e: any) {
+    } catch {
       setLoginError('Connection error. Please try again.')
     } finally {
       setLoginLoading(false)
@@ -1675,8 +1711,7 @@ export default function App() {
       socket.disconnect()
       setSocket(null)
     }
-  }
-
+  } 
   const renderWelcomePage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">

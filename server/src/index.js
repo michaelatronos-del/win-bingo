@@ -116,6 +116,7 @@ function createEmptyGameState(stake, roomIdOverride) {
     takenBoards: new Set(),
     stake,
     called: [],
+    lastCall: null,
     timer: null,
     caller: null,
     systemPlayers: SYSTEM_PLAYERS_TEMPLATE.map(p => ({
@@ -230,13 +231,22 @@ function getHumanSelectedBoardCount(state) {
   return count;
 }
 
-// Active participants (human + bot) that actually hold >= 1 board
 function getActiveParticipantsCount(state) {
   let count = 0;
-  state.players.forEach(p => {
-    if (Array.isArray(p.picks) && p.picks.length > 0) count += 1;
+  state.players.forEach(player => {
+    if (Array.isArray(player.picks) && player.picks.length > 0) {
+      count += 1;
+    }
   });
   return count;
+}
+
+function getSelectedBoardCount(state) {
+  let totalBoards = 0;
+  state.players.forEach(player => {
+    if (Array.isArray(player.picks)) totalBoards += player.picks.length;
+  });
+  return totalBoards;
 }
 
 function getTotalSelectedBoards(state) {
@@ -275,7 +285,6 @@ function resetSystemPlayers(state) {
 function activateSystemPlayersIfNeeded(state, stake) {
   if (state.phase === 'calling') return;
 
-  // ✅ Trigger condition: at least 2 BOARDS chosen by real players
   const humanBoardCount = getHumanSelectedBoardCount(state);
 
   if (humanBoardCount < 2) {
@@ -285,12 +294,10 @@ function activateSystemPlayersIfNeeded(state, stake) {
     return;
   }
 
-  // If already active and have picks, keep them stable for this round
   if (state.botsActivated && state.systemPlayers.every(sp => sp.ready && sp.picks.length > 0)) {
     return;
   }
 
-  // Fresh activation
   resetSystemPlayers(state);
 
   const taken = new Set();
@@ -334,7 +341,8 @@ function emitRoomState(stake, state) {
     takenBoards: Array.from(state.takenBoards),
   });
   io.to(roomId).emit('players', {
-    count: getActiveParticipantsCount(state), // ✅ participants, not board count
+    count: getSelectedBoardCount(state),
+    participantCount: getActiveParticipantsCount(state),
     waitingCount: state.waitingPlayers.size,
     stake
   });
@@ -350,9 +358,9 @@ function finalizeRoundToLobby(stake) {
 
   state.phase = 'lobby';
   state.called = [];
+  state.lastCall = null;
   state.countdown = COUNTDOWN_SECONDS;
 
-  // keep only real players
   const realPlayers = new Map();
   state.players.forEach((p, id) => {
     if (!p.isSystemPlayer) {
@@ -363,7 +371,6 @@ function finalizeRoundToLobby(stake) {
   });
   state.players = realPlayers;
 
-  // move waiting players in
   state.waitingPlayers.forEach((p, id) => {
     p.picks = [];
     p.ready = false;
@@ -389,6 +396,7 @@ function startCountdown(stake) {
   state.phase = 'countdown';
   state.countdown = COUNTDOWN_SECONDS;
   state.called = [];
+  state.lastCall = null;
 
   state.waitingPlayers.forEach((player, socketId) => {
     state.players.set(socketId, player);
@@ -397,12 +405,12 @@ function startCountdown(stake) {
 
   activateSystemPlayersIfNeeded(state, stake);
   rebuildTakenBoards(state);
-  emitRoomState(stake, state);
 
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('tick', {
     seconds: state.countdown,
-    players: getActiveParticipantsCount(state), // ✅ participants
+    players: getSelectedBoardCount(state),
+    participantCount: getActiveParticipantsCount(state),
     prize: computePrizePool(state),
     stake: state.stake
   });
@@ -411,7 +419,8 @@ function startCountdown(stake) {
     state.countdown -= 1;
     io.to(roomId).emit('tick', {
       seconds: state.countdown,
-      players: getActiveParticipantsCount(state), // ✅ participants
+      players: getSelectedBoardCount(state),
+      participantCount: getActiveParticipantsCount(state),
       prize: computePrizePool(state),
       stake: state.stake
     });
@@ -437,10 +446,10 @@ function startCalling(stake) {
   const roomId = state.roomId;
 
   state.phase = 'calling';
+  state.lastCall = null;
   io.to(roomId).emit('phase', { phase: state.phase, stake });
   io.to(roomId).emit('game_start', { stake });
 
-  // increment games played for real users only
   state.players.forEach(player => {
     if (player.isSystemPlayer) return;
     const userId = player.oderId;
@@ -480,8 +489,8 @@ function startCalling(stake) {
 
     const n = numbers[idx++];
     state.called.push(n);
+    state.lastCall = n;
 
-    // bots mark called number
     state.systemPlayers.forEach(sp => {
       if (!sp.ready || !sp.picks.length) return;
       sp.markedNumbers.add(n);
@@ -489,7 +498,6 @@ function startCalling(stake) {
 
     io.to(roomId).emit('call', { number: n, called: state.called, stake });
 
-    // system winner check
     for (const sp of state.systemPlayers) {
       if (!sp.ready || !sp.picks.length) continue;
       for (const boardId of sp.picks) {
@@ -518,14 +526,15 @@ function getAllBetHousesStatus() {
   const statuses = [];
   AVAILABLE_STAKES.forEach(stake => {
     const state = getGameState(stake);
-    const activeParticipants = getActiveParticipantsCount(state);
+    const boardCount = getSelectedBoardCount(state);
     const waitingPlayers = state.waitingPlayers.size;
     statuses.push({
       stake,
       phase: state.phase,
-      activePlayers: activeParticipants, // ✅ participants
+      activePlayers: boardCount,
       waitingPlayers,
-      totalPlayers: activeParticipants + waitingPlayers,
+      participantCount: getActiveParticipantsCount(state),
+      totalPlayers: boardCount + waitingPlayers,
       prize: computePrizePool(state),
       countdown: state.countdown,
       called: state.called.length
@@ -774,12 +783,10 @@ io.on('connection', (socket) => {
     const player = state.players.get(socket.id) || state.waitingPlayers.get(socket.id);
     if (!player) return;
 
-    // remove old picks
     if (Array.isArray(player.picks)) {
       player.picks.forEach(boardId => state.takenBoards.delete(boardId));
     }
 
-    // recalc from everyone except current player first
     rebuildTakenBoards(state);
     if (Array.isArray(player.picks)) {
       player.picks.forEach(boardId => state.takenBoards.delete(boardId));
@@ -789,7 +796,6 @@ io.on('connection', (socket) => {
     const availablePicks = uniquePicks.filter(boardId => !state.takenBoards.has(boardId));
     player.picks = availablePicks;
 
-    // now bots may activate/deactivate based on current human picks
     activateSystemPlayersIfNeeded(state, stake);
     rebuildTakenBoards(state);
 
@@ -832,13 +838,54 @@ io.on('connection', (socket) => {
     const player = state.players.get(socket.id);
     if (!player || !player.picks || player.picks.length === 0) return;
 
-    const boardId = data?.boardId;
-    const lineIndices = Array.isArray(data?.lineIndices) ? data.lineIndices : undefined;
+    if (state.phase !== 'calling') {
+      socket.emit('bingo_invalid', { reason: 'Round not active.' });
+      return;
+    }
+
+    const lastCall = state.lastCall;
+    if (!lastCall) {
+      socket.emit('bingo_invalid', { reason: 'No numbers have been called yet.' });
+      return;
+    }
+
+    const calledNumbers = new Set(state.called);
+    let candidateBoards = player.picks;
+    const requestedBoardId = data?.boardId;
+    if (requestedBoardId && player.picks.includes(requestedBoardId)) {
+      candidateBoards = [requestedBoardId, ...player.picks.filter(id => id !== requestedBoardId)];
+    }
+
+    let winningBoardId = null;
+    let winningLine = [];
+
+    for (const boardId of candidateBoards) {
+      const board = getBoard(boardId);
+      if (!board) continue;
+      const line = getWinningLine(board, calledNumbers, lastCall);
+      if (line.length) {
+        winningBoardId = boardId;
+        winningLine = line;
+        break;
+      }
+    }
+
+    if (!winningBoardId) {
+      socket.emit('bingo_invalid', { reason: 'No valid BINGO found that includes the last called number.' });
+      return;
+    }
 
     const prize = computePrizePool(state);
-    io.to(roomId).emit('winner', { playerId: socket.id, prize, stake, boardId, lineIndices });
+    io.to(roomId).emit('winner', {
+      playerId: socket.id,
+      prize,
+      stake,
+      boardId: winningBoardId,
+      lineIndices: winningLine,
+      systemPlayer: player.isSystemPlayer === true,
+      name: player.name
+    });
 
-    // payout only real users
     if (!player.isSystemPlayer && player.userId) {
       const winnerBalance = userBalances.get(player.userId) || 0;
       userBalances.set(player.userId, winnerBalance + prize);
