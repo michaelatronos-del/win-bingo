@@ -236,66 +236,6 @@ const translations = {
     bingo_btn: 'ቢንጎ!',
     your_boards: 'ናካ ካርቶታት',
     tap_mark_hint: 'ቁጽሪ ንምምልካት ጠውቕ። FREE ባዕሉ ይምላእ።',
-    next_call_in: 'ቀጻሊ ጻውዒት ኣ',
-        audio: 'ድምፅ',
-    auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
-    auto_algo: 'ራስ-ሰር አልጎሪዝም',
-    players_label: 'ተጫዋቾች',
-    waiting: 'በመጠባበቅ ላይ',
-    prize: 'ሽልማት',
-    active: 'ተጫዋቾች',
-    go_lobby: 'ወደ ሎቢ',
-    join_wait: 'ተቀላቀል & ጠብቅ',
-    insufficient_balance_msg: 'ይህን ውርርድ ለመቀላቀል በቂ ሂሳብ የለዎትም።',
-    link_copied: 'የግብዣ ሊንክ ተቀድቷል!',
-    first_deposit_bonus: '🎉 የመጀመሪያ ገቢ ቦነስ: 2X!',
-    referral_bonus: 'የግብዣ ቦነስ',
-    wallet_desc: 'ገቢ + ያሸነፉት',
-    bonus_desc: 'ስጦታ + ግብዣ',
-    select_lang: 'ቋንቋ ይምረጡ'
-  },
-  ti: {
-    hello: 'ሰላም',
-    back: 'ተመለስ',
-    close: 'ዕጸው',
-    loading: 'ይሰርሕ ኣሎ...',
-    ok: 'ሕራይ',
-    signin: 'እተው',
-    signup: 'ተመዝገብ',
-    username: 'ናይ ተጠቃሚ ስም',
-    password: 'ፓስዎርድ',
-    enter_username: 'ስምካ ኣእቱ',
-    enter_password: 'ፓስዎርድ ኣእቱ',
-    create_account: 'አካውንት ፍጠር',
-    welcome_login_msg: 'እንቋዕ ብደሓን መጻእኩም! በይዘኦም ይእተዉ',
-    deposit: '+ ተቀመጥ',
-    withdraw: 'ውሰድ',
-    logout: 'ውጻእ',
-    balance: 'ዋሌት',
-    bonus: 'ቦነስ',
-    total_playable: 'ጠቅላላ ዝውረድ',
-    instructions: 'መምርሒ',
-    invite: 'ዓርኪ ዓድም',
-    game_title_bingo: 'ቢንጎ',
-    game_title_aviator: 'ኣቭያተር',
-    game_title_keno: 'ኬኖ',
-    play_now: 'ሕጂ ተጫወት',
-    select_bingo_house: 'ናይ ቢንጎ ውርርድ ገዛ ምረጽ',
-    bet_houses: 'ናይ ውርርድ ቤቶች',
-    stake: 'ውርርድ',
-    select_boards: 'ካርቶን ምረጽ',
-    selected: 'ተመሪጹ',
-    start_game: 'ጸወታ ጀምር',
-    ready: 'ድሉው!',
-    switch_house: 'ቤት ቀይር',
-    game_in_progress: 'ጸወታ ይካየድ ኣሎ',
-    current_call: 'ህሉው ጻውዒት',
-    last_5: 'ናይ መወዳእታ 5',
-    live_caller: 'ቀጥታ ጻውዒት',
-    auto_bingo: 'ኦቶ ቢንጎ',
-    bingo_btn: 'ቢንጎ!',
-    your_boards: 'ናካ ካርቶታት',
-    tap_mark_hint: 'ቁጽሪ ንምምልካት ጠውቕ። FREE ባዕሉ ይምላእ።',
     next_call_in: 'ቀጻሊ ጻውዒት ኣብ',
     winner: 'ተዓዋቲ',
     winning_board: 'ዝተዓወተ ካርቶ',
@@ -375,7 +315,7 @@ const translations = {
     select_boards: 'Kaartii Filadhu',
     selected: 'Filatame',
     start_game: 'Tapha Jalqabi',
-    ready: 'Qophaa aa!',
+    ready: 'Qophaa!',
     switch_house: 'Mana Qabsiisaa Jijjiiri',
     game_in_progress: 'Tapha itti fufaa jira',
     current_call: 'LAKKOOFSA AMMAA',
@@ -464,7 +404,7 @@ export default function App() {
   const [betHouses, setBetHouses] = useState<any[]>([])
   const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
 
-  // Balance State: Wallet (Deposits/Wins) vs Bonus (Promo/Referrals)
+  // Balance State
   const [balance, setBalance] = useState<number>(0)
   const [bonus, setBonus] = useState<number>(0)
   const [gamesPlayed, setGamesPlayed] = useState<number>(0)
@@ -510,7 +450,7 @@ export default function App() {
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
   const autoBingoSentRef = useRef<boolean>(false)
 
-  // NEW: First deposit tracking & referral
+  // First deposit tracking & referral
   const [isFirstDeposit, setIsFirstDeposit] = useState<boolean>(true)
   const [referralCode, setReferralCode] = useState<string>('')
   const [showLinkCopied, setShowLinkCopied] = useState<boolean>(false)
@@ -524,6 +464,9 @@ export default function App() {
   const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
   const autoBingoRef = useRef<boolean>(autoBingo)
   const markedNumbersRef = useRef<Set<number>>(markedNumbers)
+  const audioOnRef = useRef<boolean>(audioOn)
+  const isWaitingRef = useRef<boolean>(isWaiting)
+  const phaseRef = useRef<Phase>(phase)
 
   useEffect(() => { playerIdRef.current = playerId }, [playerId])
   useEffect(() => { calledRef.current = called }, [called])
@@ -533,6 +476,9 @@ export default function App() {
   useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
   useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
   useEffect(() => { markedNumbersRef.current = markedNumbers }, [markedNumbers])
+  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
+  useEffect(() => { phaseRef.current = phase }, [phase])
 
   // --- Helper: Get Translation ---
   const t = (key: keyof typeof translations['en']) => {
@@ -566,27 +512,27 @@ export default function App() {
 
   // --- Capture referral code from URL ---
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const ref = urlParams.get('ref');
+    const urlParams = new URLSearchParams(window.location.search)
+    const ref = urlParams.get('ref')
     if (ref) {
-      setReferralCode(ref);
-      localStorage.setItem('referralCode', ref);
+      setReferralCode(ref)
+      localStorage.setItem('referralCode', ref)
     } else {
-      const storedRef = localStorage.getItem('referralCode');
+      const storedRef = localStorage.getItem('referralCode')
       if (storedRef) {
-        setReferralCode(storedRef);
+        setReferralCode(storedRef)
       }
     }
-  }, []);
+  }, [])
 
   // Telegram Auto-Login
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tgToken = urlParams.get('tg_token');
+    const urlParams = new URLSearchParams(window.location.search)
+    const tgToken = urlParams.get('tg_token')
 
     if (tgToken) {
-      setLoginLoading(true);
-      setCurrentPage('login');
+      setLoginLoading(true)
+      setCurrentPage('login')
 
       fetch(`${getApiUrl()}/api/telegram/auto-login`, {
         method: 'POST',
@@ -596,58 +542,51 @@ export default function App() {
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            localStorage.setItem('userId', data.userId);
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('userId', data.userId)
+            localStorage.setItem('username', data.username)
+            localStorage.setItem('authToken', data.token)
 
-            setUserId(data.userId);
-            setUsername(data.username);
-            setIsAuthenticated(true);
+            setUserId(data.userId)
+            setUsername(data.username)
+            setIsAuthenticated(true)
 
-            // Handle balance/bonus
-            let userBalance = data.balance || 0;
-            let userBonus = data.bonus || 0;
-            const isFirst = data.isFirstDeposit !== false;
+            let userBalance = data.balance || 0
+            let userBonus = data.bonus || 0
 
-            if (isFirst && userBalance === 100 && userBonus === 0) {
-              userBalance = 0;
-              userBonus = 30;
-            }
+            setBalance(userBalance)
+            setBonus(userBonus)
+            setGamesPlayed(data.gamesPlayed || 0)
+            setIsFirstDeposit(data.isFirstDeposit !== false)
+            setLoginLoading(false)
 
-            setBalance(userBalance);
-            setBonus(userBonus);
-            setGamesPlayed(data.gamesPlayed || 0);
-            setIsFirstDeposit(isFirst);
-            setLoginLoading(false);
-
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState({}, document.title, window.location.pathname)
 
             setTimeout(() => {
-              setCurrentPage('welcome');
-            }, 100);
+              setCurrentPage('welcome')
+            }, 100)
           } else {
-            setLoginError(data.error || 'Auto-login failed');
-            setLoginLoading(false);
-            setCurrentPage('login');
+            setLoginError(data.error || 'Auto-login failed')
+            setLoginLoading(false)
+            setCurrentPage('login')
           }
         })
-        .catch(err => {
-          setLoginError('Connection error during auto-login');
-          setLoginLoading(false);
-          setCurrentPage('login');
-        });
+        .catch(() => {
+          setLoginError('Connection error during auto-login')
+          setLoginLoading(false)
+          setCurrentPage('login')
+        })
 
-      return;
+      return
     }
 
-    checkExistingSession();
-  }, []);
+    checkExistingSession()
+  }, [])
 
   const checkExistingSession = () => {
     try {
-      const savedUserId = localStorage.getItem('userId');
-      const savedUsername = localStorage.getItem('username');
-      const savedToken = localStorage.getItem('authToken');
+      const savedUserId = localStorage.getItem('userId')
+      const savedUsername = localStorage.getItem('username')
+      const savedToken = localStorage.getItem('authToken')
 
       if (savedUserId && savedUsername && savedToken) {
         fetch(`${getApiUrl()}/api/auth/verify`, {
@@ -658,34 +597,34 @@ export default function App() {
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              setUserId(savedUserId);
-              setUsername(savedUsername);
-              setIsAuthenticated(true);
-              setIsFirstDeposit(data.isFirstDeposit !== false);
-              setBalance(data.balance || 0);
-              setBonus(data.bonus || 0);
-              setGamesPlayed(data.gamesPlayed || 0);
-              setCurrentPage('welcome');
+              setUserId(savedUserId)
+              setUsername(savedUsername)
+              setIsAuthenticated(true)
+              setIsFirstDeposit(data.isFirstDeposit !== false)
+              setBalance(data.balance || 0)
+              setBonus(data.bonus || 0)
+              setGamesPlayed(data.gamesPlayed || 0)
+              setCurrentPage('welcome')
             } else {
-              localStorage.removeItem('userId');
-              localStorage.removeItem('username');
-              localStorage.removeItem('authToken');
-              setCurrentPage('login');
+              localStorage.removeItem('userId')
+              localStorage.removeItem('username')
+              localStorage.removeItem('authToken')
+              setCurrentPage('login')
             }
           })
           .catch(() => {
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-            localStorage.removeItem('authToken');
-            setCurrentPage('login');
-          });
+            localStorage.removeItem('userId')
+            localStorage.removeItem('username')
+            localStorage.removeItem('authToken')
+            setCurrentPage('login')
+          })
       } else {
-        setCurrentPage('login');
+        setCurrentPage('login')
       }
-    } catch (error) {
-      setCurrentPage('login');
+    } catch {
+      setCurrentPage('login')
     }
-  };
+  }
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -769,7 +708,6 @@ export default function App() {
         })
       }
 
-      // Check for auto-bingo
       if (autoBingoRef.current && !autoBingoSentRef.current) {
         const marks = new Set<number>(d.called)
         const win = findBingoWinIncludingLast(marks, d.number, picksRef.current)
@@ -907,7 +845,7 @@ export default function App() {
     return () => window.clearInterval(id)
   }, [phase, callCountdown])
 
-  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), []);
+  const board = useMemo(() => Array.from({ length: 100 }, (_, i) => i + 1), [])
 
   const togglePick = (n: number) => {
     if (phase !== 'lobby' && phase !== 'countdown' && !isWaiting) return
@@ -926,8 +864,8 @@ export default function App() {
 
     const totalFunds = balance + bonus
     if (totalFunds < stakeAmount) {
-      alert(t('insufficient_balance_msg'));
-      return;
+      alert(t('insufficient_balance_msg'))
+      return
     }
 
     setCurrentBetHouse(stakeAmount)
@@ -969,32 +907,29 @@ export default function App() {
     })
   }
 
-  const checkBingo = (board: BoardGrid): boolean => {
-    // Check rows
+  const checkBingo = (grid: BoardGrid): boolean => {
     for (let row = 0; row < 5; row++) {
       let count = 0
       for (let col = 0; col < 5; col++) {
         const idx = row * 5 + col
-        const num = board[idx]
+        const num = grid[idx]
         if (num === -1 || markedNumbers.has(num)) count++
       }
       if (count === 5) return true
     }
-    // Check columns
     for (let col = 0; col < 5; col++) {
       let count = 0
       for (let row = 0; row < 5; row++) {
         const idx = row * 5 + col
-        const num = board[idx]
+        const num = grid[idx]
         if (num === -1 || markedNumbers.has(num)) count++
       }
       if (count === 5) return true
     }
-    // Check diagonals
     let count1 = 0, count2 = 0
     for (let i = 0; i < 5; i++) {
-      const num1 = board[i * 5 + i]
-      const num2 = board[i * 5 + (4 - i)]
+      const num1 = grid[i * 5 + i]
+      const num2 = grid[i * 5 + (4 - i)]
       if (num1 === -1 || markedNumbers.has(num1)) count1++
       if (num2 === -1 || markedNumbers.has(num2)) count2++
     }
@@ -1002,38 +937,9 @@ export default function App() {
   }
 
   const canBingo = picks.some(boardId => {
-    const board = getBoard(boardId)
-    return board ? checkBingo(board) : false
+    const grid = getBoard(boardId)
+    return grid ? checkBingo(grid) : false
   })
-
-  const hasBingoWithMarksAndLast = (
-    marks: Set<number>,
-    last: number | null,
-    boardIdsOverride?: number[]
-  ): boolean => {
-    if (!last) return false
-    const boardsToCheck = boardIdsOverride ?? picks
-    for (const boardId of boardsToCheck) {
-      const grid = getBoard(boardId)
-      if (!grid) continue
-      const lines: number[][] = []
-      // Rows
-      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => grid[r*5 + c]))
-      // Columns
-      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => grid[r*5 + c]))
-      // Diagonals
-      lines.push([0,1,2,3,4].map(i => grid[i*5 + i]))
-      lines.push([0,1,2,3,4].map(i => grid[i*5 + (4-i)]))
-
-      for (const line of lines) {
-        const containsLast = line.includes(last)
-        if (!containsLast) continue
-        const complete = line.every(n => n === -1 || marks.has(n))
-        if (complete) return true
-      }
-    }
-    return false
-  }
 
   const findAnyBingoWin = (
     marks: Set<number>,
@@ -1044,11 +950,8 @@ export default function App() {
       const grid = getBoard(boardId)
       if (!grid) continue
       const lines: number[][] = []
-      // Rows
       for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
-      // Columns
       for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      // Diagonals
       lines.push([0,1,2,3,4].map(i => i * 5 + i))
       lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
 
@@ -1078,11 +981,8 @@ export default function App() {
       if (!grid) continue
 
       const lines: number[][] = []
-      // Rows
       for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
-      // Columns
       for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
-      // Diagonals
       lines.push([0,1,2,3,4].map(i => i * 5 + i))
       lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
 
@@ -1112,22 +1012,40 @@ export default function App() {
     const marks = new Set<number>(
       autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
     )
-    return hasBingoWithMarksAndLast(marks, effectiveLastCalled)
+    const boardsToCheck = picks
+    for (const boardId of boardsToCheck) {
+      const grid = getBoard(boardId)
+      if (!grid) continue
+      const lines: number[][] = []
+      for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => r * 5 + c))
+      for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => r * 5 + c))
+      lines.push([0,1,2,3,4].map(i => i * 5 + i))
+      lines.push([0,1,2,3,4].map(i => i * 5 + (4 - i)))
+
+      for (const idxLine of lines) {
+        const nums = idxLine.map(idx => grid[idx])
+        if (!nums.includes(effectiveLastCalled)) continue
+        const complete = idxLine.every(idx => {
+          const num = grid[idx]
+          return num === -1 || marks.has(num)
+        })
+        if (complete) return true
+      }
+    }
+    return false
   }
 
-  const onPressBingo = (overrideCalled?: number[], overrideLastCalled?: number | null) => {
+  const onPressBingo = () => {
     if (phase !== 'calling' || isWaiting) return
-    if (!hasBingoIncludingLastCalled(overrideCalled, overrideLastCalled)) {
+    if (!hasBingoIncludingLastCalled()) {
       alert('No valid BINGO found that includes the last called number. Keep marking!')
       return
     }
     if (!currentBetHouse) return
-    const effectiveLastCalled = overrideLastCalled ?? lastCalled
-    const effectiveCalled = overrideCalled ?? called
     const marks = new Set<number>(
-      autoAlgoMark ? effectiveCalled : Array.from(markedNumbers)
+      autoAlgoMark ? called : Array.from(markedNumbers)
     )
-    const win = findBingoWinIncludingLast(marks, effectiveLastCalled, picks)
+    const win = findBingoWinIncludingLast(marks, lastCalled, picks)
     socket?.emit('bingo', {
       stake: currentBetHouse,
       boardId: win?.boardId,
@@ -1136,7 +1054,6 @@ export default function App() {
     autoBingoSentRef.current = true
   }
 
-  // --- Generate Telegram Bot Deep Link ---
   const getInviteLink = () => {
     return `https://t.me/WinBingoGamesBot?start=${userId}`
   }
@@ -1165,12 +1082,12 @@ export default function App() {
       Array.from({ length: 15 }, (_, i) => i + 31),
       Array.from({ length: 15 }, (_, i) => i + 46),
       Array.from({ length: 15 }, (_, i) => i + 61),
-    ];
+    ]
 
-    const headers = ['B', 'I', 'N', 'G', 'O'];
+    const headers = ['B', 'I', 'N', 'G', 'O']
     const headerColors = [
       'bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'
-    ];
+    ]
 
     return (
       <div className="flex flex-col h-full w-full bg-slate-900/50 rounded-2xl p-2 border border-white/10 shadow-2xl">
@@ -1187,10 +1104,10 @@ export default function App() {
 
         <div className="grid grid-cols-5 gap-1.5 flex-1">
           {columns.map((col, colIndex) => (
-            <div key={colIndex} className="grid grid-rows-15 gap-1 h-full">
+            <div key={colIndex} className="grid grid-rows-[repeat(15,minmax(0,1fr))] gap-1 h-full">
               {col.map((num) => {
-                const isCalled = called.includes(num);
-                const isCurrent = currentNumber === num;
+                const isCalled = called.includes(num)
+                const isCurrent = currentNumber === num
                 return (
                   <div
                     key={num}
@@ -1205,14 +1122,14 @@ export default function App() {
                   >
                     {num}
                   </div>
-                );
+                )
               })}
             </div>
           ))}
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const numberToLetter = (n: number) => (n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O')
 
@@ -1228,13 +1145,6 @@ export default function App() {
   }
 
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const audioOnRef = useRef<boolean>(audioOn)
-  const isWaitingRef = useRef<boolean>(isWaiting)
-  const phaseRef = useRef<Phase>(phase)
-
-  useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
-  useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
-  useEffect(() => { phaseRef.current = phase }, [phase])
 
   const parseAmount = (message: string): number | null => {
     const patterns = [
@@ -1269,7 +1179,7 @@ export default function App() {
     }
     const tokens = text.match(/[A-Z0-9]{8,20}/gi)
     if (tokens) {
-      const sorted = tokens.sort((a,b)=>b.length-a.length)
+      const sorted = tokens.sort((a, b) => b.length - a.length)
       return sorted[0].toUpperCase()
     }
     return null
@@ -1299,7 +1209,7 @@ export default function App() {
         audio.currentTime = 0
         await audio.play()
         break
-      } catch (_) {
+      } catch {
         continue
       }
     }
@@ -1310,13 +1220,13 @@ export default function App() {
     isGamePage: boolean = false,
     highlightLineIndices: number[] = []
   ) => {
-    if (!boardId) return null;
-    const grid: BoardGrid | null = getBoard(boardId);
-    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>;
+    if (!boardId) return null
+    const grid: BoardGrid | null = getBoard(boardId)
+    if (!grid) return <div className="text-slate-400 p-4">Board Not Found</div>
 
-    const boardCanBingo = isGamePage ? checkBingo(grid) : false;
-    const headers = ['B', 'I', 'N', 'G', 'O'];
-    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'];
+    const boardCanBingo = isGamePage ? checkBingo(grid) : false
+    const headers = ['B', 'I', 'N', 'G', 'O']
+    const headerColors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500']
 
     return (
       <div className="bg-slate-900/80 rounded-2xl p-3 shadow-2xl border border-white/10 backdrop-blur-sm">
@@ -1333,11 +1243,11 @@ export default function App() {
 
         <div className="grid grid-cols-5 gap-1.5">
           {grid.map((val, idx) => {
-            const isFree = val === -1;
-            const isCalled = called.includes(val);
-            const isMarked = isFree || markedNumbers.has(val);
-            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled;
-            const isHighlight = highlightLineIndices.includes(idx);
+            const isFree = val === -1
+            const isCalled = called.includes(val)
+            const isMarked = isFree || markedNumbers.has(val)
+            const finalState = isGamePage ? (autoAlgoMark ? isCalled || isFree : isMarked) : isCalled
+            const isHighlight = highlightLineIndices.includes(idx)
 
             return (
               <div
@@ -1363,12 +1273,390 @@ export default function App() {
                   <div className="absolute top-0 right-0 -mr-1 -mt-1 h-3 w-3 bg-white rounded-full shadow-[0_0_8px_white]" />
                 )}
               </div>
-            );
+            )
           })}
         </div>
       </div>
-    );
-  };
+    )
+  }
+
+  const handleLogin = async () => {
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      setLoginError('Please enter username and password')
+      return
+    }
+
+    setLoginLoading(true)
+    setLoginError('')
+
+    try {
+      const response = await fetch(`${getApiUrl()}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername.trim(),
+          password: loginPassword,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setLoginError(result.error || 'Login failed')
+        setLoginLoading(false)
+        return
+      }
+
+      localStorage.setItem('userId', result.userId)
+      localStorage.setItem('username', result.username)
+      localStorage.setItem('authToken', result.token)
+
+      setUserId(result.userId)
+      setUsername(result.username)
+      setIsAuthenticated(true)
+      setIsFirstDeposit(result.isFirstDeposit !== false)
+      setBalance(result.balance || 0)
+      setBonus(result.bonus || 0)
+      setLoginUsername('')
+      setLoginPassword('')
+      setCurrentPage('welcome')
+    } catch {
+      setLoginError('Connection error. Please try again.')
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  const handleSignup = async () => {
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      setLoginError('Please enter username and password')
+      return
+    }
+
+    if (loginUsername.trim().length < 3) {
+      setLoginError('Username must be at least 3 characters')
+      return
+    }
+
+    if (loginPassword.length < 6) {
+      setLoginError('Password must be at least 6 characters')
+      return
+    }
+
+    setLoginLoading(true)
+    setLoginError('')
+
+    try {
+      const refCode = referralCode || localStorage.getItem('referralCode') || ''
+
+      const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername.trim(),
+          password: loginPassword,
+          initialBonus: 30,
+          referralCode: refCode,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setLoginError(result.error || 'Signup failed')
+        setLoginLoading(false)
+        return
+      }
+
+      localStorage.setItem('userId', result.userId)
+      localStorage.setItem('username', result.username)
+      localStorage.setItem('authToken', result.token)
+      localStorage.setItem('isNewUser', 'true')
+      localStorage.removeItem('referralCode')
+
+      setUserId(result.userId)
+      setUsername(result.username)
+      setIsAuthenticated(true)
+      setBalance(0)
+      setBonus(30)
+      setIsFirstDeposit(true)
+      setLoginUsername('')
+      setLoginPassword('')
+      setReferralCode('')
+      setCurrentPage('welcome')
+    } catch {
+      setLoginError('Connection error. Please try again.')
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('userId')
+    localStorage.removeItem('username')
+    localStorage.removeItem('authToken')
+    setUserId('')
+    setUsername('')
+    setIsAuthenticated(false)
+    setCurrentPage('login')
+    if (socket) {
+      socket.disconnect()
+      setSocket(null)
+    }
+  }
+
+  const renderLoginPage = () => (
+    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-md">
+        <div className="bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-8 space-y-4 sm:space-y-6">
+          <div className="text-center">
+            <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
+            <div className="text-slate-400 text-xs sm:text-sm">{t('welcome_login_msg')}</div>
+            {referralCode && (
+              <div className="mt-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-400 text-xs">
+                🎁 Invited by a friend! Sign up for bonus rewards!
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => {
+                setLoginMode('login')
+                setLoginError('')
+              }}
+              className={`flex-1 py-2 rounded-lg font-semibold ${
+                loginMode === 'login' 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-slate-700 text-slate-300'
+              }`}
+            >
+              {t('signin')}
+            </button>
+            <button
+              onClick={() => {
+                setLoginMode('signup')
+                setLoginError('')
+              }}
+              className={`flex-1 py-2 rounded-lg font-semibold ${
+                loginMode === 'signup' 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-slate-700 text-slate-300'
+              }`}
+            >
+              {t('signup')}
+            </button>
+          </div>
+
+          {loginError && (
+            <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 text-red-300 text-sm">
+              {loginError}
+            </div>
+          )}
+
+          <div className="space-y-3 sm:space-y-4">
+            <div>
+              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('username')}</label>
+              <input
+                type="text"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                placeholder={t('enter_username')}
+                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !loginLoading) {
+                    if (loginMode === 'login') handleLogin()
+                    else handleSignup()
+                  }
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('password')}</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder={t('enter_password')}
+                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !loginLoading) {
+                    if (loginMode === 'login') handleLogin()
+                    else handleSignup()
+                  }
+                }}
+              />
+            </div>
+            <button
+              onClick={loginMode === 'login' ? handleLogin : handleSignup}
+              disabled={!loginUsername.trim() || !loginPassword.trim() || loginLoading}
+              className="w-full py-2 sm:py-3 rounded-lg bg-emerald-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-700"
+            >
+              {loginLoading ? t('loading') : loginMode === 'login' ? t('signin') : t('create_account')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderWelcomePage = () => (
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
+        <div className="flex items-center justify-between py-1 sm:py-2">
+          <div className="text-lg sm:text-2xl font-bold truncate pr-2">{t('hello')}, {username}!</div>
+          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+            <button
+              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-amber-500 text-black font-semibold text-xs sm:text-sm"
+              onClick={() => setCurrentPage('depositSelect')}
+            >
+              {t('deposit')}
+            </button>
+            <button
+              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-blue-500 text-white font-semibold text-xs sm:text-sm"
+              onClick={() => setCurrentPage('withdrawal')}
+            >
+              {t('withdraw')}
+            </button>
+            <button
+              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 text-white font-semibold text-xs sm:text-sm"
+              onClick={handleLogout}
+            >
+              {t('logout')}
+            </button>
+          </div>
+        </div>
+
+        {showLanguageModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
+              <h2 className="text-2xl font-bold text-center mb-6 text-white">{t('select_lang')}</h2>
+              <div className="grid grid-cols-1 gap-3">
+                <button onClick={() => handleLanguageSelect('en')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">English</button>
+                <button onClick={() => handleLanguageSelect('am')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">አማርኛ</button>
+                <button onClick={() => handleLanguageSelect('ti')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">ትግርኛ</button>
+                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">Oromigna</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showLinkCopied && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-black px-6 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+            ✓ {t('link_copied')}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+          <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
+            <div>
+              <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('balance')}</div>
+              <div className="text-xs text-white/70 mb-1">{t('wallet_desc')}</div>
+              <div className="text-xl sm:text-3xl font-extrabold">{balance}</div>
+            </div>
+            <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
+          </div>
+
+          <div className="bg-purple-600/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
+            <div>
+              <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('bonus')}</div>
+              <div className="text-xs text-white/70 mb-1">{t('bonus_desc')}</div>
+              <div className="text-xl sm:text-3xl font-extrabold">{bonus}</div>
+            </div>
+            <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
+          </div>
+        </div>
+
+        <div className="bg-slate-800 rounded-lg p-2 text-center text-xs sm:text-sm text-emerald-400 font-bold border border-emerald-500/20">
+          {t('total_playable')}: {balance + bonus} Birr
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <button
+            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
+            onClick={() => setCurrentPage('instructions')}
+          >
+            {t('instructions')}
+          </button>
+          <button
+            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-purple-600 hover:bg-purple-500 text-xs sm:text-sm flex-1 font-semibold"
+            onClick={handleCopyInviteLink}
+          >
+            🔗 {t('invite')}
+          </button>
+        </div>
+
+        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+          <div className="text-xs text-slate-400 mb-1">Your unique invite link:</div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={getInviteLink()}
+              className="flex-1 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-600 outline-none"
+            />
+            <button
+              onClick={handleCopyInviteLink}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold"
+            >
+              Copy
+            </button>
+          </div>
+          <div className="text-xs text-amber-400 mt-2">
+            🎁 Earn 20 Birr Bonus for each friend who joins via the bot!
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <button
+            onClick={() => setCurrentPage('bingoHouseSelect')}
+            className="w-full bg-emerald-700/80 hover:bg-emerald-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group"
+          >
+            <div className="text-left">
+              <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_bingo')}</h3>
+              <div className="text-[10px] text-emerald-200">Live Bingo Rooms</div>
+            </div>
+            <div className="flex gap-1 opacity-90 group-hover:opacity-100">
+              <span className="bg-blue-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">B</span>
+              <span className="bg-pink-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">I</span>
+              <span className="bg-purple-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">N</span>
+              <span className="bg-green-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">G</span>
+              <span className="bg-orange-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">O</span>
+            </div>
+          </button>
+
+          <a href="/prokeno.html" className="block w-full">
+            <button className="w-full bg-purple-700/80 hover:bg-purple-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group">
+              <div className="text-left">
+                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_keno')}</h3>
+                <div className="text-[10px] text-purple-200">Instant Draw</div>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-black shadow-md group-hover:scale-110 transition-transform">80</div>
+            </button>
+          </a>
+
+          <button
+            onClick={() => alert('Aviator game is coming soon!')}
+            className="w-full bg-red-700/80 hover:bg-red-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all relative overflow-hidden"
+          >
+            <div className="text-left z-10">
+              <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_aviator')}</h3>
+              <div className="text-[10px] text-red-200">Crash Game</div>
+            </div>
+
+            <div className="flex items-center gap-2 z-10">
+              <div className="text-yellow-400 font-bold text-xs sm:text-sm animate-pulse border border-yellow-400/50 rounded px-2 py-1 bg-black/20">
+                COMING SOON
+              </div>
+              <div className="text-2xl">✈️</div>
+            </div>
+          </button>
+        </div>
+
+        <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
+      </div>
+    </div>
+  )
 
   const renderLobbyPage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
@@ -1394,9 +1682,9 @@ export default function App() {
               )}
             </div>
             {!isWaiting && (
-            <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
-              {String(seconds).padStart(2,"0")}s
-            </div>
+              <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 font-mono text-sm sm:text-lg">
+                {String(seconds).padStart(2,"0")}s
+              </div>
             )}
             {isWaiting && (
               <div className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-yellow-500/20 text-yellow-400 font-mono text-xs sm:text-sm">
@@ -1524,396 +1812,10 @@ export default function App() {
       </div>
     </div>
   )
-    const renderLoginPage = () => (
-    <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-md">
-        <div className="bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-8 space-y-4 sm:space-y-6">
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
-            <div className="text-slate-400 text-xs sm:text-sm">{t('welcome_login_msg')}</div>
-            {referralCode && (
-              <div className="mt-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-400 text-xs">
-                🎁 Invited by a friend! Sign up for bonus rewards!
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => {
-                setLoginMode('login')
-                setLoginError('')
-              }}
-              className={`flex-1 py-2 rounded-lg font-semibold ${
-                loginMode === 'login' 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-slate-700 text-slate-300'
-              }`}
-            >
-              {t('signin')}
-            </button>
-            <button
-              onClick={() => {
-                setLoginMode('signup')
-                setLoginError('')
-              }}
-              className={`flex-1 py-2 rounded-lg font-semibold ${
-                loginMode === 'signup' 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-slate-700 text-slate-300'
-              }`}
-            >
-              {t('signup')}
-            </button>
-          </div>
-
-          {loginError && (
-            <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 text-red-300 text-sm">
-              {loginError}
-            </div>
-          )}
-
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('username')}</label>
-              <input
-                type="text"
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                placeholder={t('enter_username')}
-                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !loginLoading) {
-                    if (loginMode === 'login') handleLogin()
-                    else handleSignup()
-                  }
-                }}
-              />
-            </div>
-            <div>
-              <label className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2 block">{t('password')}</label>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder={t('enter_password')}
-                className="w-full bg-slate-700 rounded-lg p-2 sm:p-3 border border-slate-600 outline-none focus:border-emerald-500 text-sm sm:text-base"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !loginLoading) {
-                    if (loginMode === 'login') handleLogin()
-                    else handleSignup()
-                  }
-                }}
-              />
-            </div>
-            <button
-              onClick={loginMode === 'login' ? handleLogin : handleSignup}
-              disabled={!loginUsername.trim() || !loginPassword.trim() || loginLoading}
-              className="w-full py-2 sm:py-3 rounded-lg bg-emerald-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-700"
-            >
-              {loginLoading ? t('loading') : loginMode === 'login' ? t('signin') : t('create_account')}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
-  const handleLogin = async () => {
-    if (!loginUsername.trim() || !loginPassword.trim()) {
-      setLoginError('Please enter username and password')
-      return
-    }
-
-    setLoginLoading(true)
-    setLoginError('')
-
-    try {
-      const response = await fetch(`${getApiUrl()}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: loginUsername.trim(),
-          password: loginPassword,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        setLoginError(result.error || 'Login failed')
-        setLoginLoading(false)
-        return
-      }
-
-      localStorage.setItem('userId', result.userId)
-      localStorage.setItem('username', result.username)
-      localStorage.setItem('authToken', result.token)
-
-      setUserId(result.userId)
-      setUsername(result.username)
-      setIsAuthenticated(true)
-      setIsFirstDeposit(result.isFirstDeposit !== false)
-      setBalance(result.balance || 0)
-      setBonus(result.bonus || 0)
-      setLoginUsername('')
-      setLoginPassword('')
-      setCurrentPage('welcome')
-    } catch (e: any) {
-      setLoginError('Connection error. Please try again.')
-    } finally {
-      setLoginLoading(false)
-    }
-  }
-
-  const handleSignup = async () => {
-    if (!loginUsername.trim() || !loginPassword.trim()) {
-      setLoginError('Please enter username and password')
-      return
-    }
-
-    if (loginUsername.trim().length < 3) {
-      setLoginError('Username must be at least 3 characters')
-      return
-    }
-
-    if (loginPassword.length < 6) {
-      setLoginError('Password must be at least 6 characters')
-      return
-    }
-
-    setLoginLoading(true)
-    setLoginError('')
-
-    try {
-      const refCode = referralCode || localStorage.getItem('referralCode') || ''
-
-      const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: loginUsername.trim(),
-          password: loginPassword,
-          initialBonus: 30,
-          referralCode: refCode,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        setLoginError(result.error || 'Signup failed')
-        setLoginLoading(false)
-        return
-      }
-
-      localStorage.setItem('userId', result.userId)
-      localStorage.setItem('username', result.username)
-      localStorage.setItem('authToken', result.token)
-      localStorage.setItem('isNewUser', 'true')
-      localStorage.removeItem('referralCode')
-
-      setUserId(result.userId)
-      setUsername(result.username)
-      setIsAuthenticated(true)
-      setBalance(0)
-      setBonus(30)
-      setIsFirstDeposit(true)
-      setLoginUsername('')
-      setLoginPassword('')
-      setReferralCode('')
-      setCurrentPage('welcome')
-    } catch (e: any) {
-      setLoginError('Connection error. Please try again.')
-    } finally {
-      setLoginLoading(false)
-    }
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('userId')
-    localStorage.removeItem('username')
-    localStorage.removeItem('authToken')
-    setUserId('')
-    setUsername('')
-    setIsAuthenticated(false)
-    setCurrentPage('login')
-    if (socket) {
-      socket.disconnect()
-      setSocket(null)
-    }
-  }
-
-  const renderWelcomePage = () => (
-    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
-      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
-        <div className="flex items-center justify-between py-1 sm:py-2">
-          <div className="text-lg sm:text-2xl font-bold truncate pr-2">{t('hello')}, {username}!</div>
-          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
-            <button
-              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-amber-500 text-black font-semibold text-xs sm:text-sm"
-              onClick={() => setCurrentPage('depositSelect')}
-            >
-              {t('deposit')}
-            </button>
-            <button
-              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-blue-500 text-white font-semibold text-xs sm:text-sm"
-              onClick={() => setCurrentPage('withdrawal')}
-            >
-              {t('withdraw')}
-            </button>
-            <button
-              className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-slate-700 text-white font-semibold text-xs sm:text-sm"
-              onClick={handleLogout}
-            >
-              {t('logout')}
-            </button>
-          </div>
-        </div>
-
-        {/* --- Language Selection Modal --- */}
-        {showLanguageModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
-              <h2 className="text-2xl font-bold text-center mb-6 text-white">{t('select_lang')}</h2>
-              <div className="grid grid-cols-1 gap-3">
-                <button onClick={() => handleLanguageSelect('en')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">English</button>
-                <button onClick={() => handleLanguageSelect('am')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">አማርኛ</button>
-                <button onClick={() => handleLanguageSelect('ti')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">ትግርኛ</button>
-                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">Oromigna</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --- Link Copied Toast --- */}
-        {showLinkCopied && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-black px-6 py-3 rounded-xl font-bold shadow-lg animate-bounce">
-            ✓ {t('link_copied')}
-          </div>
-        )}
-
-        {/* Dual Balance card */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-4">
-          <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
-            <div>
-              <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('balance')}</div>
-              <div className="text-xs text-white/70 mb-1">{t('wallet_desc')}</div>
-              <div className="text-xl sm:text-3xl font-extrabold">{balance}</div>
-            </div>
-            <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
-          </div>
-
-          <div className="bg-purple-600/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
-            <div>
-              <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('bonus')}</div>
-              <div className="text-xs text-white/70 mb-1">{t('bonus_desc')}</div>
-              <div className="text-xl sm:text-3xl font-extrabold">{bonus}</div>
-            </div>
-            <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
-          </div>
-        </div>
-
-        <div className="bg-slate-800 rounded-lg p-2 text-center text-xs sm:text-sm text-emerald-400 font-bold border border-emerald-500/20">
-          {t('total_playable')}: {balance + bonus} Birr
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <button
-            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm flex-1"
-            onClick={() => setCurrentPage('instructions')}
-          >
-            {t('instructions')}
-          </button>
-          <button
-            className="px-2 sm:px-4 py-1.5 sm:py-3 rounded bg-purple-600 hover:bg-purple-500 text-xs sm:text-sm flex-1 font-semibold"
-            onClick={handleCopyInviteLink}
-          >
-            🔗 {t('invite')}
-          </button>
-        </div>
-
-        {/* Invite Link Display */}
-        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-          <div className="text-xs text-slate-400 mb-1">Your unique invite link:</div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              readOnly
-              value={getInviteLink()}
-              className="flex-1 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-600 outline-none"
-            />
-            <button
-              onClick={handleCopyInviteLink}
-              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold"
-            >
-              Copy
-            </button>
-          </div>
-          <div className="text-xs text-amber-400 mt-2">
-            🎁 Earn 20 Birr Bonus for each friend who joins via the bot!
-          </div>
-        </div>
-
-        {/* Game Selection Buttons */}
-        <div className="space-y-4">
-            {/* BINGO Game Button */}
-            <button
-              onClick={() => setCurrentPage('bingoHouseSelect')}
-              className="w-full bg-emerald-700/80 hover:bg-emerald-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group"
-            >
-              <div className="text-left">
-                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_bingo')}</h3>
-                <div className="text-[10px] text-emerald-200">Live Bingo Rooms</div>
-              </div>
-              <div className="flex gap-1 opacity-90 group-hover:opacity-100">
-                <span className="bg-blue-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">B</span>
-                <span className="bg-pink-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">I</span>
-                <span className="bg-purple-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">N</span>
-                <span className="bg-green-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">G</span>
-                <span className="bg-orange-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">O</span>
-              </div>
-            </button>
-
-            {/* KENO Game Button */}
-            <a href="/prokeno.html" className="block w-full">
-              <button className="w-full bg-purple-700/80 hover:bg-purple-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group">
-                <div className="text-left">
-                  <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_keno')}</h3>
-                  <div className="text-[10px] text-purple-200">Instant Draw</div>
-                </div>
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-black shadow-md group-hover:scale-110 transition-transform">80</div>
-              </button>
-            </a>
-
-            {/* Aviator Game Button (Placeholder) */}
-            <button
-              onClick={() => alert('Aviator game is coming soon!')}
-              className="w-full bg-red-700/80 hover:bg-red-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all relative overflow-hidden"
-            >
-              <div className="text-left z-10">
-                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_aviator')}</h3>
-                <div className="text-[10px] text-red-200">Crash Game</div>
-              </div>
-
-              <div className="flex items-center gap-2 z-10">
-                <div className="text-yellow-400 font-bold text-xs sm:text-sm animate-pulse border border-yellow-400/50 rounded px-2 py-1 bg-black/20">
-                  COMING SOON
-                </div>
-                <div className="text-2xl">✈️</div>
-              </div>
-            </button>
-        </div>
-
-        <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
-      </div>
-    </div>
-  )
 
   const renderDepositSelect = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between py-1 sm:py-2">
           <button
             className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
@@ -1922,10 +1824,9 @@ export default function App() {
             {t('back')}
           </button>
           <div className="text-lg sm:text-2xl font-bold">{t('select_payment')}</div>
-          <div className="w-16"></div> {/* Spacer for centering */}
+          <div className="w-16"></div>
         </div>
 
-        {/* Banner: First Deposit Bonus */}
         {isFirstDeposit && (
           <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
              <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
@@ -1933,20 +1834,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Recommended label */}
-        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">Recommended</div>
+        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">{t('recommended')}</div>
 
         <div className="space-y-3">
-          {/* Telebirr Option */}
           <div
             onClick={() => {
-              setSelectedProvider('Telebirr');
-              setCurrentPage('depositConfirm');
+              setSelectedProvider('Telebirr')
+              setCurrentPage('depositConfirm')
             }}
             className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
           >
             <div className="flex items-center gap-3">
-              <img src="/icons/telebirr.png" className="w-8 h-8 rounded-lg object-cover bg-white" alt="Telebirr" />
+              <div className="w-8 h-8 rounded-lg object-cover bg-white flex items-center justify-center text-xs font-bold">TB</div>
               <div>
                 <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Telebirr</h3>
               </div>
@@ -1954,16 +1853,15 @@ export default function App() {
             <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
           </div>
 
-          {/* Ebirr Option */}
           <div
             onClick={() => {
-              setSelectedProvider('Ebirr');
-              setCurrentPage('depositConfirm');
+              setSelectedProvider('Ebirr')
+              setCurrentPage('depositConfirm')
             }}
             className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
           >
             <div className="flex items-center gap-3">
-              <img src="/icons/ebirr.png" className="w-8 h-8 rounded-lg object-cover bg-white" alt="Ebirr" />
+              <div className="w-8 h-8 rounded-lg object-cover bg-white flex items-center justify-center text-xs font-bold">EB</div>
               <div>
                 <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Ebirr (KAAFI)</h3>
               </div>
@@ -1978,7 +1876,6 @@ export default function App() {
   const renderDepositConfirm = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between py-1 sm:py-2">
           <button
             className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
@@ -1987,15 +1884,13 @@ export default function App() {
             {t('back')}
           </button>
           <div className="text-lg sm:text-2xl font-bold">{t('confirm_payment')}</div>
-          <div className="w-16"></div> {/* Spacer for centering */}
+          <div className="w-16"></div>
         </div>
 
-        {/* Provider */}
         <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide">
           Payment via {selectedProvider}
         </div>
 
-        {/* First deposit bonus banner */}
         {isFirstDeposit && (
           <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
              <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
@@ -2008,7 +1903,6 @@ export default function App() {
         )}
 
         <div className="space-y-4">
-          {/* Deposit Account Box */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 flex items-center justify-between shadow-lg">
             <div>
               <div className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">{t('deposit_account')}</div>
@@ -2017,7 +1911,7 @@ export default function App() {
             </div>
             <button
               onClick={() => {
-                navigator.clipboard.writeText('0999282572');
+                navigator.clipboard.writeText('0999282572')
               }}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-semibold text-white transition-colors"
             >
@@ -2025,7 +1919,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Amount Input */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
             <div className="text-slate-300 text-xs sm:text-sm">{t('amount_deposit')}</div>
             <input
@@ -2033,15 +1926,14 @@ export default function App() {
               inputMode="numeric"
               value={depositAmount}
               onChange={(e) => {
-                const v = e.target.value;
-                if (v === '' || /^\d+$/.test(v)) setDepositAmount(v);
+                const v = e.target.value
+                if (v === '' || /^\d+$/.test(v)) setDepositAmount(v)
               }}
               placeholder="0.00 ETB"
               className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-sm sm:text-base text-white"
             />
           </div>
 
-          {/* Paste SMS Input */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
             <div className="text-slate-300 text-xs sm:text-sm">{t('paste_deposit_msg')}</div>
             <textarea
@@ -2051,40 +1943,39 @@ export default function App() {
               placeholder="Paste the SMS confirmation from your provider here..."
             />
 
-            {/* Submit Button */}
             <button
               disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
               onClick={async () => {
-                setDepositVerifying(true);
+                setDepositVerifying(true)
                 try {
-                  const baseAmount = Number(depositAmount);
+                  const baseAmount = Number(depositAmount)
                   const response = await fetch(`${getApiUrl()}/api/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       userId,
                       amount: baseAmount,
-                      provider: selectedProvider,
+                      account: '0999282572',
                       message: depositMessage,
-                      isFirstDeposit,
+                      transactionId: `TXN${Date.now()}`,
                     }),
-                  });
+                  })
 
-                  const result = await response.json();
+                  const result = await response.json()
 
                   if (result.success) {
-                    if (isFirstDeposit) setIsFirstDeposit(false);
-                    alert('Deposit submitted successfully!');
-                    setDepositAmount('');
-                    setDepositMessage('');
-                    setCurrentPage('welcome');
+                    if (isFirstDeposit) setIsFirstDeposit(false)
+                    alert('Deposit submitted successfully!')
+                    setDepositAmount('')
+                    setDepositMessage('')
+                    setCurrentPage('welcome')
                   } else {
-                    alert(result.error || 'Deposit failed');
+                    alert(result.error || 'Deposit failed')
                   }
                 } catch {
-                  alert('Network error, please try again');
+                  alert('Network error, please try again')
                 }
-                setDepositVerifying(false);
+                setDepositVerifying(false)
               }}
               className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
@@ -2093,7 +1984,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* How to Deposit Section */}
         <div className="mt-4">
           <div className="text-sm font-bold mb-2 text-slate-200">{t('how_to_deposit')}</div>
           <div className="bg-slate-800 h-32 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-700/80 transition-colors group shadow-lg">
@@ -2125,7 +2015,6 @@ export default function App() {
           </ul>
         </div>
 
-        {/* Bonuses Section */}
         <div className="bg-emerald-800/50 p-6 rounded-xl space-y-4 text-slate-300 border border-emerald-500/30">
           <h3 className="text-xl font-bold text-emerald-400">🎁 Bonuses & Rewards</h3>
           <ul className="space-y-3">
@@ -2185,25 +2074,25 @@ export default function App() {
                 </div>
                 <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
                 <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
-                  <div>{t('active')}: {house.activePlayers} {t('players')}</div>
-                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players')}</div>}
+                  <div>{t('active')}: {house.activePlayers} {t('players_label')}</div>
+                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players_label')}</div>}
                   <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
-              <div className="mt-auto flex items-center justify-between gap-2">
-                <button
+                <div className="mt-auto flex items-center justify-between gap-2">
+                  <button
                     className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
-                  onClick={() => {
+                    onClick={() => {
                       handleJoinBetHouse(house.stake)
-                  }}
-                >
+                    }}
+                  >
                     {isSelected ? t('go_lobby') : isLive ? t('join_wait') : t('play_now')}
-                </button>
+                  </button>
                   <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+                </div>
               </div>
-            </div>
             )
           }) : (
-            [5, 10, 20, 50, 100, 200].map(amount => {
+            [5, 10, 20, 50, 100, 200, 500].map(amount => {
               const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
                 5: { label: 'Micro', tag: 10, color: 'bg-indigo-600' },
                 10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
@@ -2211,6 +2100,7 @@ export default function App() {
                 50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
                 100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
                 200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
+                500: { label: 'Premium', tag: 80, color: 'bg-purple-600' },
               }
               const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
               return (
@@ -2264,7 +2154,9 @@ export default function App() {
                 setTakenBoards([])
                 setPhase('lobby')
                 if (previousStake) {
-                  setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('bingoHouseSelect')
+                  setCurrentBetHouse(previousStake)
+                  setStake(previousStake)
+                  setCurrentPage('bingoHouseSelect')
                 } else {
                   setCurrentPage('welcome')
                 }
@@ -2653,7 +2545,6 @@ export default function App() {
 
   return (
     <>
-      {/* Add loading overlay for Telegram login */}
       {loginLoading && currentPage === 'login' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
           <div className="text-center">
@@ -2663,7 +2554,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Rest of your app */}
       {!loginLoading && mainPage}
 
       {winnerInfo && (
@@ -2717,4 +2607,3 @@ export default function App() {
     </>
   )
 }
-  
