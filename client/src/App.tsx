@@ -1433,8 +1433,7 @@ export default function App() {
                 </div>
               )}
               {picks.length > 0 && !isWaiting && (
-                <div className="flex gap-1 sm:gap
-                2 mt-1 sm:mt-2">
+                <div className="flex gap-1 sm:gap-2 mt-1 sm:mt-2">
                   {picks.map(n => (
                     <span key={n} className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 text-black rounded text-xs sm:text-sm">Board {n}</span>
                   ))}
@@ -2382,7 +2381,7 @@ export default function App() {
       </div>
       </div>
     </div>
-  )
+  );
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
       return (
