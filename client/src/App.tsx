@@ -177,7 +177,7 @@ const translations = {
     rule_5: 'ቢንጎ የሚለውን የሚጫኑት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
     dep_with_title: 'ገቢ እና ወጪ',
     dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
-    audio: 'ድምፅ',
+    audio: 'ድምጽ',
     auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
     auto_algo: 'ራስ-ሰር አልጎሪዝም',
     players_label: 'ተጫዋቾች',
@@ -2382,7 +2382,7 @@ export default function App() {
       </div>
       </div>
     </div>
-    )
+  )
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
       return (
@@ -2657,5 +2657,3 @@ export default function App() {
     </>
   )
 }
-
-                 
