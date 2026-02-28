@@ -1711,12 +1711,14 @@ export default function App() {
       socket.disconnect()
       setSocket(null)
     }
-  } 
-  const renderWelcomePage = () => (
+  }
+    const renderWelcomePage = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
         <div className="flex items-center justify-between py-1 sm:py-2">
-          <div className="text-lg sm:text-2xl font-bold truncate pr-2">{t('hello')}, {username}!</div>
+          <div className="text-lg sm:text-2xl font-bold truncate pr-2">
+            {t('hello')}, {username}!
+          </div>
           <div className="flex gap-1 sm:gap-2 flex-shrink-0">
             <button
               className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-amber-500 text-black font-semibold text-xs sm:text-sm"
@@ -1739,7 +1741,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* --- Language Selection Modal --- */}
         {showLanguageModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
             <div className="bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
@@ -1754,14 +1755,12 @@ export default function App() {
           </div>
         )}
 
-        {/* --- Link Copied Toast --- */}
         {showLinkCopied && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-500 text-black px-6 py-3 rounded-xl font-bold shadow-lg animate-bounce">
             ✓ {t('link_copied')}
           </div>
         )}
 
-        {/* Dual Balance card */}
         <div className="grid grid-cols-2 gap-2 sm:gap-4">
           <div className="bg-rose-500/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
             <div>
@@ -1771,7 +1770,7 @@ export default function App() {
             </div>
             <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
           </div>
-          
+
           <div className="bg-purple-600/80 rounded-lg sm:rounded-xl p-2 sm:p-3 flex flex-col justify-between h-full">
             <div>
               <div className="uppercase text-[10px] sm:text-xs tracking-wider opacity-90 font-bold">{t('bonus')}</div>
@@ -1781,7 +1780,7 @@ export default function App() {
             <div className="text-right text-xs sm:text-sm font-bold opacity-80 mt-2">ETB</div>
           </div>
         </div>
-        
+
         <div className="bg-slate-800 rounded-lg p-2 text-center text-xs sm:text-sm text-emerald-400 font-bold border border-emerald-500/20">
           {t('total_playable')}: {balance + bonus} Birr
         </div>
@@ -1801,7 +1800,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Invite Link Display */}
         <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
           <div className="text-xs text-slate-400 mb-1">Your unique invite link:</div>
           <div className="flex items-center gap-2">
@@ -1823,54 +1821,51 @@ export default function App() {
           </div>
         </div>
 
-        {/* Game Selection Buttons */}
         <div className="space-y-4">
-            {/* BINGO Game Button */}
-            <button
-              onClick={() => setCurrentPage('bingoHouseSelect')}
-              className="w-full bg-emerald-700/80 hover:bg-emerald-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group"
-            >
+          <button
+            onClick={() => setCurrentPage('bingoHouseSelect')}
+            className="w-full bg-emerald-700/80 hover:bg-emerald-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group"
+          >
+            <div className="text-left">
+              <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_bingo')}</h3>
+              <div className="text-[10px] text-emerald-200">Live Bingo Rooms</div>
+            </div>
+            <div className="flex gap-1 opacity-90 group-hover:opacity-100">
+              <span className="bg-blue-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">B</span>
+              <span className="bg-pink-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">I</span>
+              <span className="bg-purple-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">N</span>
+              <span className="bg-green-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">G</span>
+              <span className="bg-orange-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">O</span>
+            </div>
+          </button>
+
+          <a href="/prokeno.html" className="block w-full">
+            <button className="w-full bg-purple-700/80 hover:bg-purple-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group">
               <div className="text-left">
-                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_bingo')}</h3>
-                <div className="text-[10px] text-emerald-200">Live Bingo Rooms</div>
+                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_keno')}</h3>
+                <div className="text-[10px] text-purple-200">Instant Draw</div>
               </div>
-              <div className="flex gap-1 opacity-90 group-hover:opacity-100">
-                <span className="bg-blue-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">B</span>
-                <span className="bg-pink-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">I</span>
-                <span className="bg-purple-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">N</span>
-                <span className="bg-green-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">G</span>
-                <span className="bg-orange-500 text-white rounded px-1.5 py-0.5 text-xs font-bold">O</span>
+              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-black shadow-md group-hover:scale-110 transition-transform">
+                80
               </div>
             </button>
+          </a>
 
-            {/* KENO Game Button */}
-            <a href="/prokeno.html" className="block w-full">
-              <button className="w-full bg-purple-700/80 hover:bg-purple-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all group">
-                <div className="text-left">
-                  <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_keno')}</h3>
-                  <div className="text-[10px] text-purple-200">Instant Draw</div>
-                </div>
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-black shadow-md group-hover:scale-110 transition-transform">80</div>
-              </button>
-            </a>
-
-            {/* Aviator Game Button (Placeholder) */}
-            <button
-              onClick={() => alert('Aviator game is coming soon!')}
-              className="w-full bg-red-700/80 hover:bg-red-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all relative overflow-hidden"
-            >
-              <div className="text-left z-10">
-                <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_aviator')}</h3>
-                <div className="text-[10px] text-red-200">Crash Game</div>
+          <button
+            onClick={() => alert('Aviator game is coming soon!')}
+            className="w-full bg-red-700/80 hover:bg-red-600/80 rounded-xl p-3 shadow-lg border border-white/10 flex items-center justify-between transition-all relative overflow-hidden"
+          >
+            <div className="text-left z-10">
+              <h3 className="text-xl sm:text-2xl font-black italic tracking-wider">{t('game_title_aviator')}</h3>
+              <div className="text-[10px] text-red-200">Crash Game</div>
+            </div>
+            <div className="flex items-center gap-2 z-10">
+              <div className="text-yellow-400 font-bold text-xs sm:text-sm animate-pulse border border-yellow-400/50 rounded px-2 py-1 bg-black/20">
+                COMING SOON
               </div>
-              
-              <div className="flex items-center gap-2 z-10">
-                <div className="text-yellow-400 font-bold text-xs sm:text-sm animate-pulse border border-yellow-400/50 rounded px-2 py-1 bg-black/20">
-                  COMING SOON
-                </div>
-                <div className="text-2xl">✈️</div>
-              </div>
-            </button>
+              <div className="text-2xl">✈️</div>
+            </div>
+          </button>
         </div>
 
         <div className="text-[10px] sm:text-xs text-slate-400 pb-2">Version preview</div>
@@ -1881,7 +1876,6 @@ export default function App() {
   const renderDepositSelect = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between py-1 sm:py-2">
           <button
             className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
@@ -1890,26 +1884,25 @@ export default function App() {
             {t('back')}
           </button>
           <div className="text-lg sm:text-2xl font-bold">{t('select_payment')}</div>
-          <div className="w-16"></div> {/* Spacer for centering */}
+          <div className="w-16"></div>
         </div>
 
-        {/* Banner: First Deposit Bonus */}
         {isFirstDeposit && (
           <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
-             <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
-             <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">Your deposit will be doubled!</div>
+            <div className="text-lg sm:text-xl font-black italic tracking-wider">{t('first_deposit_bonus')}</div>
+            <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">Your deposit will be doubled!</div>
           </div>
         )}
 
-        {/* Recommended label */}
-        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">Recommended</div>
+        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">
+          {t('recommended')}
+        </div>
 
         <div className="space-y-3">
-          {/* Telebirr Option */}
           <div
             onClick={() => {
-              setSelectedProvider('Telebirr');
-              setCurrentPage('depositConfirm');
+              setSelectedProvider('Telebirr')
+              setCurrentPage('depositConfirm')
             }}
             className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
           >
@@ -1919,14 +1912,15 @@ export default function App() {
                 <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Telebirr</h3>
               </div>
             </div>
-            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
+            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">
+              ›
+            </div>
           </div>
 
-          {/* Ebirr Option */}
           <div
             onClick={() => {
-              setSelectedProvider('Ebirr');
-              setCurrentPage('depositConfirm');
+              setSelectedProvider('Ebirr')
+              setCurrentPage('depositConfirm')
             }}
             className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
           >
@@ -1936,7 +1930,9 @@ export default function App() {
                 <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Ebirr (KAAFI)</h3>
               </div>
             </div>
-            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
+            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">
+              ›
+            </div>
           </div>
         </div>
       </div>
@@ -1946,7 +1942,6 @@ export default function App() {
   const renderDepositConfirm = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between py-1 sm:py-2">
           <button
             className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
@@ -1955,104 +1950,105 @@ export default function App() {
             {t('back')}
           </button>
           <div className="text-lg sm:text-2xl font-bold">{t('confirm_payment')}</div>
-          <div className="w-16"></div> {/* Spacer for centering */}
+          <div className="w-16"></div>
         </div>
 
-        {/* Provider */}
         <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide">
           Payment via {selectedProvider}
         </div>
 
-        {/* First deposit bonus banner */}
         {isFirstDeposit && (
           <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
-             <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
-             <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">
-                {depositAmount
-                  ? `Your deposit will be doubled to ${Number(depositAmount) * 2} Birr!`
-                  : 'Your deposit will be doubled!'}
-             </div>
+            <div className="text-lg sm:text-xl font-black italic tracking-wider">{t('first_deposit_bonus')}</div>
+            <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">
+              {depositAmount ? `Your deposit will be doubled to ${Number(depositAmount) * 2} Birr!` : 'Your deposit will be doubled!'}
+            </div>
           </div>
         )}
 
         <div className="space-y-4">
-          {/* Deposit Account Box */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 flex items-center justify-between shadow-lg">
             <div>
               <div className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">{t('deposit_account')}</div>
               <div className="text-base sm:text-lg font-bold text-emerald-400">0999282572</div>
               <div className="text-slate-400 text-[10px] sm:text-xs">Abeje Dita Debele</div>
             </div>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText('0999282572');
-              }}
+            <button
+              onClick={() => navigator.clipboard.writeText('0999282572')}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-semibold text-white transition-colors"
             >
               Copy
             </button>
           </div>
 
-          {/* Amount Input */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
             <div className="text-slate-300 text-xs sm:text-sm">{t('amount_deposit')}</div>
             <input
               type="text"
               inputMode="numeric"
               value={depositAmount}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === '' || /^\d+$/.test(v)) setDepositAmount(v);
+              onChange={e => {
+                const v = e.target.value
+                if (v === '' || /^\d+$/.test(v)) setDepositAmount(v)
               }}
               placeholder="0.00 ETB"
               className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-sm sm:text-base text-white"
             />
           </div>
 
-          {/* Paste SMS Input */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
             <div className="text-slate-300 text-xs sm:text-sm">{t('paste_deposit_msg')}</div>
             <textarea
               value={depositMessage}
-              onChange={(e) => setDepositMessage(e.target.value)}
+              onChange={e => setDepositMessage(e.target.value)}
               className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-white text-xs sm:text-sm h-24 resize-none"
               placeholder="Paste the SMS confirmation from your provider here..."
             />
-            
-            {/* Submit Button */}
             <button
               disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
               onClick={async () => {
-                setDepositVerifying(true);
+                if (!depositAmount || Number(depositAmount) <= 0) {
+                  showBingoError('Please enter a valid amount.')
+                  return
+                }
+
+                setDepositVerifying(true)
                 try {
-                  const baseAmount = Number(depositAmount);
+                  const amountNum = Number(depositAmount)
+                  const txFromMsg = parseTransactionId(depositMessage)
+                  const transactionId = txFromMsg || `TXN${Date.now()}`
+
                   const response = await fetch(`${getApiUrl()}/api/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       userId,
-                      amount: baseAmount,
+                      amount: amountNum,
                       provider: selectedProvider,
+                      account: '0999282572',
                       message: depositMessage,
-                      isFirstDeposit,
-                    }),
-                  });
+                      transactionId,
+                      isFirstDeposit
+                    })
+                  })
 
-                  const result = await response.json();
+                  const result = await response.json()
 
-                  if (result.success) {
-                    if (isFirstDeposit) setIsFirstDeposit(false);
-                    alert('Deposit submitted successfully!');
-                    setDepositAmount('');
-                    setDepositMessage('');
-                    setCurrentPage('welcome');
-                  } else {
-                    alert(result.error || 'Deposit failed');
-                  }
-                } catch {
-                  alert('Network error, please try again');
+                  if (!result.success) throw new Error(result.error || 'Deposit failed')
+
+                  if (result.balance !== undefined) setBalance(result.balance)
+                  if (result.bonus !== undefined) setBonus(result.bonus)
+                  if (result.isFirstDeposit === false) setIsFirstDeposit(false)
+
+                  alert('Deposit verified successfully!')
+                  setDepositAmount('')
+                  setDepositMessage('')
+                  setCurrentPage('welcome')
+                } catch (error: any) {
+                  alert(error?.message || 'Network error, please try again')
+                } finally {
+                  setDepositVerifying(false)
                 }
-                setDepositVerifying(false);
               }}
               className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
@@ -2061,12 +2057,15 @@ export default function App() {
           </div>
         </div>
 
-        {/* How to Deposit Section */}
         <div className="mt-4">
           <div className="text-sm font-bold mb-2 text-slate-200">{t('how_to_deposit')}</div>
           <div className="bg-slate-800 h-32 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-700/80 transition-colors group shadow-lg">
             <svg className="w-8 h-8 text-slate-400 group-hover:text-emerald-400 transition-colors" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                clipRule="evenodd"
+              />
             </svg>
             <div className="text-slate-400 group-hover:text-slate-300 text-xs">Video tutorial</div>
           </div>
@@ -2080,7 +2079,9 @@ export default function App() {
       <div className="max-w-3xl mx-auto space-y-6 mt-8">
         <div className="flex items-center justify-between">
           <div className="text-2xl font-bold">{t('instructions')}</div>
-          <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
+          <button className="px-4 py-2 bg-slate-800 rounded" onClick={() => setCurrentPage('welcome')}>
+            {t('back')}
+          </button>
         </div>
         <div className="bg-slate-800 p-6 rounded-xl space-y-4 text-slate-300">
           <h3 className="text-xl font-bold text-white">{t('how_to_play')}</h3>
@@ -2092,22 +2093,27 @@ export default function App() {
             <li>{t('rule_5')}</li>
           </ul>
         </div>
-        
-        {/* Bonuses Section */}
+
         <div className="bg-emerald-800/50 p-6 rounded-xl space-y-4 text-slate-300 border border-emerald-500/30">
           <h3 className="text-xl font-bold text-emerald-400">🎁 Bonuses & Rewards</h3>
           <ul className="space-y-3">
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">✓</span>
-              <span><b>Welcome Bonus:</b> Get 30 Birr free (Bonus Balance) when you sign up!</span>
+              <span>
+                <b>Welcome Bonus:</b> Get 30 Birr free (Bonus Balance) when you sign up!
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-amber-400">✓</span>
-              <span><b>First Deposit 2X:</b> Your first deposit is doubled!</span>
+              <span>
+                <b>First Deposit 2X:</b> Your first deposit is doubled!
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-400">✓</span>
-              <span><b>Referral Bonus:</b> Earn 20 Birr (Bonus Balance) for each friend you invite via the Bot!</span>
+              <span>
+                <b>Referral Bonus:</b> Earn 20 Birr (Bonus Balance) for each friend you invite via the Bot!
+              </span>
             </li>
           </ul>
         </div>
@@ -2129,82 +2135,57 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 pb-2">
-          {betHouses.length > 0 ? betHouses.map((house: any) => {
-            const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
-              5: { label: 'Micro', tag: 10, color: 'bg-indigo-600' },
-              10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
-              20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
-              50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
-              100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
-              200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
-              500: { label: 'Premium', tag: 80, color: 'bg-purple-600' },
-            }
-            const config = cardConfig[house.stake] || { label: `${house.stake} Birr`, tag: 0, color: 'bg-slate-600' }
+          {(betHouses.length ? betHouses : AVAILABLE_FALLBACK_STAKES()).map((house: any) => {
+            const config = getHouseCardConfig(house.stake)
             const isLive = house.phase === 'calling'
             const isCountdown = house.phase === 'countdown'
             const isSelected = currentBetHouse === house.stake
-            
+
             return (
-              <div key={house.stake} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 ${isSelected ? 'ring-2 sm:ring-4 ring-yellow-400' : ''}`}>
+              <div
+                key={house.stake}
+                className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 ${
+                  isSelected ? 'ring-2 sm:ring-4 ring-yellow-400' : ''
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
-                  {isLive && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-500 text-[10px] sm:text-xs font-bold animate-pulse">LIVE</span>}
-                  {isCountdown && <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-500 text-[10px] sm:text-xs font-bold">Starting</span>}
+                  {isLive && (
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-500 text-[10px] sm:text-xs font-bold animate-pulse">
+                      LIVE
+                    </span>
+                  )}
+                  {isCountdown && (
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-500 text-[10px] sm:text-xs font-bold">
+                      Starting
+                    </span>
+                  )}
                 </div>
                 <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
                 <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
-                  <div>{t('active')}: {house.activePlayers} {t('players')}</div>
-                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players')}</div>}
+                  <div>Boards Selected: {house.activePlayers ?? 0}</div>
+                  <div>Live Participants: {house.participantCount ?? 0}</div>
+                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers}</div>}
                   <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
-              <div className="mt-auto flex items-center justify-between gap-2">
-                <button
+                <div className="mt-auto flex items-center justify-between gap-2">
+                  <button
                     className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 font-semibold text-xs sm:text-sm flex-1"
-                  onClick={() => {
-                      handleJoinBetHouse(house.stake)
-                  }}
-                >
+                    onClick={() => handleJoinBetHouse(house.stake)}
+                  >
                     {isSelected ? t('go_lobby') : isLive ? t('join_wait') : t('play_now')}
-                </button>
-                  <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
-              </div>
-            </div>
-            )
-          }) : (
-            [5, 10, 20, 50, 100, 200].map(amount => {
-              const cardConfig: Record<number, { label: string; tag: number; color: string }> = {
-                5: { label: 'Micro', tag: 10, color: 'bg-indigo-600' },
-                10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
-                20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
-                50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
-                100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
-                200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
-              }
-              const config = cardConfig[amount] || { label: `${amount} Birr`, tag: 0, color: 'bg-slate-600' }
-              return (
-                <div key={amount} className={`${config.color} rounded-lg sm:rounded-xl p-3 sm:p-5 flex flex-col gap-2 sm:gap-4`}>
-                  <div className="text-xs sm:text-sm opacity-90">{config.label}</div>
-                  <div className="text-xl sm:text-3xl font-extrabold">{amount} Birr</div>
-                  <div className="mt-auto flex items-center justify-between gap-2">
-                    <button
-                      className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-black/30 hover:bg-black/40 text-xs sm:text-sm flex-1"
-                      onClick={() => {
-                        handleJoinBetHouse(amount)
-                      }}
-                    >
-                      {t('play_now')}
-                    </button>
-                    <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">{config.tag}</div>
+                  </button>
+                  <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-black/20 flex items-center justify-center text-sm sm:text-xl font-black flex-shrink-0">
+                    {config.tag}
                   </div>
                 </div>
-              )
-            })
-          )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
   )
-
 
   const renderGamePage = () => {
     const recentlyCalled = called.slice(-6).reverse()
@@ -2214,13 +2195,12 @@ export default function App() {
       I: 'bg-pink-600',
       N: 'bg-purple-600',
       G: 'bg-green-600',
-      O: 'bg-orange-500',
+      O: 'bg-orange-500'
     }
-    
+
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col p-2 sm:p-4 overflow-hidden">
         <div className="w-full max-w-7xl mx-auto h-full flex flex-col">
-          
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
@@ -2233,7 +2213,9 @@ export default function App() {
                 setTakenBoards([])
                 setPhase('lobby')
                 if (previousStake) {
-                  setCurrentBetHouse(previousStake); setStake(previousStake); setCurrentPage('bingoHouseSelect') 
+                  setCurrentBetHouse(previousStake)
+                  setStake(previousStake)
+                  setCurrentPage('bingoHouseSelect')
                 } else {
                   setCurrentPage('welcome')
                 }
@@ -2243,14 +2225,14 @@ export default function App() {
               {t('close')}
             </button>
           </div>
-  
+
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-orange-500 rounded-lg p-2 sm:p-4">
               <div className="text-[10px] opacity-90">{t('stake')}</div>
               <div className="text-sm sm:text-2xl font-bold">{stake} Birr</div>
             </div>
             <div className="bg-blue-600 rounded-lg p-2 sm:p-4">
-              <div className="text-[10px] opacity-90">{t('players_label')}</div>
+              <div className="text-[10px] opacity-90">Boards Selected</div>
               <div className="text-sm sm:text-2xl font-bold">{players}</div>
             </div>
             <div className="bg-green-600 rounded-lg p-2 sm:p-4">
@@ -2258,7 +2240,7 @@ export default function App() {
               <div className="text-sm sm:text-2xl font-bold">{prize} Birr</div>
             </div>
           </div>
-  
+
           {lastCalled && (
             <div className="mb-3">
               <div className="w-full bg-slate-800/80 rounded-2xl px-3 sm:px-5 py-2 sm:py-3 border border-white/10 flex items-center justify-between gap-3 sm:gap-6">
@@ -2270,15 +2252,15 @@ export default function App() {
                   {phase === 'calling' && (
                     <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] sm:text-xs text-emerald-300 border border-emerald-500/40">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>{t('next_call_in')} {String(callCountdown).padStart(2, '0')}s</span>
+                      <span>
+                        {t('next_call_in')} {String(callCountdown).padStart(2, '0')}s
+                      </span>
                     </div>
                   )}
                 </div>
                 <div className="flex items-center justify-center">
                   <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-black flex flex-col items-center justify-center font-black text-base sm:text-2xl shadow-[0_0_22px_rgba(251,146,60,0.9)] animate-pulse">
-                    <div className="text-[10px] sm:text-xs tracking-wide">
-                      {numberToLetter(lastCalled)}
-                    </div>
+                    <div className="text-[10px] sm:text-xs tracking-wide">{numberToLetter(lastCalled)}</div>
                     <div>{lastCalled}</div>
                   </div>
                 </div>
@@ -2311,7 +2293,6 @@ export default function App() {
           )}
 
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6 flex-1 min-h-0 mb-2">
-            
             <div className="lg:col-span-2 bg-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col min-h-0 shadow-2xl border border-white/5">
               <div className="flex items-center justify-between mb-4 gap-3">
                 <div className="flex items-center gap-2">
@@ -2333,12 +2314,12 @@ export default function App() {
                   )}
                 </div>
               </div>
-  
+
               <div className="flex-1 overflow-y-auto">
                 <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Caller Grid:</div>
                 {renderCallerGrid(lastCalled ?? undefined)}
               </div>
-  
+
               <div className="hidden lg:flex items-center gap-3 mt-4">
                 <button
                   onClick={() => setAutoBingo(prev => !prev)}
@@ -2361,28 +2342,28 @@ export default function App() {
                 </button>
               </div>
             </div>
-  
+
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-4 flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs sm:text-sm font-semibold">{t('your_boards')}</div>
                 <div className="text-[10px] text-slate-400">{picks.length}/2</div>
               </div>
-  
+
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {picks.map((boardId) => (
+                {picks.map(boardId => (
                   <div key={boardId} className="bg-slate-700 rounded-lg p-2">
                     <div className="text-[10px] sm:text-sm text-slate-300 mb-1">Board {boardId}</div>
                     {renderCard(boardId, true)}
                   </div>
                 ))}
               </div>
-              
+
               <div className="mt-2 hidden sm:block text-[10px] text-slate-400 leading-tight">
                 {t('tap_mark_hint')}
               </div>
             </div>
           </div>
-  
+
           <div className="lg:hidden pb-1 space-y-2">
             <button
               onClick={() => setAutoBingo(prev => !prev)}
@@ -2408,9 +2389,8 @@ export default function App() {
           </div>
         </div>
       </div>
-    )
-  }
-
+    </div>
+  )
   const renderWithdrawalPage = () => {
     if (currentWithdrawalPage === 'confirm') {
       return (
@@ -2429,7 +2409,7 @@ export default function App() {
               <div className="text-xs sm:text-sm text-slate-300">{t('paste_withdraw_msg')}</div>
               <textarea
                 value={withdrawalMessage}
-                onChange={(e) => setWithdrawalMessage(e.target.value)}
+                onChange={e => setWithdrawalMessage(e.target.value)}
                 placeholder="After we process your withdrawal, you will receive a confirmation message. Paste it here to verify the withdrawal was successful."
                 rows={4}
                 className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none resize-none text-xs sm:text-sm"
@@ -2440,28 +2420,28 @@ export default function App() {
               disabled={!withdrawalMessage.trim() || withdrawalVerifying}
               onClick={async () => {
                 if (!withdrawalMessage.trim()) {
-                  alert('Please paste your withdrawal confirmation message')
+                  showBingoError('Please paste your withdrawal confirmation message')
                   return
                 }
-                
+
                 setWithdrawalVerifying(true)
                 try {
                   const amountNum = Number(withdrawalAmount)
-                  
+
                   const detectedAmount = parseAmount(withdrawalMessage)
                   if (!detectedAmount || Math.abs(detectedAmount - amountNum) > 0.01) {
                     alert('Amount in confirmation message does not match withdrawal amount')
                     setWithdrawalVerifying(false)
                     return
                   }
-                  
+
                   const transactionId = parseTransactionId(withdrawalMessage)
                   if (!transactionId) {
                     alert('Transaction ID not found in confirmation message')
                     setWithdrawalVerifying(false)
                     return
                   }
-                  
+
                   const response = await fetch(`${getApiUrl()}/api/withdrawal/verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2470,18 +2450,18 @@ export default function App() {
                       amount: amountNum,
                       account: withdrawalAccount,
                       message: withdrawalMessage,
-                      transactionId,
-                    }),
+                      transactionId
+                    })
                   })
-                  
+
                   const result = await response.json()
-                  
+
                   if (!result.success) {
                     alert(result.error || 'Withdrawal verification failed')
                     setWithdrawalVerifying(false)
                     return
                   }
-                  
+
                   alert('Withdrawal verified successfully!')
                   setWithdrawalAmount('')
                   setWithdrawalAccount('')
@@ -2498,13 +2478,18 @@ export default function App() {
               {withdrawalVerifying ? t('verifying') : t('verify_withdraw')}
             </button>
             <div>
-              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentWithdrawalPage('form')}>{t('back')}</button>
+              <button
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm"
+                onClick={() => setCurrentWithdrawalPage('form')}
+              >
+                {t('back')}
+              </button>
             </div>
           </div>
         </div>
       )
     }
-    
+
     return (
       <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
@@ -2512,7 +2497,9 @@ export default function App() {
           <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
             <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('available_balance')}</div>
             <div className="text-2xl sm:text-3xl font-bold">{balance} Birr</div>
-            <div className="text-xs text-orange-400 mt-1">Note: Bonus balance ({bonus} Birr) is not withdrawable.</div>
+            <div className="text-xs text-orange-400 mt-1">
+              Bonus ({bonus} Birr) is not withdrawable.
+            </div>
           </div>
           <div className="space-y-2 sm:space-y-3">
             <div>
@@ -2520,7 +2507,7 @@ export default function App() {
               <input
                 type="number"
                 value={withdrawalAmount}
-                onChange={(e) => setWithdrawalAmount(e.target.value)}
+                onChange={e => setWithdrawalAmount(e.target.value)}
                 placeholder="Enter amount in Birr"
                 className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
               />
@@ -2530,7 +2517,7 @@ export default function App() {
               <input
                 type="text"
                 value={withdrawalAccount}
-                onChange={(e) => setWithdrawalAccount(e.target.value)}
+                onChange={e => setWithdrawalAccount(e.target.value)}
                 placeholder="Enter your account number (same bank/provider as deposit)"
                 className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
               />
@@ -2541,18 +2528,18 @@ export default function App() {
               onClick={async () => {
                 const amountNum = Number(withdrawalAmount)
                 if (!Number.isFinite(amountNum) || amountNum <= 0) {
-                  alert('Enter a valid amount')
+                  showBingoError('Enter a valid amount')
                   return
                 }
                 if (amountNum > balance) {
-                  alert('Insufficient withdrawable balance')
+                  showBingoError('Insufficient withdrawable balance')
                   return
                 }
                 if (!withdrawalAccount.trim()) {
-                  alert('Enter your account number')
+                  showBingoError('Enter your account number')
                   return
                 }
-                
+
                 setWithdrawalVerifying(true)
                 try {
                   const response = await fetch(`${getApiUrl()}/api/withdrawal`, {
@@ -2561,18 +2548,18 @@ export default function App() {
                     body: JSON.stringify({
                       userId,
                       amount: amountNum,
-                      account: withdrawalAccount,
-                    }),
+                      account: withdrawalAccount
+                    })
                   })
-                  
+
                   const result = await response.json()
-                  
+
                   if (!result.success) {
                     alert(result.error || 'Withdrawal request failed')
                     setWithdrawalVerifying(false)
                     return
                   }
-                  
+
                   setCurrentWithdrawalPage('confirm')
                   alert('Withdrawal request submitted! Please check your account and paste the confirmation message.')
                 } catch (e: any) {
@@ -2596,33 +2583,43 @@ export default function App() {
             </div>
           </div>
           <div>
-            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
+            <button
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm"
+              onClick={() => setCurrentPage('welcome')}
+            >
+              {t('back')}
+            </button>
           </div>
         </div>
       </div>
     )
   }
 
-  // Redirect to login if not authenticated (except for login page)
   if (!isAuthenticated && currentPage !== 'login') {
     return renderLoginPage()
   }
 
-  // CORE RENDER LOGIC
   const mainPage =
-    currentPage === 'login' ? renderLoginPage()
-    : currentPage === 'welcome' ? renderWelcomePage()
-    : currentPage === 'instructions' ? renderInstructionsPage()
-    : currentPage === 'depositSelect' ? renderDepositSelect()
-    : currentPage === 'depositConfirm' ? renderDepositConfirm()
-    : currentPage === 'withdrawal' ? renderWithdrawalPage()
-    : currentPage === 'bingoHouseSelect' ? renderBingoHouseSelectPage() 
-    : currentPage === 'lobby' ? renderLobbyPage()
-    : renderGamePage()
+    currentPage === 'login'
+      ? renderLoginPage()
+      : currentPage === 'welcome'
+      ? renderWelcomePage()
+      : currentPage === 'instructions'
+      ? renderInstructionsPage()
+      : currentPage === 'depositSelect'
+      ? renderDepositSelect()
+      : currentPage === 'depositConfirm'
+      ? renderDepositConfirm()
+      : currentPage === 'withdrawal'
+      ? renderWithdrawalPage()
+      : currentPage === 'bingoHouseSelect'
+      ? renderBingoHouseSelectPage()
+      : currentPage === 'lobby'
+      ? renderLobbyPage()
+      : renderGamePage()
 
   return (
     <>
-      {/* Add loading overlay for Telegram login */}
       {loginLoading && currentPage === 'login' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
           <div className="text-center">
@@ -2631,16 +2628,19 @@ export default function App() {
           </div>
         </div>
       )}
-      
-      {/* Rest of your app */}
+
       {!loginLoading && mainPage}
-      
+
+      {bingoError && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-2xl shadow-2xl border border-white/20 text-xs sm:text-sm font-semibold">
+          {bingoError}
+        </div>
+      )}
+
       {winnerInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-emerald-400/40 shadow-2xl p-4 sm:p-6 space-y-4">
-            <div className="text-lg sm:text-2xl font-bold text-emerald-300">
-              {t('bingo_btn')}
-            </div>
+            <div className="text-lg sm:text-2xl font-bold text-emerald-300">{t('bingo_btn')}</div>
             <div className="text-xs sm:text-sm text-slate-300 space-y-1">
               <div>
                 <span className="text-slate-500">{t('winner')}:</span>{' '}
@@ -2648,8 +2648,10 @@ export default function App() {
                   <span className="font-semibold text-emerald-300">
                     {winnerInfo.winnerName || 'System Player'} (Bot)
                   </span>
+                ) : winnerInfo.winnerName ? (
+                  <span className="font-semibold text-emerald-300">{winnerInfo.winnerName}</span>
                 ) : (
-                  <span className="font-mono break-all">{winnerInfo.playerId}</span>
+                  winnerInfo.playerId && <span className="font-mono break-all">{winnerInfo.playerId}</span>
                 )}
               </div>
               {typeof winnerInfo.prize === 'number' && (
@@ -2660,8 +2662,7 @@ export default function App() {
               )}
               {typeof winnerInfo.stake === 'number' && (
                 <div>
-                  <span className="text-slate-500">{t('stake')}:</span>{' '}
-                  <span>{winnerInfo.stake} Birr</span>
+                  <span className="text-slate-500">{t('stake')}:</span> <span>{winnerInfo.stake} Birr</span>
                 </div>
               )}
               <div>
@@ -2685,4 +2686,70 @@ export default function App() {
       )}
     </>
   )
+}
+
+/** Utility: fallback stakes if socket status not yet loaded */
+function AVAILABLE_FALLBACK_STAKES() {
+  return [5, 10, 20, 50, 100, 200, 500].map(stake => ({
+    stake,
+    phase: 'lobby',
+    activePlayers: 0,
+    participantCount: 0,
+    waitingPlayers: 0,
+    prize: 0
+  }))
+}
+
+/** Utility: card metadata per stake */
+function getHouseCardConfig(stake: number) {
+  const map: Record<number, { label: string; tag: number; color: string }> = {
+    5: { label: 'Micro', tag: 10, color: 'bg-indigo-600' },
+    10: { label: 'Mini', tag: 15, color: 'bg-sky-600' },
+    20: { label: 'Sweety', tag: 74, color: 'bg-orange-500' },
+    50: { label: 'Standard', tag: 40, color: 'bg-violet-600' },
+    100: { label: 'Grand', tag: 60, color: 'bg-teal-600' },
+    200: { label: 'Elite', tag: 75, color: 'bg-emerald-600' },
+    500: { label: 'Premium', tag: 80, color: 'bg-purple-600' }
+  }
+  return map[stake] || { label: `${stake} Birr`, tag: stake, color: 'bg-slate-600' }
+}
+
+/** Simple pattern helpers reused by deposit/withdraw forms */
+function parseAmount(message: string): number | null {
+  const patterns = [
+    /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
+    /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
+    /amount[:\s]*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*(?:sent|transferred|deposited|credited)/i
+  ]
+  for (const pattern of patterns) {
+    const match = message.match(pattern)
+    if (match) {
+      const amount = parseFloat(match[1])
+      if (!isNaN(amount) && amount > 0) return amount
+    }
+  }
+  const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
+  if (numbers && numbers.length > 0) {
+    const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
+    if (amounts.length > 0) return Math.max(...amounts)
+  }
+  return null
+}
+
+function parseTransactionId(text: string): string | null {
+  const patterns = [
+    /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
+    /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i
+  ]
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) return match[1].trim().toUpperCase()
+  }
+  const tokens = text.match(/[A-Z0-9]{8,20}/gi)
+  if (tokens) {
+    const sorted = tokens.sort((a, b) => b.length - a.length)
+    return sorted[0].toUpperCase()
+  }
+  return null
 }
