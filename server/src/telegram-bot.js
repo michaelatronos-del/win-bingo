@@ -6,7 +6,7 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8265646245:AAFoz7VyX2P71G4z
 const FRONTEND_URL = process.env.FRONTEND_URL || 'win-bingo-frontend.onrender.com';
 
 // FIX: Changed from localhost to actual Render backend URL
-const API_BASE_URL = process.env.API_BASE_URL || 'http://178.128.46.103/api';
+const API_BASE_URL = process.env.API_BASE_URL || 'win-bingo-frontend.onrender.com/api';
 
 console.log('🤖 Bot Configuration:');
 console.log('   Frontend URL:', FRONTEND_URL);
@@ -18,15 +18,9 @@ if (!BOT_TOKEN) {
   process.exit(1);
 }
 
-// FIXED: Initialize bot with polling (but ensure only one instance runs)
+// Initialize bot
 const bot = new TelegramBot(BOT_TOKEN, { 
-  polling: {
-    interval: 300,
-    autoStart: true,
-    params: {
-      timeout: 30
-    }
-  },
+  polling: true,
   request: {
     agentOptions: {
       keepAlive: true,
@@ -34,9 +28,6 @@ const bot = new TelegramBot(BOT_TOKEN, {
     }
   }
 });
-
-console.log('🤖 Bot using polling mode');
-console.log('📡 Listening for commands...');
 
 // Store user sessions
 const userSessions = new Map();
@@ -81,7 +72,7 @@ const translations = {
     registered: "ተመዝጊብኩም ኣለኹም። ሕጂ ክትጻወቱ ትኽእሉ። ተዘናገዑ!",
     alreadyRegistered: "እንቋዕ ደሓን መጻእኩም! ኣስቀድም ተመዝጊብኩም። ንምጽዋት Play ጠውቑ!",
     playButton: "🎮 ተጫወት",
-    errorOccurred: "ጌጋ ተፈጢሩ። በጃኹም ተመለሱ ሞክሩ。",
+    errorOccurred: "ጌጋ ተፈጢሩ። በጃኹም ተመለሱ ሞክሩ።",
     insufficientBalance: "በቂ ሂሳብ የለን። ንምቕፃል በጃኹም ገንዘብ ኣእትዉ።",
     sessionExpired: "ጊዜኹም ወዲኡ። በጃኹም /start ጽሓፉ።",
     shareOwnContact: "በጃኹም ናይ ገዛእ ርእስኹም ስልክ ቁጽሪ ኣካፍሉ።",
@@ -517,14 +508,13 @@ Token: ${session?.token ? '✓ Set' : '✗ Missing'}
 API URL: \`${API_BASE_URL}\`
 Frontend: \`${FRONTEND_URL}\`
 
-Bot Status: ✓ Running (Polling Mode)
-Mode: Long Polling
+Bot Status: ✓ Running
   `;
   
   await bot.sendMessage(chatId, debugInfo, { parse_mode: 'Markdown' });
 });
 
-// Error handling for polling errors
+// Error handling for polling
 bot.on('polling_error', (error) => {
   console.error('❌ Telegram polling error:', error.code);
   console.error('   Message:', error.message);
@@ -532,6 +522,11 @@ bot.on('polling_error', (error) => {
   if (error.code === 'EFATAL') {
     console.error('   Fatal error - bot may need restart');
   }
+});
+
+// Error handling for webhook errors
+bot.on('webhook_error', (error) => {
+  console.error('❌ Telegram webhook error:', error);
 });
 
 // General error handler
@@ -559,7 +554,7 @@ process.on('SIGTERM', () => {
 });
 
 // Log successful bot start
-console.log('✅ Telegram Bot is running in polling mode...');
+console.log('✅ Telegram Bot is running...');
 console.log('📡 Listening for commands...');
 console.log('🔗 Backend URL:', API_BASE_URL);
 console.log('');
