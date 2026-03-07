@@ -3,7 +3,7 @@ import crypto from 'crypto';
 
 // UPDATED: Use deployed backend URL instead of localhost
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8265646245:AAFoz7VyX2P71G4zkd4YNrKWdWpHRgniOOE';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://178.128.46.103';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'win-bingo-frontend.onrender.com';
 
 // FIX: Changed from localhost to actual Render backend URL
 const API_BASE_URL = process.env.API_BASE_URL || 'http://178.128.46.103/api';
@@ -18,19 +18,25 @@ if (!BOT_TOKEN) {
   process.exit(1);
 }
 
-// UPDATED: Initialize bot with webhook instead of polling
+// FIXED: Initialize bot with polling (but ensure only one instance runs)
 const bot = new TelegramBot(BOT_TOKEN, { 
-  webHook: {
-    port: 8443,
-    host: '0.0.0.0'
+  polling: {
+    interval: 300,
+    autoStart: true,
+    params: {
+      timeout: 30
+    }
+  },
+  request: {
+    agentOptions: {
+      keepAlive: true,
+      family: 4
+    }
   }
 });
 
-// Set webhook URL
-bot.setWebHook(`${FRONTEND_URL}/telegram-webhook`);
-
-console.log('🤖 Bot using webhook mode');
-console.log('📡 Webhook URL:', `${FRONTEND_URL}/telegram-webhook`);
+console.log('🤖 Bot using polling mode');
+console.log('📡 Listening for commands...');
 
 // Store user sessions
 const userSessions = new Map();
@@ -75,7 +81,7 @@ const translations = {
     registered: "ተመዝጊብኩም ኣለኹም። ሕጂ ክትጻወቱ ትኽእሉ። ተዘናገዑ!",
     alreadyRegistered: "እንቋዕ ደሓን መጻእኩም! ኣስቀድም ተመዝጊብኩም። ንምጽዋት Play ጠውቑ!",
     playButton: "🎮 ተጫወት",
-    errorOccurred: "ጌጋ ተፈጢሩ። በጃኹም ተመለሱ ሞክሩ।",
+    errorOccurred: "ጌጋ ተፈጢሩ። በጃኹም ተመለሱ ሞክሩ。",
     insufficientBalance: "በቂ ሂሳብ የለን። ንምቕፃል በጃኹም ገንዘብ ኣእትዉ።",
     sessionExpired: "ጊዜኹም ወዲኡ። በጃኹም /start ጽሓፉ።",
     shareOwnContact: "በጃኹም ናይ ገዛእ ርእስኹም ስልክ ቁጽሪ ኣካፍሉ።",
@@ -511,19 +517,22 @@ Token: ${session?.token ? '✓ Set' : '✗ Missing'}
 API URL: \`${API_BASE_URL}\`
 Frontend: \`${FRONTEND_URL}\`
 
-Bot Status: ✓ Running (Webhook Mode)
-Webhook: \`${FRONTEND_URL}/telegram-webhook\`
+Bot Status: ✓ Running (Polling Mode)
+Mode: Long Polling
   `;
   
   await bot.sendMessage(chatId, debugInfo, { parse_mode: 'Markdown' });
 });
 
-// Error handling for webhook errors
-bot.on('webhook_error', (error) => {
-  console.error('❌ Telegram webhook error:', error);
+// Error handling for polling errors
+bot.on('polling_error', (error) => {
+  console.error('❌ Telegram polling error:', error.code);
+  console.error('   Message:', error.message);
+  
+  if (error.code === 'EFATAL') {
+    console.error('   Fatal error - bot may need restart');
+  }
 });
-
-// REMOVED: polling_error handler since we're using webhooks
 
 // General error handler
 process.on('unhandledRejection', (reason, promise) => {
@@ -539,19 +548,19 @@ process.on('uncaughtException', (error) => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n⚠️ Received SIGINT, shutting down gracefully...');
-  // No need to stop polling since we're using webhooks
+  bot.stopPolling();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('\n⚠️ Received SIGTERM, shutting down gracefully...');
-  // No need to stop polling since we're using webhooks
+  bot.stopPolling();
   process.exit(0);
 });
 
 // Log successful bot start
-console.log('✅ Telegram Bot is running in webhook mode...');
-console.log('📡 Webhook endpoint ready...');
+console.log('✅ Telegram Bot is running in polling mode...');
+console.log('📡 Listening for commands...');
 console.log('🔗 Backend URL:', API_BASE_URL);
 console.log('');
 
