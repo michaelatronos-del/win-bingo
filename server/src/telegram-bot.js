@@ -3,9 +3,10 @@ import crypto from 'crypto';
 
 // UPDATED: Use deployed backend URL instead of localhost
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8265646245:AAFoz7VyX2P71G4zkd4YNrKWdWpHRgniOOE';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'win-bingo-frontend.onrender.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://win-bingo-frontend.onrender.com';
+
 // FIX: Changed from localhost to actual Render backend URL
-const API_BASE_URL = process.env.API_BASE_URL || 'win-bingo-backend.onrender.com/api';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://win-bingo-backend.onrender.com/api';
 
 console.log('🤖 Bot Configuration:');
 console.log('   Frontend URL:', FRONTEND_URL);
