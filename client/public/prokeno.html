@@ -564,1037 +564,1037 @@
             font-size: 0.65rem;
             color: var(--muted);
         }
+        
+.win-popup {
+  position: absolute;
+  left: 50%;
+  bottom: 20%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid var(--gold);
+  padding: 20px 40px;
+  border-radius: 50px;
+  color: var(--gold);
+  font-size: 2rem;
+  font-weight: 900;
+  text-align: center;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  white-space: nowrap;
+  opacity: 0;
+  animation: floatUp 4s ease-out forwards;
+}
 
-        .win-popup {
-            position: absolute;
-            left: 50%;
-            bottom: 20%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            border: 2px solid var(--gold);
-            padding: 20px 40px;
-            border-radius: 50px;
-            color: var(--gold);
-            font-size: 2rem;
-            font-weight: 900;
-            text-align: center;
-            pointer-events: none;
-            z-index: 100;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-            white-space: nowrap;
-            opacity: 0;
-            animation: floatUp 4s ease-out forwards;
-        }
+.waiting-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  border-radius: 24px;
+}
 
-        .waiting-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-            border-radius: 24px;
-        }
+.waiting-overlay h2 {
+  color: var(--gold);
+  margin-bottom: 10px;
+}
 
-        .waiting-overlay h2 {
-            color: var(--gold);
-            margin-bottom: 10px;
-        }
+.waiting-overlay p {
+  color: var(--muted);
+}
 
-        .waiting-overlay p {
-            color: var(--muted);
-        }
+.online-players {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 5px;
+}
 
-        .online-players {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.7rem;
-            color: var(--muted);
-            margin-top: 5px;
-        }
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
 
-        .online-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--primary);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+@keyframes floatUp {
+  0% {
+      opacity: 0;
+      transform: translate(-50%, 50px) scale(0.5);
+  }
+  15% {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1.1);
+  }
+  30% {
+      transform: translate(-50%, -10px) scale(1);
+  }
+  80% {
+      opacity: 1;
+      transform: translate(-50%, -100px);
+  }
+  100% {
+      opacity: 0;
+      transform: translate(-50%, -200px);
+  }
+}
 
-        @keyframes floatUp {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, 50px) scale(0.5);
-            }
-            15% {
-                opacity: 1;
-                transform: translate(-50%, 0) scale(1.1);
-            }
-            30% {
-                transform: translate(-50%, -10px) scale(1);
-            }
-            80% {
-                opacity: 1;
-                transform: translate(-50%, -100px);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -200px);
-            }
-        }
+@keyframes ballPop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
 
-        @keyframes ballPop {
-            0% { transform: scale(0); }
-            100% { transform: scale(1); }
-        }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+::-webkit-scrollbar {
+  width: 4px;
+}
 
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
+::-webkit-scrollbar-thumb {
+  background: var(--cell);
+  border-radius: 10px;
+}
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--cell);
-            border-radius: 10px;
-        }
+.balance-display {
+  text-align: center;
+  background: rgba(0,0,0,0.5);
+  padding: 8px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--gold);
+}
 
-        .balance-display {
-            text-align: center;
-            background: rgba(0,0,0,0.5);
-            padding: 8px 15px;
-            border-radius: 12px;
-            border: 1px solid var(--gold);
-        }
+.balance-label {
+  font-size: 0.65rem;
+  color: var(--gold);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
 
-        .balance-label {
-            font-size: 0.65rem;
-            color: var(--gold);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+.balance-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+}
 
-        .balance-value {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .currency {
-            font-size: 0.9rem;
-            color: var(--muted);
-        }
-    </style>
+.currency {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+</style>
 </head>
 
 <body>
-    <div class="app" id="mainApp">
-        <div class="top-nav">
-            <a href="/" class="back-btn">← Back to Bingo</a>
-            <div class="page-title">PRO KENO 80</div>
-            <div style="width: 100px;"></div>
-        </div>
-
-        <div class="game-header">
-            <div class="header-top">
-                <div class="timer-box">
-                    <div class="timer-label" id="timerLabel">NEXT DRAW IN</div>
-                    <div id="timer">00:40</div>
-                    <div class="online-players">
-                        <span class="online-dot"></span>
-                        <span id="onlineCount">0 players online</span>
-                    </div>
-                </div>
-                
-                <div class="balance-display">
-                    <div class="balance-label">BALANCE</div>
-                    <div id="userBalanceDisplay" class="balance-value">
-                        <span class="currency">Syncing...</span>
-                    </div>
-                </div>
-
-                <div style="text-align: right">
-                    <div class="timer-label">TOTAL DRAW</div>
-                    <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">20 / 80</div>
-                </div>
-            </div>
-            <div class="draw-slots" id="drawSlots"></div>
-        </div>
-
-        <div class="prev-draw-container" id="prevDrawContainer">
-            <div class="prev-draw-label">Last Draw Results</div>
-            <div class="prev-draw-list" id="prevDrawList"></div>
-        </div>
-
-        <div class="board" id="board"></div>
-
-        <div class="controls">
-            <div class="bet-row">
-                <div class="display-stat" id="pickedDisplay">0 / 10 Selected</div>
-
-                <div class="bet-stepper">
-                    <button class="step-btn" id="minusBtn">-</button>
-                    <input type="number" id="betInput" class="bet-input" value="2.00" min="2" step="1" readonly>
-                    <button class="step-btn" id="plusBtn">+</button>
-                </div>
-
-                <button class="bet-btn" id="betBtn">PLACE BET</button>
-            </div>
-            <!-- AUTO PICK and CLEAR buttons removed -->
-        </div>
-
-        <div>
-            <div class="ticket-tabs">
-                <button class="tab-btn active" id="liveTabBtn">LIVE TICKETS</button>
-                <button class="tab-btn" id="historyTabBtn">MY TICKETS</button>
-                <button class="tab-btn" id="gameLogsTabBtn">GAME HISTORY</button>
-                <button class="tab-btn" id="hotNumbersTabBtn">🔥 HOT NUMBERS</button>
-            </div>
-            <div class="tickets-container" id="ticketsContainer"></div>
-        </div>
-
-        <div id="animationContainer"></div>
-        <div id="waitingOverlay" class="waiting-overlay" style="display: none;">
-            <h2>⏳ Game In Progress</h2>
-            <p>Please wait for the next round...</p>
-            <p id="waitingTimer"></p>
-        </div>
-    </div>
-
-    <script>
-    const getServerUrl = () => {
-        return "https://win-bingo-backend.onrender.com";
-    };
-    
-    const SERVER_URL = getServerUrl();
-    const API_BASE_URL = SERVER_URL + '/api';
-    
-    const USER_TOKEN = localStorage.getItem('authToken'); 
-    const USER_ID = localStorage.getItem('userId');
-    const USERNAME = localStorage.getItem('username') || 'Player';
-
-    if (!USER_TOKEN || !USER_ID) {
-        alert("Please log in first!");
-        window.location.href = "/";
-    }
-
-    let socket = null;
-    let userBalance = 0.00;
-    // UPDATED: Added userBonus variable
-    let userBonus = 0.00;
-    const MAX_PICK = 10;
-    const MIN_BET = 2; // Changed from 10 to 2
-
-    let gameState = 'BETTING';
-    let currentGameId = 0;
-    let timeLeft = 40; // Default UI timer
-    let selectedNumbers = new Set();
-    let liveTickets = [];
-    let otherPlayersTickets = [];
-    let ticketHistory = []; 
-    let gameLogs = []; 
-    let lastDrawResult = []; 
-    let currentTab = 'LIVE'; 
-    let ticketCounter = 1;
-    let drawnBalls = [];
-    let joinedMidGame = false;
-    let hotNumbers = [];
-    let onlinePlayersCount = 0;
-
-    // --- UPDATED PAYOUT FORMULA ---
-        // --- UPDATED PAYOUT TABLE ---
-        const getMultiplier = (picks, hits) => {
-        const payTable = {
-            2:  { 1: 1, 2: 10 },
-            3:  { 2: 2, 3: 50 },
-            4:  { 2: 1.5, 3: 10, 4: 80 },
-            5:  { 2: 1, 3: 3, 4: 30, 5: 150 },
-            6:  { 3: 2, 4: 15, 5: 60, 6: 500 },
-            7:  { 3: 2, 4: 4, 5: 20, 6: 80, 7: 1000 },
-            8:  { 4: 5, 5: 15, 6: 50, 7: 200, 8: 2000 },
-            9:  { 4: 2, 5: 10, 6: 25, 7: 125, 8: 1000, 9: 5000 },
-            10: { 5: 5, 6: 30, 7: 100, 8: 300, 9: 2000, 10: 10000 },
-        };
-
-        if (!payTable[picks]) return 0;
-        return payTable[picks][hits] || 0;
-    };
-
-    const boardEl = document.getElementById('board');
-    const timerEl = document.getElementById('timer');
-    const betBtn = document.getElementById('betBtn');
-    const drawSlots = document.getElementById('drawSlots');
-    const ticketsContainer = document.getElementById('ticketsContainer');
-    const pickedDisplay = document.getElementById('pickedDisplay');
-    const prevDrawContainer = document.getElementById('prevDrawContainer');
-    const prevDrawList = document.getElementById('prevDrawList');
-    const betInput = document.getElementById('betInput');
-    const animationContainer = document.getElementById('animationContainer');
-    const waitingOverlay = document.getElementById('waitingOverlay');
-    const waitingTimer = document.getElementById('waitingTimer');
-    const onlineCountEl = document.getElementById('onlineCount');
-
-    const cells = {};
-    for (let i = 1; i <= 80; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.textContent = i;
-        cell.onclick = () => handleCellClick(i);
-        boardEl.appendChild(cell);
-        cells[i] = cell;
-    }
-
-    function initSocket() {
-        socket = io(SERVER_URL, {
-            auth: {
-                token: USER_TOKEN,
-                userId: USER_ID,
-                username: USERNAME
-            },
-            transports: ['websocket', 'polling']
-        });
-
-        socket.on('connect', () => {
-            console.log('Connected to Keno server');
-            socket.emit('join_keno');
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-        });
-
-        socket.on('balance_update', (data) => {
-            userBalance = parseFloat(data.balance) || 0;
-            // UPDATED: Capture bonus from socket update
-            userBonus = parseFloat(data.bonus) || 0;
-            updateBalanceDisplay();
-        });
-
-        socket.on('keno_init', (data) => {
-            console.log('Keno init:', data);
-            currentGameId = data.gameId;
-            gameState = data.phase;
-            timeLeft = data.seconds;
-            
-            if (data.hotNumbers) {
-                hotNumbers = data.hotNumbers;
-                updateHotNumbersOnBoard();
-            }
-            
-            if (data.onlinePlayers !== undefined) {
-                onlinePlayersCount = data.onlinePlayers;
-                updateOnlineCount();
-            }
-            
-            if (data.phase === 'DRAWING' && data.drawnBalls && data.drawnBalls.length > 0) {
-                joinedMidGame = true;
-                showWaitingOverlay(true);
-                drawnBalls = data.drawnBalls;
-                displayExistingBalls(data.drawnBalls);
-            } else if (data.phase === 'BETTING') {
-                joinedMidGame = false;
-                showWaitingOverlay(false);
-            }
-            
-            updateUI();
-        });
-
-        socket.on('keno_state_sync', (data) => {
-            console.log('State sync:', data);
-            currentGameId = data.gameId;
-            gameState = data.phase;
-            timeLeft = data.seconds;
-            
-            if (data.phase === 'DRAWING') {
-                joinedMidGame = true;
-                showWaitingOverlay(true);
-                if (data.drawnBalls && data.drawnBalls.length > 0) {
-                    drawnBalls = data.drawnBalls;
-                    displayExistingBalls(data.drawnBalls);
-                }
-            }
-            
-            updateUI();
-        });
-
-        socket.on('keno_tick', (data) => {
-            if (data.phase === 'BETTING') {
-                gameState = 'BETTING';
-                timeLeft = data.seconds;
-                currentGameId = data.gameId;
-                updateTimerDisplay();
-            }
-        });
-
-        socket.on('keno_draw_start', (data) => {
-            console.log('Draw starting:', data);
-            gameState = 'DRAWING';
-            currentGameId = data.gameId;
-            drawnBalls = [];
-            drawSlots.innerHTML = '';
-            
-            if (joinedMidGame) {
-                showWaitingOverlay(true);
-            } else {
-                showWaitingOverlay(false);
-                betBtn.disabled = true;
-                document.getElementById('timerLabel').textContent = "DRAWING...";
-            }
-            
-            prevDrawContainer.style.display = 'none';
-        });
-
-        socket.on('keno_ball', (data) => {
-            console.log('Ball drawn:', data.ball, 'index:', data.index);
-            
-            if (data.gameId !== currentGameId) return;
-            
-            drawnBalls.push(data.ball);
-            
-            if (!joinedMidGame) {
-                const ball = document.createElement('div');
-                ball.className = 'draw-ball';
-                ball.textContent = data.ball;
-                drawSlots.appendChild(ball);
-
-                cells[data.ball].classList.add('drawn');
-
-                // Check my tickets
-                liveTickets.forEach(t => {
-                    if (t.gameId === currentGameId && t.picks.includes(data.ball)) {
-                        t.hits++;
-                        t.drawnMatches.push(data.ball);
-                        cells[data.ball].classList.add('hit');
-                    }
-                });
-                
-                // Check other players' tickets
-                otherPlayersTickets.forEach(t => {
-                    if (t.gameId === currentGameId && t.picks.includes(data.ball)) {
-                        t.hits++;
-                        t.drawnMatches.push(data.ball);
-                    }
-                });
-                
-                if (currentTab === 'LIVE') renderContent();
-            }
-        });
-
-        socket.on('keno_draw_complete', (data) => {
-            console.log('Draw complete:', data);
-            
-            if (data.gameId !== currentGameId) return;
-            
-            lastDrawResult = data.allBalls;
-            
-            gameLogs.push({
-                timestamp: new Date(),
-                numbers: [...data.allBalls].sort((a, b) => a - b),
-                gameId: data.gameId
-            });
-            
-            if (!joinedMidGame) {
-                finalizeGame(data.allBalls);
-            }
-        });
-
-        socket.on('keno_new_round', (data) => {
-            console.log('New round:', data);
-            
-            gameState = 'BETTING';
-            timeLeft = data.seconds;
-            currentGameId = data.gameId;
-            joinedMidGame = false;
-            drawnBalls = [];
-            otherPlayersTickets = [];
-            
-            showWaitingOverlay(false);
-            resetBoard();
-            updateUI();
-        });
-
-        // Receive other players' bets
-        socket.on('keno_player_bet', (data) => {
-            console.log('Other player bet:', data);
-            
-            if (data.oderId === USER_ID) return; // Skip own bets
-            
-            const ticket = {
-                oderId: data.oderId,
-                username: data.username || 'Player',
-                gameId: data.gameId,
-                picks: data.picks,
-                bet: data.amount,
-                hits: 0,
-                drawnMatches: [],
-                timestamp: new Date()
-            };
-            
-            // Check if already drawn balls hit this ticket
-            drawnBalls.forEach(ball => {
-                if (ticket.picks.includes(ball)) {
-                    ticket.hits++;
-                    ticket.drawnMatches.push(ball);
-                }
-            });
-            
-            otherPlayersTickets.push(ticket);
-            
-            if (currentTab === 'LIVE') renderContent();
-        });
-
-        // Online players count
-        socket.on('keno_online_count', (data) => {
-            onlinePlayersCount = data.count;
-            updateOnlineCount();
-        });
-
-        // Hot numbers update
-        socket.on('keno_hot_numbers', (data) => {
-            hotNumbers = data.numbers;
-            updateHotNumbersOnBoard();
-            if (currentTab === 'HOT') renderContent();
-        });
-    }
-
-    function updateOnlineCount() {
-        onlineCountEl.textContent = `${onlinePlayersCount} player${onlinePlayersCount !== 1 ? 's' : ''} online`;
-    }
-
-    function updateHotNumbersOnBoard() {
-        // Clear existing hot indicators
-        Object.values(cells).forEach(cell => {
-            const indicator = cell.querySelector('.hot-indicator');
-            if (indicator) indicator.remove();
-        });
-        
-        // Add hot indicators to top 10 numbers
-        const top10 = hotNumbers.slice(0, 10);
-        top10.forEach((item, index) => {
-            if (cells[item.number]) {
-                const indicator = document.createElement('div');
-                indicator.className = 'hot-indicator';
-                indicator.title = `#${index + 1} Hot - Picked ${item.count} times`;
-                cells[item.number].appendChild(indicator);
-            }
-        } );
-    }
-
-    function showWaitingOverlay(show) {
-        waitingOverlay.style.display = show ? 'flex' : 'none';
-        betBtn.disabled = show || gameState === 'DRAWING';
-    }
-
-    function displayExistingBalls(balls) {
-        drawSlots.innerHTML = '';
-        balls.forEach(num => {
-            const ball = document.createElement('div');
-            ball.className = 'draw-ball';
-            ball.textContent = num;
-            drawSlots.appendChild(ball);
-            cells[num].classList.add('drawn');
-        });
-    }
-
-    function updateUI() {
-        updateTimerDisplay();
-        
-        if (gameState === 'BETTING') {
-            document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
-            betBtn.disabled = false;
-        } else {
-            document.getElementById('timerLabel').textContent = "DRAWING...";
-            betBtn.disabled = true;
-        }
-        
-        if (lastDrawResult.length > 0 && gameState === 'BETTING') {
-            prevDrawContainer.style.display = 'block';
-            prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
-        }
-    }
-
-    function resetBoard() {
-        drawSlots.innerHTML = '';
-        Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
-        document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
-        betBtn.disabled = false;
-        
-        if (lastDrawResult.length > 0) {
-            prevDrawContainer.style.display = 'block';
-            prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
-        }
-        
-        updateHotNumbersOnBoard();
-    }
-
-    async function fetchUserBalance() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/user/balance`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${USER_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (!response.ok) throw new Error('Auth failed');
-
-            const data = await response.json();
-            if (data.balance !== undefined) {
-                userBalance = parseFloat(data.balance);
-                // UPDATED: Fetch bonus too
-                userBonus = parseFloat(data.bonus) || 0;
-                updateBalanceDisplay();
-            }
-        } catch (error) {
-            console.error("Balance Sync Error:", error);
-            document.getElementById('userBalanceDisplay').innerHTML = 
-                '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
-        }
-    }
-
-    async function fetchHotNumbers() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/games/keno/hot-numbers`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${USER_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.numbers) {
-                    hotNumbers = data.numbers;
-                    updateHotNumbersOnBoard();
-                    if (currentTab === 'HOT') renderContent();
-                }
-            }
-        } catch (error) {
-            console.error("Hot numbers fetch error:", error);
-        }
-    }
-
-    function updateBalanceDisplay() {
-        const balEl = document.getElementById('userBalanceDisplay');
-        if (balEl) {
-            // UPDATED: Show total playable (Wallet + Bonus)
-            const total = userBalance + userBonus;
-            balEl.innerHTML = `${total.toFixed(2)} <span class="currency">Birr</span>`;
-        }
-    }
-
-    function handleCellClick(num) {
-        if (gameState !== 'BETTING' || joinedMidGame) return;
-        
-        if (selectedNumbers.has(num)) {
-            selectedNumbers.delete(num);
-            cells[num].classList.remove('selected');
-        } else if (selectedNumbers.size < MAX_PICK) {
-            selectedNumbers.add(num);
-            cells[num].classList.add('selected');
-        }
-        pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
-    }
-
-    // AUTO PICK and CLEAR button handlers removed
-
-    document.getElementById('plusBtn').onclick = () => {
-        let val = parseFloat(betInput.value);
-        let newBet = val + 1; // Increment by 1 Birr
-        const totalFunds = userBalance + userBonus;
-        // Ensure new bet doesn't exceed total funds
-        if (newBet <= totalFunds) { 
-            betInput.value = newBet.toFixed(2);
-        } else {
-            betInput.value = totalFunds.toFixed(2); // Set to max available if balance is less
-        }
-    };
-
-    document.getElementById('minusBtn').onclick = () => {
-        let val = parseFloat(betInput.value);
-        let newBet = val - 1; // Decrement by 1 Birr
-        // Ensure bet doesn't go below minimum of 2
-        if (newBet >= MIN_BET) { 
-            betInput.value = newBet.toFixed(2);
-        } else {
-            betInput.value = MIN_BET.toFixed(2); // Set to minimum bet if trying to go below
-        }
-    };
-
-    document.getElementById('liveTabBtn').onclick = () => { currentTab = 'LIVE'; updateTabUI(); renderContent(); };
-    document.getElementById('historyTabBtn').onclick = () => { currentTab = 'HISTORY'; updateTabUI(); renderContent(); };
-    document.getElementById('gameLogsTabBtn').onclick = () => { currentTab = 'LOGS'; updateTabUI(); renderContent(); };
-    document.getElementById('hotNumbersTabBtn').onclick = () => { currentTab = 'HOT'; updateTabUI(); renderContent(); fetchHotNumbers(); };
-
-    function updateTabUI() {
-        document.getElementById('liveTabBtn').classList.toggle('active', currentTab === 'LIVE');
-        document.getElementById('historyTabBtn').classList.toggle('active', currentTab === 'HISTORY');
-        document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
-        document.getElementById('hotNumbersTabBtn').classList.toggle('active', currentTab === 'HOT');
-    }
-
-    betBtn.onclick = async () => {
-        if (gameState !== 'BETTING') {
-            return alert("Betting is closed! Wait for next round.");
-        }
-        
-        if (joinedMidGame) {
-            return alert("Please wait for the next round to place bets.");
-        }
-        
-        if (selectedNumbers.size < 2) {
-            return alert("Pick at least 2 numbers!");
-        }
-        
-        const betVal = parseFloat(betInput.value);
-        
-        if (betVal < MIN_BET) {
-            return alert(`Minimum bet is ${MIN_BET} Birr!`);
-        }
-        
-        // UPDATED: Check Total Playable Funds
-        const totalPlayable = userBalance + userBonus;
-        if (betVal > totalPlayable) {
-            return alert("Insufficient Balance!");
-        }
-
-        try {
-            const picksArray = Array.from(selectedNumbers);
-            
-            const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${USER_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    userId: USER_ID, 
-                    amount: betVal,
-                    picks: picksArray,
-                    gameId: currentGameId
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                alert(result.error || "Bet Failed");
-                fetchUserBalance(); // Refresh balance in case of server-side issue
-                return;
-            }
-            
-            userBalance = result.newBalance;
-            // UPDATED: Update Bonus from response if available (needs backend support, otherwise fetch)
-            if(result.newBonus !== undefined) userBonus = result.newBonus;
-            
-            updateBalanceDisplay();
-
-            const ticket = {
-                id: ticketCounter++,
-                gameId: currentGameId,
-                picks: picksArray,
-                bet: betVal,
-                hits: 0,
-                drawnMatches: [],
-                payout: 0,
-                timestamp: new Date(),
-                status: 'WAITING'
-            };
-            liveTickets.push(ticket);
-            
-            // Clear selections after successful bet
-            selectedNumbers.clear();
-            Object.values(cells).forEach(c => c.classList.remove('selected'));
-            pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
-
-            if (currentTab === 'LIVE') renderContent();
-            
-        } catch (error) {
-            console.error('Bet error:', error);
-            alert("Network Error");
-        }
-    };
-
-    function renderContent() {
-        ticketsContainer.innerHTML = "";
-        
-        if (currentTab === 'HOT') {
-            renderHotNumbers();
-            return;
-        }
-        
-        if (currentTab === 'LOGS') {
-            if (gameLogs.length === 0) {
-                ticketsContainer.innerHTML = `<div class="empty-msg">No game history available yet.</div>`;
-                return;
-            }
-            const displayLogs = [...gameLogs].reverse();
-            displayLogs.forEach((log) => {
-                const div = document.createElement('div');
-                div.className = 'game-log';
-                const timeStr = log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                div.innerHTML = `
-                    <div class="log-info">
-                        <div style="font-size:0.65rem; color:var(--primary); font-weight:700">GAME #${log.gameId || '?'} • ${timeStr}</div>
-                        <div class="log-numbers">
-                            ${log.numbers.map(n => `<span class="log-badge">${n}</span>`).join('')}
-                        </div>
-                    </div>
-                `;
-                ticketsContainer.appendChild(div);
-            });
-            return;
-        }
-
-        if (currentTab === 'LIVE') {
-            // Render my tickets first
-            if (liveTickets.length === 0 && otherPlayersTickets.length === 0) {
-                ticketsContainer.innerHTML = `<div class="empty-msg">No live tickets. Place a bet!</div>`;
-                return;
-            }
-            
-            // My tickets
-            if (liveTickets.length > 0) {
-                const myHeader = document.createElement('div');
-                myHeader.style.cssText = 'font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;';
-                myHeader.textContent = '📋 MY TICKETS';
-                ticketsContainer.appendChild(myHeader);
-                
-                liveTickets.forEach(t => {
-                    ticketsContainer.appendChild(createTicketElement(t, false));
-                });
-            }
-            
-            // Other players' tickets
-            if (otherPlayersTickets.length > 0) {
-                const divider = document.createElement('div');
-                divider.className = 'section-divider';
-                divider.textContent = `👥 OTHER PLAYERS (${otherPlayersTickets.length})`;
-                ticketsContainer.appendChild(divider);
-                
-                otherPlayersTickets.forEach(t => {
-                    ticketsContainer.appendChild(createTicketElement(t, true));
-                });
-            }
-            return;
-        }
-
-        // HISTORY tab
-        const source = ticketHistory;
-        if (source.length === 0) {
-            ticketsContainer.innerHTML = `<div class="empty-msg">No ticket history yet.</div>`;
-            return;
-        }
-        
-        const displayList = [...source].reverse();
-        displayList.forEach(t => {
-            ticketsContainer.appendChild(createTicketElement(t, false, true));
-        });
-    }
-
-    function createTicketElement(t, isOtherUser = false, isHistory = false) {
-        const div = document.createElement('div');
-        div.className = `ticket ${t.payout > 0 ? 'win' : ''} ${isOtherUser ? 'other-user' : ''}`;
-        const timeStr = t.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        let resultLabel = '--';
-        if (isHistory || t.status === 'DONE') {
-            resultLabel = t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00';
-        }
-        
-        let ownerLabel = '';
-        if (isOtherUser) {
-            ownerLabel = `<div class="ticket-owner">👤 ${t.username || 'Player'}</div>`;
-        }
-        
-        div.innerHTML = `
-            <div class="ticket-info">
-                ${ownerLabel}
-                <div style="font-size:0.65rem; color:var(--muted)">${isOtherUser ? '' : 'TICKET #' + t.id + ' • '}BET ${t.bet} Birr</div>
-                <div class="ticket-numbers">
-                    ${t.picks.map(n => {
-                        const isMatched = t.drawnMatches && t.drawnMatches.includes(n);
-                        return `<span class="hit-badge ${isMatched ? 'matched' : ''}">${n}</span>`;
-                    }).join('')}
-                </div>
-                <div style="font-size:0.75rem; color:var(--primary); font-weight:700">${t.hits || 0} HITS</div>
-                <div class="ticket-time">${timeStr}</div>
-            </div>
-            <div class="ticket-payout">${resultLabel}</div>
-        `;
-        return div;
-    }
-
-    function renderHotNumbers() {
-        if (hotNumbers.length === 0) {
-            ticketsContainer.innerHTML = `<div class="empty-msg">Loading hot numbers...</div>`;
-            fetchHotNumbers();
-            return;
-        }
-
-        let html = `
-            <div class="stats-header">
-                <div class="stats-title">🔥 MOST PICKED NUMBERS</div>
-                <div class="stats-period">Last 24 Hours</div>
-            </div>
-            <div class="hot-numbers-grid">
-        `;
-
-        hotNumbers.forEach((item, index) => {
-            let rankClass = '';
-            let rankLabel = '';
-            
-            if (index < 5) {
-                rankClass = 'top-5';
-                rankLabel = `🏆 #${index + 1}`;
-            } else if (index < 10) {
-                rankClass = 'top-10';
-                rankLabel = `#${index + 1}`;
-            } else {
-                rankLabel = `#${index + 1}`;
-            }
-
-            html += `
-                <div class="hot-number-item ${rankClass}" onclick="quickSelectNumber(${item.number})">
-                    <div class="hot-number-rank">${rankLabel}</div>
-                    <div class="hot-number-ball">${item.number}</div>
-                    <div class="hot-number-count"><span>${item.count}</span> picks</div>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-        
-        // Add cold numbers section
-        if (hotNumbers.length >= 80) {
-            const coldNumbers = [...hotNumbers].reverse().slice(0, 10);
-            html += `
-                <div class="stats-header" style="margin-top: 20px;">
-                    <div class="stats-title">❄️ LEAST PICKED NUMBERS</div>
-                    <div class="stats-period">Last 24 Hours</div>
-                </div>
-                <div class="hot-numbers-grid">
-            `;
-            
-            coldNumbers.forEach((item, index) => {
-                html += `
-                    <div class="hot-number-item" onclick="quickSelectNumber(${item.number})">
-                        <div class="hot-number-rank" style="color: var(--accent);">#${80 - index}</div>
-                        <div class="hot-number-ball" style="background: var(--accent);">${item.number}</div>
-                        <div class="hot-number-count"><span>${item.count}</span> picks</div>
-                    </div>
-                `;
-            });
-            
-            html += `</div>`;
-        }
-
-        ticketsContainer.innerHTML = html;
-    }
-
-    // Quick select a number from hot numbers
-    window.quickSelectNumber = function(num) {
-        if (gameState !== 'BETTING' || joinedMidGame) {
-            alert("Wait for betting phase to select numbers!");
-            return;
-        }
-        
-        if (!selectedNumbers.has(num) && selectedNumbers.size < MAX_PICK) {
-            selectedNumbers.add(num);
-            cells[num].classList.add('selected');
-            pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
-        }
-    };
-
-    function showWinAnimation(amount) {
-        const popup = document.createElement('div');
-        popup.className = 'win-popup';
-        popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} Birr`;
-        animationContainer.appendChild(popup);
-        
-        setTimeout(() => {
-            popup.remove();
-        }, 4000);
-    }
-
-    function updateTimerDisplay() {
-        const m = Math.floor(timeLeft / 60);
-        const s = timeLeft % 60;
-        timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    async function finalizeGame(allBalls) {
-        let totalWin = 0;
-
-        liveTickets.forEach(t => {
-            if (t.gameId === currentGameId) {
-                const mult = getMultiplier(t.picks.length, t.hits);
-                t.payout = t.bet * mult;
-                t.status = 'DONE';
-                totalWin += t.payout;
-                ticketHistory.push(t);
-            }
-        });
-        
-        liveTickets = liveTickets.filter(t => t.gameId !== currentGameId);
-        otherPlayersTickets = [];
-        
-        if (totalWin > 0) {
-            showWinAnimation(totalWin);
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${USER_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        userId: USER_ID, 
-                        totalWin: totalWin,
-                        gameId: currentGameId 
-                    })
-                });
-                
-                const result = await response.json();
-                if (result.success) {
-                    userBalance = result.newBalance;
-                    updateBalanceDisplay();
-                } else {
-                    console.error("Server settlement failed:", result.error);
-                }
-            } catch (e) { 
-                console.error("Settlement network error:", e); 
-            }
-        }
-
-        renderContent();
-    }
-
-    fetchUserBalance();
-    initSocket();
-    renderContent();
-    fetchHotNumbers();
-    setInterval(fetchUserBalance, 30000);
-    setInterval(fetchHotNumbers, 60000); // Refresh hot numbers every minute
-    </script>
+<div class="app" id="mainApp">
+<div class="top-nav">
+  <a href="/" class="back-btn">← Back to Bingo</a>
+  <div class="page-title">PRO KENO 80</div>
+  <div style="width: 100px;"></div>
+</div>
+
+<div class="game-header">
+  <div class="header-top">
+      <div class="timer-box">
+          <div class="timer-label" id="timerLabel">NEXT DRAW IN</div>
+          <div id="timer">00:40</div>
+          <div class="online-players">
+              <span class="online-dot"></span>
+              <span id="onlineCount">0 players online</span>
+          </div>
+      </div>
+      
+      <div class="balance-display">
+          <div class="balance-label">BALANCE</div>
+          <div id="userBalanceDisplay" class="balance-value">
+              <span class="currency">Syncing...</span>
+          </div>
+      </div>
+
+      <div style="text-align: right">
+          <div class="timer-label">TOTAL DRAW</div>
+          <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">20 / 80</div>
+      </div>
+  </div>
+  <div class="draw-slots" id="drawSlots"></div>
+</div>
+
+<div class="prev-draw-container" id="prevDrawContainer">
+  <div class="prev-draw-label">Last Draw Results</div>
+  <div class="prev-draw-list" id="prevDrawList"></div>
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="controls">
+  <div class="bet-row">
+      <div class="display-stat" id="pickedDisplay">0 / 10 Selected</div>
+
+      <div class="bet-stepper">
+          <button class="step-btn" id="minusBtn">-</button>
+          <input type="number" id="betInput" class="bet-input" value="2.00" min="2" step="1" readonly>
+          <button class="step-btn" id="plusBtn">+</button>
+      </div>
+
+      <button class="bet-btn" id="betBtn">PLACE BET</button>
+  </div>
+  <!-- AUTO PICK and CLEAR buttons removed -->
+</div>
+
+<div>
+  <div class="ticket-tabs">
+      <button class="tab-btn active" id="liveTabBtn">LIVE TICKETS</button>
+      <button class="tab-btn" id="historyTabBtn">MY TICKETS</button>
+      <button class="tab-btn" id="gameLogsTabBtn">GAME HISTORY</button>
+      <button class="tab-btn" id="hotNumbersTabBtn">🔥 HOT NUMBERS</button>
+  </div>
+  <div class="tickets-container" id="ticketsContainer"></div>
+</div>
+
+<div id="animationContainer"></div>
+<div id="waitingOverlay" class="waiting-overlay" style="display: none;">
+  <h2>⏳ Game In Progress</h2>
+  <p>Please wait for the next round...</p>
+  <p id="waitingTimer"></p>
+</div>
+</div>
+
+<script>
+const getServerUrl = () => {
+return "http://178.128.46.103/api";
+};
+
+const SERVER_URL = getServerUrl();
+const API_BASE_URL = SERVER_URL + '/api';
+
+const USER_TOKEN = localStorage.getItem('authToken'); 
+const USER_ID = localStorage.getItem('userId');
+const USERNAME = localStorage.getItem('username') || 'Player';
+
+if (!USER_TOKEN || !USER_ID) {
+alert("Please log in first!");
+window.location.href = "/";
+}
+
+let socket = null;
+let userBalance = 0.00;
+// UPDATED: Added userBonus variable
+let userBonus = 0.00;
+const MAX_PICK = 10;
+const MIN_BET = 2; // Changed from 10 to 2
+
+let gameState = 'BETTING';
+let currentGameId = 0;
+let timeLeft = 40; // Default UI timer
+let selectedNumbers = new Set();
+let liveTickets = [];
+let otherPlayersTickets = [];
+let ticketHistory = []; 
+let gameLogs = []; 
+let lastDrawResult = []; 
+let currentTab = 'LIVE'; 
+let ticketCounter = 1;
+let drawnBalls = [];
+let joinedMidGame = false;
+let hotNumbers = [];
+let onlinePlayersCount = 0;
+
+// --- UPDATED PAYOUT FORMULA ---
+// --- UPDATED PAYOUT TABLE ---
+const getMultiplier = (picks, hits) => {
+const payTable = {
+  2:  { 1: 1, 2: 10 },
+  3:  { 2: 2, 3: 50 },
+  4:  { 2: 1.5, 3: 10, 4: 80 },
+  5:  { 2: 1, 3: 3, 4: 30, 5: 150 },
+  6:  { 3: 2, 4: 15, 5: 60, 6: 500 },
+  7:  { 3: 2, 4: 4, 5: 20, 6: 80, 7: 1000 },
+  8:  { 4: 5, 5: 15, 6: 50, 7: 200, 8: 2000 },
+  9:  { 4: 2, 5: 10, 6: 25, 7: 125, 8: 1000, 9: 5000 },
+  10: { 5: 5, 6: 30, 7: 100, 8: 300, 9: 2000, 10: 10000 },
+};
+
+if (!payTable[picks]) return 0;
+return payTable[picks][hits] || 0;
+};
+
+const boardEl = document.getElementById('board');
+const timerEl = document.getElementById('timer');
+const betBtn = document.getElementById('betBtn');
+const drawSlots = document.getElementById('drawSlots');
+const ticketsContainer = document.getElementById('ticketsContainer');
+const pickedDisplay = document.getElementById('pickedDisplay');
+const prevDrawContainer = document.getElementById('prevDrawContainer');
+const prevDrawList = document.getElementById('prevDrawList');
+const betInput = document.getElementById('betInput');
+const animationContainer = document.getElementById('animationContainer');
+const waitingOverlay = document.getElementById('waitingOverlay');
+const waitingTimer = document.getElementById('waitingTimer');
+const onlineCountEl = document.getElementById('onlineCount');
+
+const cells = {};
+for (let i = 1; i <= 80; i++) {
+const cell = document.createElement('div');
+cell.className = 'cell';
+cell.textContent = i;
+cell.onclick = () => handleCellClick(i);
+boardEl.appendChild(cell);
+cells[i] = cell;
+}
+
+function initSocket() {
+socket = io(SERVER_URL, {
+  auth: {
+      token: USER_TOKEN,
+      userId: USER_ID,
+      username: USERNAME
+  },
+  transports: ['websocket', 'polling']
+});
+
+socket.on('connect', () => {
+  console.log('Connected to Keno server');
+  socket.emit('join_keno');
+});
+
+socket.on('disconnect', () => {
+  console.log('Disconnected from server');
+});
+
+socket.on('balance_update', (data) => {
+  userBalance = parseFloat(data.balance) || 0;
+  // UPDATED: Capture bonus from socket update
+  userBonus = parseFloat(data.bonus) || 0;
+  updateBalanceDisplay();
+});
+
+socket.on('keno_init', (data) => {
+  console.log('Keno init:', data);
+  currentGameId = data.gameId;
+  gameState = data.phase;
+  timeLeft = data.seconds;
+  
+  if (data.hotNumbers) {
+      hotNumbers = data.hotNumbers;
+      updateHotNumbersOnBoard();
+  }
+  
+  if (data.onlinePlayers !== undefined) {
+      onlinePlayersCount = data.onlinePlayers;
+      updateOnlineCount();
+  }
+  
+  if (data.phase === 'DRAWING' && data.drawnBalls && data.drawnBalls.length > 0) {
+      joinedMidGame = true;
+      showWaitingOverlay(true);
+      drawnBalls = data.drawnBalls;
+      displayExistingBalls(data.drawnBalls);
+  } else if (data.phase === 'BETTING') {
+      joinedMidGame = false;
+      showWaitingOverlay(false);
+  }
+  
+  updateUI();
+});
+
+socket.on('keno_state_sync', (data) => {
+  console.log('State sync:', data);
+  currentGameId = data.gameId;
+  gameState = data.phase;
+  timeLeft = data.seconds;
+  
+  if (data.phase === 'DRAWING') {
+      joinedMidGame = true;
+      showWaitingOverlay(true);
+      if (data.drawnBalls && data.drawnBalls.length > 0) {
+          drawnBalls = data.drawnBalls;
+          displayExistingBalls(data.drawnBalls);
+      }
+  }
+  
+  updateUI();
+});
+
+socket.on('keno_tick', (data) => {
+  if (data.phase === 'BETTING') {
+      gameState = 'BETTING';
+      timeLeft = data.seconds;
+      currentGameId = data.gameId;
+      updateTimerDisplay();
+  }
+});
+
+socket.on('keno_draw_start', (data) => {
+  console.log('Draw starting:', data);
+  gameState = 'DRAWING';
+  currentGameId = data.gameId;
+  drawnBalls = [];
+  drawSlots.innerHTML = '';
+  
+  if (joinedMidGame) {
+      showWaitingOverlay(true);
+  } else {
+      showWaitingOverlay(false);
+      betBtn.disabled = true;
+      document.getElementById('timerLabel').textContent = "DRAWING...";
+  }
+  
+  prevDrawContainer.style.display = 'none';
+});
+
+socket.on('keno_ball', (data) => {
+  console.log('Ball drawn:', data.ball, 'index:', data.index);
+  
+  if (data.gameId !== currentGameId) return;
+  
+  drawnBalls.push(data.ball);
+  
+  if (!joinedMidGame) {
+      const ball = document.createElement('div');
+      ball.className = 'draw-ball';
+      ball.textContent = data.ball;
+      drawSlots.appendChild(ball);
+
+      cells[data.ball].classList.add('drawn');
+
+      // Check my tickets
+      liveTickets.forEach(t => {
+          if (t.gameId === currentGameId && t.picks.includes(data.ball)) {
+              t.hits++;
+              t.drawnMatches.push(data.ball);
+              cells[data.ball].classList.add('hit');
+          }
+      });
+      
+      // Check other players' tickets
+      otherPlayersTickets.forEach(t => {
+          if (t.gameId === currentGameId && t.picks.includes(data.ball)) {
+              t.hits++;
+              t.drawnMatches.push(data.ball);
+          }
+      });
+      
+      if (currentTab === 'LIVE') renderContent();
+  }
+});
+
+socket.on('keno_draw_complete', (data) => {
+  console.log('Draw complete:', data);
+  
+  if (data.gameId !== currentGameId) return;
+  
+  lastDrawResult = data.allBalls;
+  
+  gameLogs.push({
+      timestamp: new Date(),
+      numbers: [...data.allBalls].sort((a, b) => a - b),
+      gameId: data.gameId
+  });
+  
+  if (!joinedMidGame) {
+      finalizeGame(data.allBalls);
+  }
+});
+
+socket.on('keno_new_round', (data) => {
+  console.log('New round:', data);
+  
+  gameState = 'BETTING';
+  timeLeft = data.seconds;
+  currentGameId = data.gameId;
+  joinedMidGame = false;
+  drawnBalls = [];
+  otherPlayersTickets = [];
+  
+  showWaitingOverlay(false);
+  resetBoard();
+  updateUI();
+});
+
+// Receive other players' bets
+socket.on('keno_player_bet', (data) => {
+  console.log('Other player bet:', data);
+  
+  if (data.oderId === USER_ID) return; // Skip own bets
+  
+  const ticket = {
+      oderId: data.oderId,
+      username: data.username || 'Player',
+      gameId: data.gameId,
+      picks: data.picks,
+      bet: data.amount,
+      hits: 0,
+      drawnMatches: [],
+      timestamp: new Date()
+  };
+  
+  // Check if already drawn balls hit this ticket
+  drawnBalls.forEach(ball => {
+      if (ticket.picks.includes(ball)) {
+          ticket.hits++;
+          ticket.drawnMatches.push(ball);
+      }
+  });
+  
+  otherPlayersTickets.push(ticket);
+  
+  if (currentTab === 'LIVE') renderContent();
+});
+
+// Online players count
+socket.on('keno_online_count', (data) => {
+  onlinePlayersCount = data.count;
+  updateOnlineCount();
+});
+
+// Hot numbers update
+socket.on('keno_hot_numbers', (data) => {
+  hotNumbers = data.numbers;
+  updateHotNumbersOnBoard();
+  if (currentTab === 'HOT') renderContent();
+});
+}
+
+function updateOnlineCount() {
+onlineCountEl.textContent = `${onlinePlayersCount} player${onlinePlayersCount !== 1 ? 's' : ''} online`;
+}
+
+function updateHotNumbersOnBoard() {
+// Clear existing hot indicators
+Object.values(cells).forEach(cell => {
+  const indicator = cell.querySelector('.hot-indicator');
+  if (indicator) indicator.remove();
+});
+
+// Add hot indicators to top 10 numbers
+const top10 = hotNumbers.slice(0, 10);
+top10.forEach((item, index) => {
+  if (cells[item.number]) {
+      const indicator = document.createElement('div');
+      indicator.className = 'hot-indicator';
+      indicator.title = `#${index + 1} Hot - Picked ${item.count} times`;
+      cells[item.number].appendChild(indicator);
+  }
+} );
+}
+
+function showWaitingOverlay(show) {
+waitingOverlay.style.display = show ? 'flex' : 'none';
+betBtn.disabled = show || gameState === 'DRAWING';
+}
+
+function displayExistingBalls(balls) {
+drawSlots.innerHTML = '';
+balls.forEach(num => {
+  const ball = document.createElement('div');
+  ball.className = 'draw-ball';
+  ball.textContent = num;
+  drawSlots.appendChild(ball);
+  cells[num].classList.add('drawn');
+});
+}
+
+function updateUI() {
+updateTimerDisplay();
+
+if (gameState === 'BETTING') {
+  document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
+  betBtn.disabled = false;
+} else {
+  document.getElementById('timerLabel').textContent = "DRAWING...";
+  betBtn.disabled = true;
+}
+
+if (lastDrawResult.length > 0 && gameState === 'BETTING') {
+  prevDrawContainer.style.display = 'block';
+  prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
+}
+}
+
+function resetBoard() {
+drawSlots.innerHTML = '';
+Object.values(cells).forEach(c => c.classList.remove('drawn', 'hit'));
+document.getElementById('timerLabel').textContent = "NEXT DRAW IN";
+betBtn.disabled = false;
+
+if (lastDrawResult.length > 0) {
+  prevDrawContainer.style.display = 'block';
+  prevDrawList.innerHTML = lastDrawResult.map(n => `<div class="mini-ball">${n}</div>`).join('');
+}
+
+updateHotNumbersOnBoard();
+}
+
+async function fetchUserBalance() {
+try {
+  const response = await fetch(`${API_BASE_URL}/user/balance`, {
+      method: 'GET',
+      headers: {
+          'Authorization': `Bearer ${USER_TOKEN}`,
+          'Content-Type': 'application/json'
+      }
+  });
+  
+  if (!response.ok) throw new Error('Auth failed');
+
+  const data = await response.json();
+  if (data.balance !== undefined) {
+      userBalance = parseFloat(data.balance);
+      // UPDATED: Fetch bonus too
+      userBonus = parseFloat(data.bonus) || 0;
+      updateBalanceDisplay();
+  }
+} catch (error) {
+  console.error("Balance Sync Error:", error);
+  document.getElementById('userBalanceDisplay').innerHTML = 
+      '<span style="color: #ff3d71; font-size: 0.8rem;">Sync Error</span>';
+}
+}
+
+async function fetchHotNumbers() {
+try {
+  const response = await fetch(`${API_BASE_URL}/games/keno/hot-numbers`, {
+      method: 'GET',
+      headers: {
+          'Authorization': `Bearer ${USER_TOKEN}`,
+          'Content-Type': 'application/json'
+      }
+  });
+  
+  if (response.ok) {
+      const data = await response.json();
+      if (data.numbers) {
+          hotNumbers = data.numbers;
+          updateHotNumbersOnBoard();
+          if (currentTab === 'HOT') renderContent();
+      }
+  }
+} catch (error) {
+  console.error("Hot numbers fetch error:", error);
+}
+}
+
+function updateBalanceDisplay() {
+const balEl = document.getElementById('userBalanceDisplay');
+if (balEl) {
+  // UPDATED: Show total playable (Wallet + Bonus)
+  const total = userBalance + userBonus;
+  balEl.innerHTML = `${total.toFixed(2)} <span class="currency">Birr</span>`;
+}
+}
+
+function handleCellClick(num) {
+if (gameState !== 'BETTING' || joinedMidGame) return;
+
+if (selectedNumbers.has(num)) {
+  selectedNumbers.delete(num);
+  cells[num].classList.remove('selected');
+} else if (selectedNumbers.size < MAX_PICK) {
+  selectedNumbers.add(num);
+  cells[num].classList.add('selected');
+}
+pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
+}
+
+// AUTO PICK and CLEAR button handlers removed
+
+document.getElementById('plusBtn').onclick = () => {
+let val = parseFloat(betInput.value);
+let newBet = val + 1; // Increment by 1 Birr
+const totalFunds = userBalance + userBonus;
+// Ensure new bet doesn't exceed total funds
+if (newBet <= totalFunds) { 
+  betInput.value = newBet.toFixed(2);
+} else {
+  betInput.value = totalFunds.toFixed(2); // Set to max available if balance is less
+}
+};
+
+document.getElementById('minusBtn').onclick = () => {
+let val = parseFloat(betInput.value);
+let newBet = val - 1; // Decrement by 1 Birr
+// Ensure bet doesn't go below minimum of 2
+if (newBet >= MIN_BET) { 
+  betInput.value = newBet.toFixed(2);
+} else {
+  betInput.value = MIN_BET.toFixed(2); // Set to minimum bet if trying to go below
+}
+};
+
+document.getElementById('liveTabBtn').onclick = () => { currentTab = 'LIVE'; updateTabUI(); renderContent(); };
+document.getElementById('historyTabBtn').onclick = () => { currentTab = 'HISTORY'; updateTabUI(); renderContent(); };
+document.getElementById('gameLogsTabBtn').onclick = () => { currentTab = 'LOGS'; updateTabUI(); renderContent(); };
+document.getElementById('hotNumbersTabBtn').onclick = () => { currentTab = 'HOT'; updateTabUI(); renderContent(); fetchHotNumbers(); };
+
+function updateTabUI() {
+document.getElementById('liveTabBtn').classList.toggle('active', currentTab === 'LIVE');
+document.getElementById('historyTabBtn').classList.toggle('active', currentTab === 'HISTORY');
+document.getElementById('gameLogsTabBtn').classList.toggle('active', currentTab === 'LOGS');
+document.getElementById('hotNumbersTabBtn').classList.toggle('active', currentTab === 'HOT');
+}
+
+betBtn.onclick = async () => {
+if (gameState !== 'BETTING') {
+  return alert("Betting is closed! Wait for next round.");
+}
+
+if (joinedMidGame) {
+  return alert("Please wait for the next round to place bets.");
+}
+
+if (selectedNumbers.size < 2) {
+  return alert("Pick at least 2 numbers!");
+}
+
+const betVal = parseFloat(betInput.value);
+
+if (betVal < MIN_BET) {
+  return alert(`Minimum bet is ${MIN_BET} Birr!`);
+}
+
+// UPDATED: Check Total Playable Funds
+const totalPlayable = userBalance + userBonus;
+if (betVal > totalPlayable) {
+  return alert("Insufficient Balance!");
+}
+
+try {
+  const picksArray = Array.from(selectedNumbers);
+  
+  const response = await fetch(`${API_BASE_URL}/games/keno/bet`, {
+      method: 'POST',
+      headers: {
+          'Authorization': `Bearer ${USER_TOKEN}`,
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+          userId: USER_ID, 
+          amount: betVal,
+          picks: picksArray,
+          gameId: currentGameId
+      })
+  });
+  
+  const result = await response.json();
+  
+  if (!result.success) {
+      alert(result.error || "Bet Failed");
+      fetchUserBalance(); // Refresh balance in case of server-side issue
+      return;
+  }
+  
+  userBalance = result.newBalance;
+  // UPDATED: Update Bonus from response if available (needs backend support, otherwise fetch)
+  if(result.newBonus !== undefined) userBonus = result.newBonus;
+  
+  updateBalanceDisplay();
+
+  const ticket = {
+      id: ticketCounter++,
+      gameId: currentGameId,
+      picks: picksArray,
+      bet: betVal,
+      hits: 0,
+      drawnMatches: [],
+      payout: 0,
+      timestamp: new Date(),
+      status: 'WAITING'
+  };
+  liveTickets.push(ticket);
+  
+  // Clear selections after successful bet
+  selectedNumbers.clear();
+  Object.values(cells).forEach(c => c.classList.remove('selected'));
+  pickedDisplay.textContent = `0 / ${MAX_PICK} Selected`;
+
+  if (currentTab === 'LIVE') renderContent();
+  
+} catch (error) {
+  console.error('Bet error:', error);
+  alert("Network Error");
+}
+};
+
+function renderContent() {
+ticketsContainer.innerHTML = "";
+
+if (currentTab === 'HOT') {
+  renderHotNumbers();
+  return;
+}
+
+if (currentTab === 'LOGS') {
+  if (gameLogs.length === 0) {
+      ticketsContainer.innerHTML = `<div class="empty-msg">No game history available yet.</div>`;
+      return;
+  }
+  const displayLogs = [...gameLogs].reverse();
+  displayLogs.forEach((log) => {
+      const div = document.createElement('div');
+      div.className = 'game-log';
+      const timeStr = log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      div.innerHTML = `
+          <div class="log-info">
+              <div style="font-size:0.65rem; color:var(--primary); font-weight:700">GAME #${log.gameId || '?'} • ${timeStr}</div>
+              <div class="log-numbers">
+                  ${log.numbers.map(n => `<span class="log-badge">${n}</span>`).join('')}
+              </div>
+          </div>
+      `;
+      ticketsContainer.appendChild(div);
+  });
+  return;
+}
+
+if (currentTab === 'LIVE') {
+  // Render my tickets first
+  if (liveTickets.length === 0 && otherPlayersTickets.length === 0) {
+      ticketsContainer.innerHTML = `<div class="empty-msg">No live tickets. Place a bet!</div>`;
+      return;
+  }
+  
+  // My tickets
+  if (liveTickets.length > 0) {
+      const myHeader = document.createElement('div');
+      myHeader.style.cssText = 'font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;';
+      myHeader.textContent = '📋 MY TICKETS';
+      ticketsContainer.appendChild(myHeader);
+      
+      liveTickets.forEach(t => {
+          ticketsContainer.appendChild(createTicketElement(t, false));
+      });
+  }
+  
+  // Other players' tickets
+  if (otherPlayersTickets.length > 0) {
+      const divider = document.createElement('div');
+      divider.className = 'section-divider';
+      divider.textContent = `👥 OTHER PLAYERS (${otherPlayersTickets.length})`;
+      ticketsContainer.appendChild(divider);
+      
+      otherPlayersTickets.forEach(t => {
+          ticketsContainer.appendChild(createTicketElement(t, true));
+      });
+  }
+  return;
+}
+
+// HISTORY tab
+const source = ticketHistory;
+if (source.length === 0) {
+  ticketsContainer.innerHTML = `<div class="empty-msg">No ticket history yet.</div>`;
+  return;
+}
+
+const displayList = [...source].reverse();
+displayList.forEach(t => {
+  ticketsContainer.appendChild(createTicketElement(t, false, true));
+});
+}
+
+function createTicketElement(t, isOtherUser = false, isHistory = false) {
+const div = document.createElement('div');
+div.className = `ticket ${t.payout > 0 ? 'win' : ''} ${isOtherUser ? 'other-user' : ''}`;
+const timeStr = t.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+let resultLabel = '--';
+if (isHistory || t.status === 'DONE') {
+  resultLabel = t.payout > 0 ? `+${t.payout.toFixed(2)}` : '0.00';
+}
+
+let ownerLabel = '';
+if (isOtherUser) {
+  ownerLabel = `<div class="ticket-owner">👤 ${t.username || 'Player'}</div>`;
+}
+
+div.innerHTML = `
+  <div class="ticket-info">
+      ${ownerLabel}
+      <div style="font-size:0.65rem; color:var(--muted)">${isOtherUser ? '' : 'TICKET #' + t.id + ' • '}BET ${t.bet} Birr</div>
+      <div class="ticket-numbers">
+          ${t.picks.map(n => {
+              const isMatched = t.drawnMatches && t.drawnMatches.includes(n);
+              return `<span class="hit-badge ${isMatched ? 'matched' : ''}">${n}</span>`;
+          }).join('')}
+      </div>
+      <div style="font-size:0.75rem; color:var(--primary); font-weight:700">${t.hits || 0} HITS</div>
+      <div class="ticket-time">${timeStr}</div>
+  </div>
+  <div class="ticket-payout">${resultLabel}</div>
+`;
+return div;
+}
+
+function renderHotNumbers() {
+if (hotNumbers.length === 0) {
+  ticketsContainer.innerHTML = `<div class="empty-msg">Loading hot numbers...</div>`;
+  fetchHotNumbers();
+  return;
+}
+
+let html = `
+  <div class="stats-header">
+      <div class="stats-title">🔥 MOST PICKED NUMBERS</div>
+      <div class="stats-period">Last 24 Hours</div>
+  </div>
+  <div class="hot-numbers-grid">
+`;
+
+hotNumbers.forEach((item, index) => {
+  let rankClass = '';
+  let rankLabel = '';
+  
+  if (index < 5) {
+      rankClass = 'top-5';
+      rankLabel = `🏆 #${index + 1}`;
+  } else if (index < 10) {
+      rankClass = 'top-10';
+      rankLabel = `#${index + 1}`;
+  } else {
+      rankLabel = `#${index + 1}`;
+  }
+
+  html += `
+      <div class="hot-number-item ${rankClass}" onclick="quickSelectNumber(${item.number})">
+          <div class="hot-number-rank">${rankLabel}</div>
+          <div class="hot-number-ball">${item.number}</div>
+          <div class="hot-number-count"><span>${item.count}</span> picks</div>
+      </div>
+  `;
+});
+
+html += `</div>`;
+
+// Add cold numbers section
+if (hotNumbers.length >= 80) {
+  const coldNumbers = [...hotNumbers].reverse().slice(0, 10);
+  html += `
+      <div class="stats-header" style="margin-top: 20px;">
+          <div class="stats-title">❄️ LEAST PICKED NUMBERS</div>
+          <div class="stats-period">Last 24 Hours</div>
+      </div>
+      <div class="hot-numbers-grid">
+  `;
+  
+  coldNumbers.forEach((item, index) => {
+      html += `
+          <div class="hot-number-item" onclick="quickSelectNumber(${item.number})">
+              <div class="hot-number-rank" style="color: var(--accent);">#${80 - index}</div>
+              <div class="hot-number-ball" style="background: var(--accent);">${item.number}</div>
+              <div class="hot-number-count"><span>${item.count}</span> picks</div>
+          </div>
+      `;
+  });
+  
+  html += `</div>`;
+}
+
+ticketsContainer.innerHTML = html;
+}
+
+// Quick select a number from hot numbers
+window.quickSelectNumber = function(num) {
+if (gameState !== 'BETTING' || joinedMidGame) {
+  alert("Wait for betting phase to select numbers!");
+  return;
+}
+
+if (!selectedNumbers.has(num) && selectedNumbers.size < MAX_PICK) {
+  selectedNumbers.add(num);
+  cells[num].classList.add('selected');
+  pickedDisplay.textContent = `${selectedNumbers.size} / ${MAX_PICK} Selected`;
+}
+};
+
+function showWinAnimation(amount) {
+const popup = document.createElement('div');
+popup.className = 'win-popup';
+popup.innerHTML = `YOU WON<br>${amount.toFixed(2)} Birr`;
+animationContainer.appendChild(popup);
+
+setTimeout(() => {
+  popup.remove();
+}, 4000);
+}
+
+function updateTimerDisplay() {
+const m = Math.floor(timeLeft / 60);
+const s = timeLeft % 60;
+timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+async function finalizeGame(allBalls) {
+let totalWin = 0;
+
+liveTickets.forEach(t => {
+  if (t.gameId === currentGameId) {
+      const mult = getMultiplier(t.picks.length, t.hits);
+      t.payout = t.bet * mult;
+      t.status = 'DONE';
+      totalWin += t.payout;
+      ticketHistory.push(t);
+  }
+});
+
+liveTickets = liveTickets.filter(t => t.gameId !== currentGameId);
+otherPlayersTickets = [];
+
+if (totalWin > 0) {
+  showWinAnimation(totalWin);
+  
+  try {
+      const response = await fetch(`${API_BASE_URL}/games/keno/settle`, {
+          method: 'POST',
+          headers: {
+              'Authorization': `Bearer ${USER_TOKEN}`,
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+              userId: USER_ID, 
+              totalWin: totalWin,
+              gameId: currentGameId 
+          })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+          userBalance = result.newBalance;
+          updateBalanceDisplay();
+      } else {
+          console.error("Server settlement failed:", result.error);
+      }
+  } catch (e) { 
+      console.error("Settlement network error:", e); 
+  }
+}
+
+renderContent();
+}
+
+fetchUserBalance();
+initSocket();
+renderContent();
+fetchHotNumbers();
+setInterval(fetchUserBalance, 30000);
+setInterval(fetchHotNumbers, 60000); // Refresh hot numbers every minute
+</script>
 </body>
 
 </html>

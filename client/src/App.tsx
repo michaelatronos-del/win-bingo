@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { io, Socket } from 'socket.io-client'
+import {io, Socket } from 'socket.io-client'
 import { getBoard, loadBoards, type BoardGrid } from './boards'
 
 // Get API base URL
@@ -11,7 +11,7 @@ const getApiUrl = () => {
 }
 
 type Phase = 'lobby' | 'countdown' | 'calling'
-type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'lobby' | 'game' | 'bingoHouseSelect' | 'aviatorGamePage'
+type Page = 'login' | 'welcome' | 'instructions' | 'depositSelect' | 'depositConfirm' | 'withdrawal' | 'withdrawalSelect' | 'lobby' | 'game' | 'bingoHouseSelect' | 'aviatorGamePage'
 type Language = 'en' | 'am' | 'ti' | 'or'
 
 // --- TRANSLATIONS CONFIGURATION ---
@@ -42,14 +42,14 @@ const translations = {
     game_title_aviator: 'Aviator',
     game_title_keno: 'KENO',
     play_now: 'Play now',
-    select_bingo_house: 'Select BINGO Bet House',
+    select_bingo_house: 'Select BINGO House',
     bet_houses: 'Bet Houses',
     stake: 'Stake',
     select_boards: 'Select Your Boards',
     selected: 'Selected',
     start_game: 'Start Game',
     ready: 'Ready!',
-    switch_house: 'Switch Bet House',
+    switch_house: 'Switch House',
     game_in_progress: 'Game in progress',
     current_call: 'CURRENT CALL',
     last_5: 'LAST 5 CALLED',
@@ -67,11 +67,11 @@ const translations = {
     deposit_account: 'Deposit account',
     amount_deposit: 'Amount to deposit',
     paste_deposit_msg: 'Paste your deposit confirmation message',
-    verify_submit: 'Verify & Submit Deposit',
+    verify_submit: 'Verify & Submit',
     how_to_deposit: 'How to deposit',
     verifying: 'Verifying…',
     withdraw_funds: 'Withdraw Funds',
-    available_balance: 'Withdrawable Balance',
+    available_balance: 'Available Balance',
     withdraw_amount: 'Withdrawal Amount',
     your_account_num: 'Your Account Number',
     request_withdraw: 'Request Withdrawal',
@@ -90,7 +90,7 @@ const translations = {
     dep_with_desc: 'Use the Deposit button on the Welcome page.',
     audio: 'Audio',
     auto_mark_me: 'Auto mark (me)',
-    auto_algo: 'Auto algorithm mark',
+    auto_algo: 'Auto algorithm',
     players_label: 'Players',
     waiting: 'Waiting',
     prize: 'Prize',
@@ -102,95 +102,107 @@ const translations = {
     first_deposit_bonus: '🎉 First Deposit Bonus: 2X!',
     referral_bonus: 'Referral Bonus',
     wallet_desc: 'Deposits + Winnings',
-    bonus_desc: 'Promo + Referral'
+    bonus_desc: 'Promo + Referral',
+    select_withdraw_platform: 'Select Payment Platform',
+    enter_telebirr_phone: 'Enter your Telebirr phone number',
+    enter_ebirr_phone: 'Enter your Ebirr phone number',
+    min_withdraw_error: 'Minimum withdrawal amount is 100 Birr',
+    withdrawable_balance: 'Withdrawable Balance',
+    bonus_not_withdrawable: 'Note: Bonus balance is not withdrawable.',
   },
   am: {
     hello: 'ሰላም',
     back: 'ተመለስ',
     close: 'ዝጋ',
-    loading: 'በማስኬድ ላይ...',
+    loading: 'በማቀናበር ላይ...',
     ok: 'እሺ',
     signin: 'ግባ',
     signup: 'ተመዝገብ',
     username: 'የተጠቃሚ ስም',
     password: 'የይለፍ ቃል',
-    enter_username: 'የተጠቃሚ ስም ያስገቡ',
-    enter_password: 'የይለፍ ቃል ያስገቡ',
+    enter_username: 'የተጠቃሚ ስምህን አስገባ',
+    enter_password: 'የይለፍ ቃልህን አስገባ',
     create_account: 'መለያ ፍጠር',
-    welcome_login_msg: 'እንኳን ደህና መጡ! እባክዎ ይግቡ ወይም መለያ ይፍጠሩ',
-    deposit: '+ ገቢ አድርግ',
-    withdraw: 'ወጪ አድርግ',
+    welcome_login_msg: 'እንኳን ደህና መጣህ! እባክህ ግባ ወይም መለያ ፍጠር',
+    deposit: '+ አስገባ',
+    withdraw: 'አውጣ',
     logout: 'ውጣ',
     balance: 'ዋሌት',
     bonus: 'ቦነስ',
     total_playable: 'ጠቅላላ የሚጫወት',
     instructions: 'መመሪያዎች',
-    invite: 'ጓደኛ ይጋብዙ',
+    invite: 'ጓደኛ ጥራ',
     game_title_bingo: 'ቢንጎ',
     game_title_aviator: 'አቪዬተር',
     game_title_keno: 'ኬኖ',
-    play_now: 'አሁን ተጫወት',
-    select_bingo_house: 'የቢንጎ ውርርድ ቤት ይምረጡ',
-    bet_houses: 'የውርርድ ቤቶች',
+    play_now: 'አሁን ጫወት',
+    select_bingo_house: 'ቢንጎ ቤት ምረጥ',
+    bet_houses: 'ውርርድ ቤቶች',
     stake: 'ውርርድ',
-    select_boards: 'ካርቶዎችን ይምረጡ',
+    select_boards: 'ቦርዶችን ምረጥ',
     selected: 'ተመርጧል',
     start_game: 'ጨዋታ ጀምር',
     ready: 'ዝግጁ!',
     switch_house: 'ቤት ቀይር',
-    game_in_progress: 'ጨዋታ በመካሄድ ላይ',
-    current_call: 'የአሁኑ ቁጥር',
-    last_5: 'የመጨረሻዎቹ 5',
+    game_in_progress: 'ጨዋታ በሂደት ላይ',
+    current_call: 'የአሁኑ ጥሪ',
+    last_5: 'የመጨረሻ 5 ጥሪዎች',
     live_caller: 'ቀጥታ ጠሪ',
     auto_bingo: 'ራስ-ሰር ቢንጎ',
     bingo_btn: 'ቢንጎ!',
-    your_boards: 'የእርስዎ ካርቶዎች',
-    tap_mark_hint: 'ቁጥሮችን ለመለየት ይንኩ። FREE በራስ-ሰር ይሞላል።',
-    next_call_in: 'ቀጣይ ቁጥር በ',
+    your_boards: 'የአንተ ቦርዶች',
+    tap_mark_hint: 'የተጠሩትን ቁጥሮች ለምልክት ይንኩ። ነፃ በራስ-ሰር ይምለካል።',
+    next_call_in: 'ቀጣዩ ጥሪ በ',
     winner: 'አሸናፊ',
-    winning_board: 'ያሸንፈው ካርቶ',
-    select_payment: 'የክፍያ አማራጭ ይምረጡ',
+    winning_board: 'የማሸነፊያ ቦርድ',
+    select_payment: 'የክፍያ መድረክ ምረጥ',
     recommended: 'የሚመከር',
-    confirm_payment: 'ክፍያ ያረጋግጡ',
-    deposit_account: 'ገቢ የሚደረግበት መለያ',
-    amount_deposit: 'የሚገቡት መጠን',
-    paste_deposit_msg: 'የገቢ ማረጋገጫ መልእክት ይለጥፉ',
+    confirm_payment: 'ክፍያ አረጋግጥ',
+    deposit_account: 'የአስገባት መለያ',
+    amount_deposit: 'የሚገባ መጠን',
+    paste_deposit_msg: 'የአስገባት ማረጋገጫ መልእክት ጥቅልል',
     verify_submit: 'አረጋግጥ እና አስገባ',
-    how_to_deposit: 'እንዴት ገቢ ማድረግ እንደሚቻል',
+    how_to_deposit: 'እንዴት አስገባ',
     verifying: 'በማረጋገጥ ላይ...',
-    withdraw_funds: 'ገንዘብ ወጪ',
-    available_balance: 'ወጪ የሚደረግ ሂሳብ',
-    withdraw_amount: 'የወጪ መጠን',
-    your_account_num: 'የእርስዎ ሂሳብ ቁጥር',
-    request_withdraw: 'ወጪ ጠይቅ',
-    how_to_withdraw: 'እንዴት ወጪ ማድረግ እንደሚቻል',
-    confirm_withdraw: 'ወጪ ማረጋገጫ',
-    your_account: 'የእርስዎ ሂሳብ',
-    paste_withdraw_msg: 'የወጪ ማረጋገጫ መልእክት ይለጥፉ',
-    verify_withdraw: 'ወጪ አረጋግጥ',
-    how_to_play: 'እንዴት እንደሚጫወቱ',
-    rule_1: 'የውርርድ ቤት ይምረጡ።',
-    rule_2: 'እስከ 2 ካርቶዎችን ይምረጡ።',
-    rule_3: 'ጨዋታ ጀምር የሚለውን ይጫኑ።',
-    rule_4: 'ቁጥሮች ሲጠሩ ምልክት ያድርጉ።',
-    rule_5: 'ቢንጎ የሚለውን የሚጫኑት ሙሉ መስመር ሲያገኙ ብቻ ነው።',
-    dep_with_title: 'ገቢ እና ወጪ',
-    dep_with_desc: 'በመነሻ ገጹ ላይ ያለውን ገቢ አድርግ ቁልፍ ይጠቀሙ።',
+    withdraw_funds: 'ገንዘብ አውጣ',
+    available_balance: 'የሚገኝ ቀሪ ሒሳብ',
+    withdraw_amount: 'የማውጣት መጠን',
+    your_account_num: 'የአንተ መለያ ቁጥር',
+    request_withdraw: 'ማውጣት ጥያቄ',
+    how_to_withdraw: 'እንዴት አውጣ',
+    confirm_withdraw: 'ማውጣት አረጋግጥ',
+    your_account: 'የአንተ መለያ',
+    paste_withdraw_msg: 'የማውጣት ማረጋገጫ መልእክት ጥቅልል',
+    verify_withdraw: 'ማውጣት አረጋግጥ',
+    how_to_play: 'እንዴት ተጫወት',
+    rule_1: 'ውርርድ ቤት ምረጥ።',
+    rule_2: 'በሜዳ ቤት ውስጥ እስከ 2 ቦርዶች ምረጥ።',
+    rule_3: 'ቀጥታ ጨዋታ ለመግባት ጨዋታ ጀምር አድርግ።',
+    rule_4: 'በጥሪ ጊዜ የተጠሩትን ቁጥሮች ምልክት አድርግ ወይም ራስ-ሰር ምልክት አንቃ።',
+    rule_5: 'ቢንጎ አድርግ የሚለውን የመጨረሻውን ጥሪ ጨምሮ ሙሉ መስመር በሙሉ በተጠናቀቀ ጊዜ ብቻ።',
+    dep_with_title: 'አስገባዎች እና ማውጣዎች',
+    dep_with_desc: 'በእንኳን ደህና መጣህ ገጽ ላይ ያለውን አስገባ ቁልፍ ተጠቀም።',
     audio: 'ድምፅ',
     auto_mark_me: 'ራስ-ሰር ምልክት (እኔ)',
     auto_algo: 'ራስ-ሰር አልጎሪዝም',
     players_label: 'ተጫዋቾች',
-    waiting: 'በመጠባበቅ ላይ',
+    waiting: 'በጥበቃ',
     prize: 'ሽልማት',
-    active: 'ተጫዋቾች',
-    go_lobby: 'ወደ ሎቢ',
-    join_wait: 'ተቀላቀል & ጠብቅ',
-    insufficient_balance_msg: 'ይህን ውርርድ ለመቀላቀል በቂ ሂሳብ የለዎትም።',
-    link_copied: 'የግብዣ ሊንክ ተቀድቷል!',
-    first_deposit_bonus: '🎉 የመጀመሪያ ገቢ ቦነስ: 2X!',
-    referral_bonus: 'የግብዣ ቦነስ',
-    wallet_desc: 'ገቢ + ያሸነፉት',
-    bonus_desc: 'ስጦታ + ግብዣ'
+    active: 'ንቁ',
+    go_lobby: 'ወደ ሜዳ ቤት ሂድ',
+    join_wait: 'ተቀላቀል እና ጠብቅ',
+    insufficient_balance_msg: 'ይህን ውርርድ ቤት ለመቀላቀል በቂ ጠቅላላ ቀሪ ሒሳብ የለህም።',
+    link_copied: 'የግብዣ አገናኝ ተገልብጧል!',
+    first_deposit_bonus: '🎉 የመጀመሪያ አስገባት ጉርሻ: 2X!',
+    referral_bonus: 'የግብዣ ጉርሻ',
+    wallet_desc: 'አስገባዎች + ማሸነፊያዎች',
+    bonus_desc: 'ፕሮሞ + ግብዣ',
+    select_withdraw_platform: 'የክፍያ መድረክ ምረጥ',
+    enter_telebirr_phone: 'የቴሌብር ስልክ ቁጥርህን አስገባ',
+    enter_ebirr_phone: 'የኢብር ስልክ ቁጥርህን አስገባ',
+    min_withdraw_error: 'ዝቅተኛ የማውጣት መጠን 100 ብር ነው',
+    withdrawable_balance: 'የሚወጣ ቀሪ ሒሳብ',
+    bonus_not_withdrawable: 'ማሳሰቢያ: የቦነስ ቀሪ ሒሳብ አይወጣም።',
   },
   ti: {
     hello: 'ሰላም',
@@ -240,7 +252,7 @@ const translations = {
     select_payment: 'ናይ ክፍሊት መገዲ ምረጽ',
     recommended: 'ዝተመከረ',
     confirm_payment: 'ክፍሊት ኣረጋግጽ',
-    deposit_account: 'ገንዘብ ዝኣትወሉ ሒሳብ',
+    deposit_account: 'ገንዘብ ዝኣተወሉ ሒሳብ',
     amount_deposit: 'ዝኣቱ መጠን',
     paste_deposit_msg: 'ናይ ክፍሊት መልእኽቲ ለጥፍ',
     verify_submit: 'ኣረጋግጽን ስደድን',
@@ -271,14 +283,20 @@ const translations = {
     waiting: 'ዝጽበዩ',
     prize: 'ሽልማት',
     active: 'ተጫወቲ',
-    go_lobby: 'ናብ ሎቢ',
+    go_lobby: 'ናብ ሎቢ ሂድ',
     join_wait: 'ተሓወስ & ተጸበ',
     insufficient_balance_msg: 'ነዚ ውርርድ ምሕዋስ ዘይምኸኣል',
     link_copied: 'ናይ ዕድመ ሊንክ ተቐዲሑ!',
     first_deposit_bonus: '🎉 ቀዳማይ ገንዘብ ቦነስ: 2X!',
     referral_bonus: 'ናይ ዕድመ ቦነስ',
     wallet_desc: 'ዝኣተወ + ዝተዓወተ',
-    bonus_desc: 'ቦነስ + ዕድመ'
+    bonus_desc: 'ቦነስ + ዕድመ',
+    select_withdraw_platform: 'ናይ ክፍሊት መገዲ ምረጽ',
+    enter_telebirr_phone: 'ናይ ቴሌብር ስልኪ ቁጽሪ ኣእቱ',
+    enter_ebirr_phone: 'ናይ ኢብር ስልኪ ቁጽሪ ኣእቱ',
+    min_withdraw_error: 'ዝተሓተ ናይ ምውጻእ መጠን 100 ብር እዩ',
+    withdrawable_balance: 'ዝወጽእ ባላንስ',
+    bonus_not_withdrawable: 'ማስታወሻ: ናይ ቦነስ ባላንስ ኣይወጽእን።',
   },
   or: {
     hello: 'Akkam',
@@ -315,7 +333,7 @@ const translations = {
     ready: 'Qophaa aa!',
     switch_house: 'Mana Qabsiisaa Jijjiiri',
     game_in_progress: 'Tapha itti fufaa jira',
-    current_call: 'LAKKOOFSA AMMAA',
+    current_call: 'LAKKOOFSAA AMMAA',
     last_5: '5 DARBAN',
     live_caller: 'WAAMAA KALLATTII',
     auto_bingo: 'Bingo Ofiin',
@@ -330,7 +348,7 @@ const translations = {
     confirm_payment: 'Kaffaltii Mirkaneessi',
     deposit_account: 'Herrega Galchii',
     amount_deposit: 'Hanga Galchii',
-    paste_deposit_msg: 'Ergaa mirkaneessaa galchii',
+    paste_deposit_msg: 'Ergaa mirkaneeffataa galchii',
     verify_submit: 'Mirkaneessi & Galchi',
     how_to_deposit: 'Akkaataa galchii',
     verifying: 'Mirkaneessaa...',
@@ -342,7 +360,7 @@ const translations = {
     how_to_withdraw: 'Akkaataa baasii',
     confirm_withdraw: 'Baasii Mirkaneessi',
     your_account: 'Herrega Kee',
-    paste_withdraw_msg: 'Ergaa mirkaneessaa baasii',
+    paste_withdraw_msg: 'Ergaa mirkaneeffataa baasii',
     verify_withdraw: 'Baasii Mirkaneessi',
     how_to_play: 'Akkaataa Taphaa',
     rule_1: 'Mana qabsiisaa filadhu.',
@@ -366,60 +384,66 @@ const translations = {
     first_deposit_bonus: '🎉 Galchii Jalqabaa Boonasii: 2X!',
     referral_bonus: 'Boonasii Afeerraa',
     wallet_desc: 'Galchii + Bu aa',
-    bonus_desc: 'Boonasii + Affeerraa'
+    bonus_desc: 'Boonasii + Affeerraa',
+    select_withdraw_platform: 'Kaffaltii Filadhu',
+    enter_telebirr_phone: 'Lakkoofsa bilbilaa Telebirr galchi',
+    enter_ebirr_phone: 'Lakkoofsa bilbilaa Ebirr galchi',
+    min_withdraw_error: 'Hanga baasii gadi aanaa 100 Birr dha',
+    withdrawable_balance: 'Haftee Baasii',
+    bonus_not_withdrawable: 'Hubachiisa: Baalansiin boonasii hin baafamu.',
   }
 }
 
 export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null)
-  const [playerId, setPlayerId] = useState<string>('')
-  const [userId, setUserId] = useState<string>('')
-  const [username, setUsername] = useState<string>('')
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [playerId, setPlayerId] = useState('')
+  const [userId, setUserId] = useState('')
+  const [username, setUsername] = useState('')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   
   // Auth state
   const [loginMode, setLoginMode] = useState<'login' | 'signup'>('login')
-  const [loginUsername, setLoginUsername] = useState<string>('')
-  const [loginPassword, setLoginPassword] = useState<string>('')
-  const [loginError, setLoginError] = useState<string>('')
-  const [loginLoading, setLoginLoading] = useState<boolean>(false)
+  const [loginUsername, setLoginUsername] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
 
   // App Settings
   const [language, setLanguage] = useState<Language>('en')
-  const [showLanguageModal, setShowLanguageModal] = useState<boolean>(false)
+  const [showLanguageModal, setShowLanguageModal] = useState(false)
 
   // Game Data
-  const [stake, setStake] = useState<number>(10)
+  const [stake, setStake] = useState(10)
   const [phase, setPhase] = useState<Phase>('lobby')
-  const [seconds, setSeconds] = useState<number>(60)
-  const [prize, setPrize] = useState<number>(0)
-  const [players, setPlayers] = useState<number>(0)
+  const [seconds, setSeconds] = useState(60)
+  const [prize, setPrize] = useState(0)
+  const [players, setPlayers] = useState(0)
   const [takenBoards, setTakenBoards] = useState<number[]>([])
-  const [waitingPlayers, setWaitingPlayers] = useState<number>(0)
-  const [isWaiting, setIsWaiting] = useState<boolean>(false)
+  const [waitingPlayers, setWaitingPlayers] = useState(0)
+  const [isWaiting, setIsWaiting] = useState(false)
   const [betHouses, setBetHouses] = useState<any[]>([])
   const [currentBetHouse, setCurrentBetHouse] = useState<number | null>(null)
   
   // Balance State: Wallet (Deposits/Wins) vs Bonus (Promo/Referrals)
-  const [balance, setBalance] = useState<number>(0)
-  const [bonus, setBonus] = useState<number>(0)
-  const [gamesPlayed, setGamesPlayed] = useState<number>(0)
+  const [balance, setBalance] = useState(0)
+  const [bonus, setBonus] = useState(0)
+  const [gamesPlayed, setGamesPlayed] = useState(0)
   
   // Game Play State
   const [called, setCalled] = useState<number[]>([])
   const [picks, setPicks] = useState<number[]>([])
   const [activeGameBoardId, setActiveGameBoardId] = useState<number | null>(null)
-  const [boardHtmlProvided, setBoardHtmlProvided] = useState<boolean>(false)
+  const [boardHtmlProvided, setBoardHtmlProvided] = useState(false)
   const [currentPage, setCurrentPage] = useState<Page>('login')
-  const [isReady, setIsReady] = useState<boolean>(false)
+  const [isReady, setIsReady] = useState(false)
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set())
-  const [callCountdown, setCallCountdown] = useState<number>(0)
+  const [callCountdown, setCallCountdown] = useState(0)
   const [lastCalled, setLastCalled] = useState<number | null>(null)
   
   // Options / Automation
-  const [autoMark, setAutoMark] = useState<boolean>(false)
-  const [autoAlgoMark, setAutoAlgoMark] = useState<boolean>(false)
-  const [autoBingo, setAutoBingo] = useState<boolean>(false)
+  const [autoMark, setAutoMark] = useState(false)
+  const [autoAlgoMark, setAutoAlgoMark] = useState(false)
+  const [autoBingo, setAutoBingo] = useState(false)
   const [winnerInfo, setWinnerInfo] = useState<{
     boardId: number
     lineIndices: number[]
@@ -428,32 +452,35 @@ export default function App() {
     stake?: number
   } | null>(null)
   
-  const [audioPack, setAudioPack] = useState<string>('amharic') 
-  const [audioOn, setAudioOn] = useState<boolean>(true)
+  const [audioPack, setAudioPack] = useState('amharic') 
+  const [audioOn, setAudioOn] = useState(true)
   const callTimerRef = useRef<number | null>(null)
   
   // Deposit / Withdraw State
-  const [selectedProvider, setSelectedProvider] = useState<string>('')
-  const [depositAmount, setDepositAmount] = useState<string>('')
-  const [depositMessage, setDepositMessage] = useState<string>('')
-  const [depositVerifying, setDepositVerifying] = useState<boolean>(false)
-  const [withdrawalAmount, setWithdrawalAmount] = useState<string>('')
-  const [withdrawalAccount, setWithdrawalAccount] = useState<string>('')
-  const [withdrawalMessage, setWithdrawalMessage] = useState<string>('')
-  const [withdrawalVerifying, setWithdrawalVerifying] = useState<boolean>(false)
+  const [selectedProvider, setSelectedProvider] = useState('')
+  const [depositAmount, setDepositAmount] = useState('')
+  const [depositMessage, setDepositMessage] = useState('')
+  const [depositVerifying, setDepositVerifying] = useState(false)
+  const [withdrawalAmount, setWithdrawalAmount] = useState('')
+  const [withdrawalAccount, setWithdrawalAccount] = useState('')
+  const [withdrawalMessage, setWithdrawalMessage] = useState('')
+  const [withdrawalVerifying, setWithdrawalVerifying] = useState(false)
   const [currentWithdrawalPage, setCurrentWithdrawalPage] = useState<'form' | 'confirm'>('form')
-  const autoBingoSentRef = useRef<boolean>(false)
+  const autoBingoSentRef = useRef(false)
+
+  // NEW: Withdrawal provider selection
+  const [selectedWithdrawProvider, setSelectedWithdrawProvider] = useState('')
 
   // NEW: First deposit tracking & referral
-  const [isFirstDeposit, setIsFirstDeposit] = useState<boolean>(true)
-  const [referralCode, setReferralCode] = useState<string>('')
-  const [showLinkCopied, setShowLinkCopied] = useState<boolean>(false)
+  const [isFirstDeposit, setIsFirstDeposit] = useState(true)
+  const [referralCode, setReferralCode] = useState('')
+  const [showLinkCopied, setShowLinkCopied] = useState(false)
 
   // Refs to avoid stale state inside socket listeners
-  const playerIdRef = useRef<string>(playerId)
-  const calledRef = useRef<number[]>(called)
-  const lastCalledRef = useRef<number | null>(lastCalled)
-  const currentBetHouseRef = useRef<number | null>(currentBetHouse)
+  const playerIdRef = useRef(playerId)
+  const calledRef = useRef(called)
+  const lastCalledRef = useRef(lastCalled)
+  const currentBetHouseRef = useRef(currentBetHouse)
 
   useEffect(() => { playerIdRef.current = playerId }, [playerId])
   useEffect(() => { calledRef.current = called }, [called])
@@ -461,8 +488,8 @@ export default function App() {
   useEffect(() => { currentBetHouseRef.current = currentBetHouse }, [currentBetHouse])
 
   // --- Helper: Get Translation ---
-  const t = (key: keyof typeof translations['en']) => {
-    return translations[language][key] || translations['en'][key]
+  const t = (key: keyof typeof translations.en) => {
+    return (translations[language] as any)[key] || translations.en[key]
   }
 
   // --- Initialize Language from LocalStorage ---
@@ -530,21 +557,18 @@ export default function App() {
             setUsername(data.username);
             setIsAuthenticated(true);
             
-            // FIX for "100 Birr Wallet" issue:
-            // If the backend returns the old default of 100 Balance for a new user (isFirstDeposit=true),
-            // and 0 bonus, we force swap it to 0 Balance and 30 Bonus to meet your requirements.
             let userBalance = data.balance || 0;
             let userBonus = data.bonus || 0;
             const isFirst = data.isFirstDeposit !== false;
             
             if (isFirst && userBalance === 100 && userBonus === 0) {
               userBalance = 0;
-              userBonus = 30; // Force 30 Bonus for new Telegram users
+              userBonus = 30;
             }
             
             setBalance(userBalance);
             setBonus(userBonus);
-            setGamesPlayed(data.gamesPlayed || 0); // Set games played
+            setGamesPlayed(data.gamesPlayed || 0);
             setIsFirstDeposit(isFirst);
             setLoginLoading(false);
             
@@ -635,7 +659,6 @@ export default function App() {
       setIsWaiting(d.isWaiting || false)
       setCurrentBetHouse(d.stake)
       
-      // Update both balances
       setBalance(d.balance || 0)
       setBonus(d.bonus || 0)
     
@@ -675,7 +698,7 @@ export default function App() {
       setWaitingPlayers(d.waitingCount || 0)
     })
     
-    s.on('bet_houses_status', (d: any) => {
+    s.on('bet_houses_status', (d:any) => {
       if (d.betHouses) setBetHouses(d.betHouses)
     })
 
@@ -768,7 +791,6 @@ export default function App() {
     })
     
     s.on('balance_update', (d: any) => {
-      // Update both balance (Wallet) and bonus (Referrals/Promos)
       if (d.balance !== undefined) setBalance(d.balance)
       if (d.bonus !== undefined) setBonus(d.bonus)
       if (d.gamesPlayed !== undefined) setGamesPlayed(d.gamesPlayed)
@@ -851,7 +873,6 @@ export default function App() {
   const handleJoinBetHouse = (stakeAmount: number) => {
     if (!socket) return
 
-    // Allow usage of both Wallet and Bonus for betting
     const totalFunds = balance + bonus
     if (totalFunds < stakeAmount) {
       alert(t('insufficient_balance_msg'));
@@ -1054,8 +1075,6 @@ export default function App() {
 
   // --- Generate Telegram Bot Deep Link ---
   const getInviteLink = () => {
-    // This redirects the invited user to the Telegram Bot with the inviter's userId as the start parameter
-    // The Bot handles registration and awards the 20 Birr bonus to the inviter
     return `https://t.me/WinBingoGamesBot?start=${userId}`
   }
 
@@ -1065,7 +1084,6 @@ export default function App() {
       setShowLinkCopied(true)
       setTimeout(() => setShowLinkCopied(false), 2000)
     }).catch(() => {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea')
       textArea.value = link
       document.body.appendChild(textArea)
@@ -1147,12 +1165,12 @@ export default function App() {
   }
 
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const audioOnRef = useRef<boolean>(audioOn)
-  const isWaitingRef = useRef<boolean>(isWaiting)
-  const phaseRef = useRef<Phase>(phase)
-  const picksRef = useRef<number[]>(picks)
-  const autoAlgoMarkRef = useRef<boolean>(autoAlgoMark)
-  const autoBingoRef = useRef<boolean>(autoBingo)
+  const audioOnRef = useRef(audioOn)
+  const isWaitingRef = useRef(isWaiting)
+  const phaseRef = useRef(phase)
+  const picksRef = useRef(picks)
+  const autoAlgoMarkRef = useRef(autoAlgoMark)
+  const autoBingoRef = useRef(autoBingo)
 
   useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
   useEffect(() => { isWaitingRef.current = isWaiting }, [isWaiting])
@@ -1161,10 +1179,14 @@ export default function App() {
   useEffect(() => { autoAlgoMarkRef.current = autoAlgoMark }, [autoAlgoMark])
   useEffect(() => { autoBingoRef.current = autoBingo }, [autoBingo])
 
+  // ==================== PARSING FUNCTIONS ====================
+
   const parseAmount = (message: string): number | null => {
     const patterns = [
       /(\d+\.?\d*)\s*(?:birr|etb|br)/i,
       /(?:birr|etb|br)\s*(\d+\.?\d*)/i,
+      /transferred\s*ETB\s*(\d+\.?\d*)/i,
+      /ETB\s*(\d+\.?\d*)/i,
       /amount[:\s]*(\d+\.?\d*)/i,
       /(\d+\.?\d*)\s*(?:sent|transferred|deposited|credited)/i,
     ]
@@ -1175,9 +1197,9 @@ export default function App() {
         if (!isNaN(amount) && amount > 0) return amount
       }
     }
-    const numbers = message.match(/\b(\d{2,}(?:\.\d{2})?)\b/g)
-    if (numbers && numbers.length > 0) {
-      const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 10)
+    const numbers = message.match(/\b(\d{1,}(?:\.\d{2})?)\b/g)
+    if (numbers) {
+      const amounts = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n) && n >= 5)
       if (amounts.length > 0) return Math.max(...amounts)
     }
     return null
@@ -1185,19 +1207,36 @@ export default function App() {
 
   const parseTransactionId = (text: string): string | null => {
     const patterns = [
-      /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([A-Z0-9]{6,})/i,
-      /(?:txn|trans|ref|reference|transaction\s*id|id)[:\s-]*([a-z0-9]{6,})/i,
+      /transaction number is\s*([A-Z0-9]+)/i,
+      /transaction number:\s*([A-Z0-9]+)/i,
+      /transaction number\s*[:\-]?\s*([A-Z0-9]{6,})/i,
+      /(?:txn|trans|ref|reference|transaction\s*(?:id|number|no))\s*[:\s-]*([A-Z0-9]{6,})/i,
+      /receipt\/([A-Z0-9]+)/i,
     ]
+    
     for (const pattern of patterns) {
       const match = text.match(pattern)
-      if (match) return match[1].trim().toUpperCase()
+      if (match && match[1]) {
+        return match[1].trim().toUpperCase()
+      }
     }
-    const tokens = text.match(/[A-Z0-9]{8,20}/gi)
+
+    const tokens = text.match(/[A-Z0-9]{7,20}/gi)
     if (tokens) {
-      const sorted = tokens.sort((a,b)=>b.length-a.length)
+      const sorted = tokens.sort((a, b) => b.length - a.length)
       return sorted[0].toUpperCase()
     }
     return null
+  }
+
+  const isValidTelebirrRecipient = (message: string): boolean => {
+    const lowerMsg = message.toLowerCase()
+    return (
+      lowerMsg.includes('gurmu diriba') ||
+      lowerMsg.includes('gurmudiriba') ||
+      /2519\*\*\*\*8666/.test(lowerMsg) ||
+      lowerMsg.includes('****8666')
+    )
   }
 
   const playCallSound = async (n: number) => {
@@ -1452,7 +1491,7 @@ export default function App() {
 
   const renderLoginPage = () => (
     <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-md">
+     <div className="w-full max-w-md">
         <div className="bg-slate-800 rounded-lg sm:rounded-xl p-4 sm:p-8 space-y-4 sm:space-y-6">
           <div className="text-center">
             <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">WIN BINGO</div>
@@ -1572,7 +1611,6 @@ export default function App() {
         return
       }
       
-      // Save session
       localStorage.setItem('userId', result.userId)
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
@@ -1613,7 +1651,6 @@ export default function App() {
     setLoginError('')
     
     try {
-      // Get referral code from state or localStorage
       const refCode = referralCode || localStorage.getItem('referralCode') || ''
       
       const response = await fetch(`${getApiUrl()}/api/auth/signup`, {
@@ -1622,8 +1659,8 @@ export default function App() {
         body: JSON.stringify({
           username: loginUsername.trim(),
           password: loginPassword,
-          initialBonus: 30, // Changed from initialBalance to initialBonus
-          referralCode: refCode, // Send referral code for 20 Birr reward to inviter
+          initialBonus: 30,
+          referralCode: refCode,
         }),
       })
       
@@ -1639,14 +1676,13 @@ export default function App() {
       localStorage.setItem('username', result.username)
       localStorage.setItem('authToken', result.token)
       localStorage.setItem('isNewUser', 'true')
-      // Clear referral code after successful signup
       localStorage.removeItem('referralCode')
       
       setUserId(result.userId)
       setUsername(result.username)
       setIsAuthenticated(true)
-      setBalance(0) // Start with 0 wallet balance
-      setBonus(30) // Start with 30 bonus
+      setBalance(0)
+      setBonus(30)
       setIsFirstDeposit(true)
       setLoginUsername('')
       setLoginPassword('')
@@ -1687,7 +1723,14 @@ export default function App() {
             </button>
             <button
               className="px-2 sm:px-4 py-1 sm:py-2 rounded bg-blue-500 text-white font-semibold text-xs sm:text-sm"
-              onClick={() => setCurrentPage('withdrawal')}
+              onClick={() => {
+                setSelectedWithdrawProvider('')
+                setWithdrawalAmount('')
+                setWithdrawalAccount('')
+                setWithdrawalMessage('')
+                setCurrentWithdrawalPage('form')
+                setCurrentPage('withdrawalSelect')
+              }}
             >
               {t('withdraw')}
             </button>
@@ -1704,12 +1747,12 @@ export default function App() {
         {showLanguageModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
             <div className="bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
-              <h2 className="text-2xl font-bold text-center mb-6 text-white">{t('select_lang')}</h2>
+              <h2 className="text-2xl font-bold text-center mb-6 text-white">Select Language</h2>
               <div className="grid grid-cols-1 gap-3">
                 <button onClick={() => handleLanguageSelect('en')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">English</button>
                 <button onClick={() => handleLanguageSelect('am')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">አማርኛ</button>
                 <button onClick={() => handleLanguageSelect('ti')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">ትግርኛ</button>
-                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">Oromigna</button>
+                <button onClick={() => handleLanguageSelect('or')} className="p-4 bg-slate-700 hover:bg-emerald-600 rounded-xl font-bold text-lg transition-all border border-white/5">Oromiffa</button>
               </div>
             </div>
           </div>
@@ -1851,7 +1894,7 @@ export default function App() {
             {t('back')}
           </button>
           <div className="text-lg sm:text-2xl font-bold">{t('select_payment')}</div>
-          <div className="w-16"></div> {/* Spacer for centering */}
+          <div className="w-16"></div>
         </div>
 
         {/* Banner: First Deposit Bonus */}
@@ -1863,7 +1906,7 @@ export default function App() {
         )}
 
         {/* Recommended label */}
-        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">Recommended</div>
+        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">{t('recommended')}</div>
 
         <div className="space-y-3">
           {/* Telebirr Option */}
@@ -1904,89 +1947,82 @@ export default function App() {
     </div>
   )
 
+  // ==================== DEPOSIT CONFIRM ====================
+
   const renderDepositConfirm = () => (
     <div className="h-screen bg-slate-900 text-white overflow-y-auto">
       <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between py-1 sm:py-2">
-          <button
-            className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
-            onClick={() => setCurrentPage('depositSelect')}
-          >
+          <button className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm" onClick={() => setCurrentPage('depositSelect')}>
             {t('back')}
           </button>
           <div className="text-lg sm:text-2xl font-bold">{t('confirm_payment')}</div>
-          <div className="w-16"></div> {/* Spacer for centering */}
+          <div className="w-16"></div>
         </div>
 
-        {/* Provider */}
         <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide">
           Payment via {selectedProvider}
         </div>
 
-        {/* First deposit bonus banner */}
         {isFirstDeposit && (
-          <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10 flex flex-col justify-center transition-all">
-             <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
-             <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">
-                {depositAmount
-                  ? `Your deposit will be doubled to ${Number(depositAmount) * 2} Birr!`
-                  : 'Your deposit will be doubled!'}
-             </div>
+          <div className="bg-gradient-to-r from-orange-500 to-yellow-400 text-black p-3 rounded-xl shadow-lg border border-white/10">
+            <div className="text-lg sm:text-xl font-black italic tracking-wider">🎉 First Deposit Bonus: 2X!</div>
+            <div className="text-[10px] sm:text-xs font-semibold opacity-90 mt-0.5">Your deposit will be doubled!</div>
           </div>
         )}
 
         <div className="space-y-4">
-          {/* Deposit Account Box */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 flex items-center justify-between shadow-lg">
             <div>
               <div className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">{t('deposit_account')}</div>
-              <div className="text-base sm:text-lg font-bold text-emerald-400">0999282572</div>
-              <div className="text-slate-400 text-[10px] sm:text-xs">Abeje Dita Debele</div>
+              <div className="text-base sm:text-lg font-bold text-emerald-400">0999198666</div>
+              <div className="text-slate-400 text-[10px] sm:text-xs">Gurmu Diriba</div>
             </div>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText('0999282572');
-              }}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-semibold text-white transition-colors"
-            >
+            <button onClick={() => navigator.clipboard.writeText('0999198666')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-semibold text-white transition-colors">
               Copy
             </button>
           </div>
 
-          {/* Amount Input */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
             <div className="text-slate-300 text-xs sm:text-sm">{t('amount_deposit')}</div>
             <input
-              type="text"
-              inputMode="numeric"
-              value={depositAmount}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === '' || /^\d+$/.test(v)) setDepositAmount(v);
-              }}
+              type="text" inputMode="numeric" value={depositAmount}
+              onChange={(e) => { const v = e.target.value; if (v === '' || /^\d+$/.test(v)) setDepositAmount(v); }}
               placeholder="0.00 ETB"
               className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-sm sm:text-base text-white"
             />
           </div>
 
-          {/* Paste SMS Input */}
           <div className="bg-slate-800 p-3 rounded-xl border border-white/5 shadow-lg space-y-2">
             <div className="text-slate-300 text-xs sm:text-sm">{t('paste_deposit_msg')}</div>
             <textarea
               value={depositMessage}
               onChange={(e) => setDepositMessage(e.target.value)}
-              className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-white text-xs sm:text-sm h-24 resize-none"
-              placeholder="Paste the SMS confirmation from your provider here..."
+              className="w-full bg-slate-900 rounded-lg p-2.5 border border-slate-700 outline-none focus:border-emerald-500 text-white text-xs sm:text-sm h-32 resize-none"
+              placeholder="Paste the full SMS confirmation from telebirr here..."
             />
             
-            {/* Submit Button */}
             <button
               disabled={!depositMessage.trim() || !depositAmount || depositVerifying}
               onClick={async () => {
                 setDepositVerifying(true);
                 try {
                   const baseAmount = Number(depositAmount);
+                  if (!baseAmount || baseAmount <= 0) {
+                    alert('Please enter a valid deposit amount');
+                    setDepositVerifying(false);
+                    return;
+                  }
+
+                  const transactionId = parseTransactionId(depositMessage);
+                  const recipientValid = isValidTelebirrRecipient(depositMessage);
+
+                  if (!transactionId && !recipientValid) {
+                    alert('Could not find transaction number or recipient info in the message. Please paste the full confirmation SMS.');
+                    setDepositVerifying(false);
+                    return;
+                  }
+
                   const response = await fetch(`${getApiUrl()}/api/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1994,7 +2030,10 @@ export default function App() {
                       userId,
                       amount: baseAmount,
                       provider: selectedProvider,
+                      account: '2519****8666',
+                      accountName: 'Gurmu Diriba',
                       message: depositMessage,
+                      transactionId: transactionId || 'AUTO_DETECTED',
                       isFirstDeposit,
                     }),
                   });
@@ -2003,6 +2042,7 @@ export default function App() {
 
                   if (result.success) {
                     if (isFirstDeposit) setIsFirstDeposit(false);
+                    setBalance(result.balance || balance + baseAmount);
                     alert('Deposit submitted successfully!');
                     setDepositAmount('');
                     setDepositMessage('');
@@ -2010,7 +2050,8 @@ export default function App() {
                   } else {
                     alert(result.error || 'Deposit failed');
                   }
-                } catch {
+                } catch (err) {
+                  console.error(err);
                   alert('Network error, please try again');
                 }
                 setDepositVerifying(false);
@@ -2022,7 +2063,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* How to Deposit Section */}
         <div className="mt-4">
           <div className="text-sm font-bold mb-2 text-slate-200">{t('how_to_deposit')}</div>
           <div className="bg-slate-800 h-32 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-700/80 transition-colors group shadow-lg">
@@ -2046,7 +2086,7 @@ export default function App() {
         <div className="bg-slate-800 p-6 rounded-xl space-y-4 text-slate-300">
           <h3 className="text-xl font-bold text-white">{t('how_to_play')}</h3>
           <ul className="list-disc pl-5 space-y-2">
-            <li>{t('rule_1')}</li>
+                        <li>{t('rule_1')}</li>
             <li>{t('rule_2')}</li>
             <li>{t('rule_3')}</li>
             <li>{t('rule_4')}</li>
@@ -2114,8 +2154,8 @@ export default function App() {
                 </div>
                 <div className="text-xl sm:text-3xl font-extrabold">{house.stake} Birr</div>
                 <div className="text-xs sm:text-sm opacity-90 space-y-0.5">
-                  <div>{t('active')}: {house.activePlayers} {t('players')}</div>
-                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players')}</div>}
+                  <div>{t('active')}: {house.activePlayers} {t('players_label')}</div>
+                  {house.waitingPlayers > 0 && <div>{t('waiting')}: {house.waitingPlayers} {t('players_label')}</div>}
                   <div>{t('prize')}: {house.prize} Birr</div>
                 </div>
               <div className="mt-auto flex items-center justify-between gap-2">
@@ -2165,7 +2205,6 @@ export default function App() {
       </div>
     </div>
   )
-
 
   const renderGamePage = () => {
     const recentlyCalled = called.slice(-6).reverse()
@@ -2363,7 +2402,7 @@ export default function App() {
                   ? 'bg-fuchsia-500 text-black animate-pulse'
                   : 'bg-slate-700 text-slate-500 cursor-not-allowed'
               }`}
-            >
+             >
               {t('bingo_btn')}
             </button>
           </div>
@@ -2372,7 +2411,81 @@ export default function App() {
     )
   }
 
+  // ==================== NEW: WITHDRAWAL SELECT PAGE ====================
+  const renderWithdrawalSelectPage = () => (
+    <div className="h-screen bg-slate-900 text-white overflow-y-auto">
+      <div className="w-full max-w-5xl mx-auto p-2 sm:p-4 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between py-1 sm:py-2">
+          <button
+            className="px-3 sm:px-4 py-1 sm:py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm"
+            onClick={() => setCurrentPage('welcome')}
+          >
+            {t('back')}
+          </button>
+          <div className="text-lg sm:text-2xl font-bold">{t('select_withdraw_platform')}</div>
+          <div className="w-16"></div>
+        </div>
+
+        {/* Recommended label */}
+        <div className="text-emerald-400 font-bold text-xs uppercase tracking-wide mt-2">{t('recommended')}</div>
+
+        <div className="space-y-3">
+          {/* Telebirr Option */}
+          <div
+            onClick={() => {
+              setSelectedWithdrawProvider('Telebirr');
+              setWithdrawalAmount('');
+              setWithdrawalAccount('');
+              setWithdrawalMessage('');
+              setCurrentWithdrawalPage('form');
+              setCurrentPage('withdrawal');
+            }}
+            className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <img src="/icons/telebirr.png" className="w-8 h-8 rounded-lg object-cover bg-white" alt="Telebirr" />
+              <div>
+                <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Telebirr</h3>
+              </div>
+            </div>
+            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
+          </div>
+
+          {/* Ebirr Option */}
+          <div
+            onClick={() => {
+              setSelectedWithdrawProvider('Ebirr');
+              setWithdrawalAmount('');
+              setWithdrawalAccount('');
+              setWithdrawalMessage('');
+              setCurrentWithdrawalPage('form');
+              setCurrentPage('withdrawal');
+            }}
+            className="w-full bg-slate-800 hover:bg-slate-700/80 rounded-xl p-3 shadow-lg border border-white/5 flex items-center justify-between cursor-pointer transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <img src="/icons/ebirr.png" className="w-8 h-8 rounded-lg object-cover bg-white" alt="Ebirr" />
+              <div>
+                <h3 className="text-base sm:text-lg font-bold tracking-wide text-white">Ebirr (KAAFI)</h3>
+              </div>
+            </div>
+            <div className="text-slate-500 group-hover:text-emerald-400 text-2xl font-light transition-colors">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  // ==================== UPDATED: WITHDRAWAL PAGE ====================
   const renderWithdrawalPage = () => {
+    const amountNum = Number(withdrawalAmount)
+    const isAmountBelowMin = withdrawalAmount !== '' && amountNum > 0 && amountNum < 100
+
+    const phoneLabel = selectedWithdrawProvider === 'Ebirr'
+      ? t('enter_ebirr_phone')
+      : t('enter_telebirr_phone')
+
     if (currentWithdrawalPage === 'confirm') {
       return (
         <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -2383,7 +2496,9 @@ export default function App() {
               <div className="text-xl sm:text-2xl font-bold">{withdrawalAmount} Birr</div>
             </div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('your_account')}</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">
+                {selectedWithdrawProvider === 'Ebirr' ? 'Ebirr Phone Number' : 'Telebirr Phone Number'}
+              </div>
               <div className="text-sm sm:text-lg font-mono break-all">{withdrawalAccount}</div>
             </div>
             <div className="space-y-1 sm:space-y-2">
@@ -2407,10 +2522,10 @@ export default function App() {
                 
                 setWithdrawalVerifying(true)
                 try {
-                  const amountNum = Number(withdrawalAmount)
+                  const currentAmountNum = Number(withdrawalAmount)
                   
                   const detectedAmount = parseAmount(withdrawalMessage)
-                  if (!detectedAmount || Math.abs(detectedAmount - amountNum) > 0.01) {
+                  if (!detectedAmount || Math.abs(detectedAmount - currentAmountNum) > 0.01) {
                     alert('Amount in confirmation message does not match withdrawal amount')
                     setWithdrawalVerifying(false)
                     return
@@ -2428,8 +2543,9 @@ export default function App() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       userId,
-                      amount: amountNum,
+                      amount: currentAmountNum,
                       account: withdrawalAccount,
+                      provider: selectedWithdrawProvider,
                       message: withdrawalMessage,
                       transactionId,
                     }),
@@ -2469,12 +2585,24 @@ export default function App() {
     return (
       <div className="h-screen bg-slate-900 text-white flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div className="w-full max-w-3xl space-y-3 sm:space-y-4">
-          <div className="text-xl sm:text-2xl font-bold">{t('withdraw_funds')}</div>
-          <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
-            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('available_balance')}</div>
-            <div className="text-2xl sm:text-3xl font-bold">{balance} Birr</div>
-            <div className="text-xs text-orange-400 mt-1">Note: Bonus balance ({bonus} Birr) is not withdrawable.</div>
+          <div className="flex items-center gap-3">
+            <button
+              className="p-1"
+              onClick={() => setCurrentPage('withdrawalSelect')}
+            >
+              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="text-xl sm:text-2xl font-bold">{t('withdraw_funds')}</div>
           </div>
+
+          <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700">
+            <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('withdrawable_balance')}</div>
+            <div className="text-2xl sm:text-3xl font-bold">{balance} Birr</div>
+            <div className="text-xs text-orange-400 mt-1">{t('bonus_not_withdrawable')} ({bonus} Birr)</div>
+          </div>
+
           <div className="space-y-2 sm:space-y-3">
             <div>
               <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('withdraw_amount')}</div>
@@ -2483,16 +2611,27 @@ export default function App() {
                 value={withdrawalAmount}
                 onChange={(e) => setWithdrawalAmount(e.target.value)}
                 placeholder="Enter amount in Birr"
-                className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
+                className={`w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border outline-none text-sm sm:text-base ${
+                  isAmountBelowMin
+                    ? 'border-red-500 text-red-400'
+                    : 'border-slate-700 text-white'
+                }`}
               />
+              {isAmountBelowMin && (
+                <div className="text-red-400 text-xs mt-1 font-semibold">
+                  {t('min_withdraw_error')}
+                </div>
+              )}
             </div>
             <div>
-              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">{t('your_account_num')}</div>
+              <div className="text-slate-300 text-xs sm:text-sm mb-1 sm:mb-2">
+                {selectedWithdrawProvider === 'Ebirr' ? 'Your Ebirr Phone Number' : 'Your Telebirr Phone Number'}
+              </div>
               <input
-                type="text"
+                type="tel"
                 value={withdrawalAccount}
                 onChange={(e) => setWithdrawalAccount(e.target.value)}
-                placeholder="Enter your account number (same bank/provider as deposit)"
+                placeholder={phoneLabel}
                 className="w-full bg-slate-800 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-700 outline-none text-sm sm:text-base"
               />
             </div>
@@ -2500,17 +2639,21 @@ export default function App() {
               className="w-full py-2 sm:py-3 rounded-lg sm:rounded-xl bg-blue-600 text-white font-bold text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={!withdrawalAmount || !withdrawalAccount.trim() || withdrawalVerifying}
               onClick={async () => {
-                const amountNum = Number(withdrawalAmount)
-                if (!Number.isFinite(amountNum) || amountNum <= 0) {
+                const currentAmountNum = Number(withdrawalAmount)
+                if (!Number.isFinite(currentAmountNum) || currentAmountNum <= 0) {
                   alert('Enter a valid amount')
                   return
                 }
-                if (amountNum > balance) {
+                if (currentAmountNum < 100) {
+                  alert(t('min_withdraw_error'))
+                  return
+                }
+                if (currentAmountNum > balance) {
                   alert('Insufficient withdrawable balance')
                   return
                 }
                 if (!withdrawalAccount.trim()) {
-                  alert('Enter your account number')
+                  alert('Enter your phone number')
                   return
                 }
                 
@@ -2521,8 +2664,9 @@ export default function App() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       userId,
-                      amount: amountNum,
+                      amount: currentAmountNum,
                       account: withdrawalAccount,
+                      provider: selectedWithdrawProvider,
                     }),
                   })
                   
@@ -2550,14 +2694,14 @@ export default function App() {
             <div className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">{t('how_to_withdraw')}</div>
             <div className="bg-slate-800 rounded-lg sm:rounded-xl p-3 sm:p-4 text-slate-300 text-xs sm:text-sm space-y-1 sm:space-y-2">
               <p>1. Enter the amount you want to withdraw (must be less than or equal to your balance).</p>
-              <p>2. Enter your account number where you want to receive the funds.</p>
+              <p>2. Enter your {selectedWithdrawProvider || 'Telebirr'} phone number where you want to receive the funds.</p>
               <p>3. Click "Request Withdrawal" to submit your request.</p>
               <p>4. After we process your withdrawal, you will receive a confirmation message.</p>
               <p>5. Paste the confirmation message to verify the withdrawal was successful.</p>
             </div>
           </div>
           <div>
-            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('welcome')}>{t('back')}</button>
+            <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded text-xs sm:text-sm" onClick={() => setCurrentPage('withdrawalSelect')}>{t('back')}</button>
           </div>
         </div>
       </div>
@@ -2576,6 +2720,7 @@ export default function App() {
     : currentPage === 'instructions' ? renderInstructionsPage()
     : currentPage === 'depositSelect' ? renderDepositSelect()
     : currentPage === 'depositConfirm' ? renderDepositConfirm()
+    : currentPage === 'withdrawalSelect' ? renderWithdrawalSelectPage()
     : currentPage === 'withdrawal' ? renderWithdrawalPage()
     : currentPage === 'bingoHouseSelect' ? renderBingoHouseSelectPage() 
     : currentPage === 'lobby' ? renderLobbyPage()
